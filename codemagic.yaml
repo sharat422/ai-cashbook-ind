@@ -49,8 +49,10 @@ workflows:
       cocoapods: default
     cache:
       cache_paths:
+        # ios/Pods is intentionally NOT cached — pod install runs clean every
+        # build so dependency version changes (e.g. RNSVG pin) never leave
+        # stale generated Pods artifacts behind.
         - node_modules
-        - ios/Pods
     scripts:
       - name: Install npm dependencies
         script: npm ci
