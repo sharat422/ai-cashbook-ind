@@ -42,7 +42,10 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       node: 18.20.4
-      xcode: latest
+      # Pin to an Xcode that RN 0.76.5 + its pods (Folly/RNSVG C++) compile
+      # against. "latest" resolves to Xcode 26.x, whose newer clang/libc++
+      # breaks RN 0.76.5's C++ (e.g. RNSVGLayoutableShadowNode.cpp).
+      xcode: 16.2
       cocoapods: default
     cache:
       cache_paths:
