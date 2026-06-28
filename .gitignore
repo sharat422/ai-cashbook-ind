@@ -16,6 +16,12 @@ DerivedData
 *.xcuserstate
 ios/.xcode.env.local
 
+# iOS signing secrets — provide these via Codemagic, not git.
+*.mobileprovision
+*.p12
+*.cer
+*.certSigningRequest
+
 # Android/IntelliJ
 build/
 .idea
@@ -24,8 +30,12 @@ local.properties
 *.iml
 *.hprof
 .cxx/
+# Signing secrets — NEVER commit a release key or its passwords.
+# debug.keystore is the standard shared RN debug key and is intentionally kept.
 *.keystore
+*.jks
 !debug.keystore
+keystore.properties
 android/app/build/
 
 # node

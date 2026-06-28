@@ -1,1 +1,72 @@
+# Codemagic CI/CD — AI Smart CashBook (React Native 0.76.5)
+#
+# Two ready-to-run workflows:
+#   * android — builds a release APK (self-signed with the bundled debug
+#     keystore so it runs without extra credentials).
+#   * ios     — installs Pods and compiles for the iOS Simulator with signing
+#     disabled, so it builds green on CI without certificates. To produce a
+#     signed device IPA, add a code-signing step + `xcodebuild archive`.
+#
+# Both copy `.env.example` to `.env` so react-native-config has sane defaults.
 
+workflows:
+  android:
+    name: Android Release Build
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 18.20.4
+      java: 17
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - node_modules
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Seed .env for react-native-config
+        script: cp -f .env.example .env || true
+      - name: Make gradlew executable
+        script: chmod +x android/gradlew
+      - name: Build Android release APK
+        script: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace
+    artifacts:
+      - android/app/build/outputs/**/*.apk
+      - android/app/build/outputs/**/mapping.txt
+
+  ios:
+    name: iOS Simulator Build
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      node: 18.20.4
+      xcode: latest
+      cocoapods: default
+    cache:
+      cache_paths:
+        - node_modules
+        - ios/Pods
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Seed .env for react-native-config
+        script: cp -f .env.example .env || true
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          bundle install
+          bundle exec pod install
+      - name: Build iOS app (simulator, unsigned)
+        script: |
+          xcodebuild \
+            -workspace ios/AISmartCashBook.xcworkspace \
+            -scheme AISmartCashBook \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+    artifacts:
+      - ios/build/Build/Products/**/*.app
