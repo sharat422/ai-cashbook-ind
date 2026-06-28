@@ -7,3 +7,8 @@ ruby ">= 2.6.10"
 gem 'cocoapods', '>= 1.13', '!= 1.15.0', '!= 1.15.1'
 gem 'activesupport', '>= 6.1.7.5', '!= 7.1.0'
 gem 'xcodeproj', '< 1.26.0'
+
+# Ruby 3.4+ (Codemagic builders use Ruby 4.x) dropped `nkf`/`kconv` from the
+# default gems. CocoaPods' CFPropertyList does `require 'kconv'`, so it must be
+# provided explicitly or `pod install` crashes with "cannot load such file -- kconv".
+gem 'nkf'
