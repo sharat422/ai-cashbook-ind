@@ -1,0 +1,53 @@
+# OSX
+.DS_Store
+
+# Xcode
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+ios/.xcode.env.local
+
+# Android/IntelliJ
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+*.keystore
+!debug.keystore
+android/app/build/
+
+# node
+node_modules/
+npm-debug.log
+yarn-error.log
+*.log
+
+# metro
+.metro-health-check*
+.expo/
+
+# bundler / cocoapods
+**/Pods/
+**/vendor/bundle/
+
+# testing / coverage
+coverage/
+
+# env
+.env
+.env.local
+
+# typescript
+*.tsbuildinfo

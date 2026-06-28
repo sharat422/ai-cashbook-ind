@@ -1,0 +1,110 @@
+import {formatINR} from '@utils/currency';
+import {formatDisplayDate} from '@utils/date';
+import type {CustomerStatement} from './customerStatement';
+import type {Customer} from './entities';
+
+const esc = (s: string): string =>
+  s.replace(/[&<>"']/g, c =>
+    c === '&'
+      ? '&amp;'
+      : c === '<'
+      ? '&lt;'
+      : c === '>'
+      ? '&gt;'
+      : c === '"'
+      ? '&quot;'
+      : '&#39;',
+  );
+
+/**
+ * Build a print-ready HTML statement — the source rendered to PDF. Self-
+ * contained (inline CSS) so it renders identically across the PDF engine.
+ */
+export function buildStatementHtml(
+  customer: Customer,
+  statement: CustomerStatement,
+  businessName?: string,
+): string {
+  const rows = statement.rows
+    .map(e => {
+      const isCredit = e.type === 'credit';
+      const sign = isCredit ? '+' : '−';
+      const color = isCredit ? '#B45309' : '#16A34A';
+      return `<tr>
+        <td>${esc(formatDisplayDate(e.date))}</td>
+        <td>${isCredit ? 'Credit' : 'Payment'}</td>
+        <td class="r" style="color:${color}">${sign}${esc(formatINR(e.amount))}</td>
+        <td class="r">${esc(formatINR(e.balance))}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const empty = statement.rows.length === 0
+    ? `<tr><td colspan="4" class="muted" style="text-align:center;padding:18px">No transactions in this period.</td></tr>`
+    : '';
+
+  return `<!doctype html><html><head><meta charset="utf-8"/>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, Roboto, Helvetica, Arial, sans-serif; color:#0F172A; margin:0; padding:28px; }
+  .head { display:flex; justify-content:space-between; align-items:flex-start; }
+  .biz { font-size:20px; font-weight:800; }
+  .sub { font-size:12px; color:#64748B; }
+  .due { background:#0F172A; color:#fff; border-radius:8px; padding:8px 12px; text-align:right; }
+  .due b { font-size:14px; } .due span { font-size:9px; text-transform:uppercase; color:#94A3B8; display:block; }
+  hr { border:none; border-top:1px solid #E2E8F0; margin:18px 0; }
+  .parties { display:flex; justify-content:space-between; }
+  .lbl { font-size:10px; text-transform:uppercase; color:#64748B; }
+  .cards { display:flex; gap:10px; margin-top:18px; }
+  .card { flex:1; background:#F8FAFC; border-radius:10px; padding:12px; }
+  .card .v { font-size:15px; font-weight:800; margin-top:4px; }
+  .bal { border:1px solid #E2E8F0; border-radius:10px; padding:6px 14px; margin-top:18px; }
+  .bal .row { display:flex; justify-content:space-between; padding:8px 0; font-size:13px; }
+  .bal .row.b { font-weight:800; border-top:1px solid #E2E8F0; }
+  table { width:100%; border-collapse:collapse; margin-top:18px; font-size:12px; }
+  th { text-align:left; color:#64748B; font-size:10px; text-transform:uppercase; border-bottom:1px solid #CBD5E1; padding:6px 4px; }
+  td { padding:8px 4px; border-bottom:1px solid #F1F5F9; }
+  .r { text-align:right; }
+  .muted { color:#94A3B8; }
+  .foot { display:flex; justify-content:space-between; margin-top:22px; font-size:10px; color:#94A3B8; }
+</style></head>
+<body>
+  <div class="head">
+    <div>
+      <div class="biz">${esc(businessName || 'Statement of Account')}</div>
+      <div class="sub">Statement of Account</div>
+    </div>
+    <div class="due"><b>${esc(formatINR(statement.outstanding))}</b><span>due</span></div>
+  </div>
+  <hr/>
+  <div class="parties">
+    <div>
+      <div class="lbl">Billed to</div>
+      <div style="font-weight:700;margin-top:2px">${esc(customer.fullName)}</div>
+      ${customer.businessName ? `<div class="sub">${esc(customer.businessName)}</div>` : ''}
+      <div class="sub">+91 ${esc(customer.mobile)}</div>
+      ${customer.gstNumber ? `<div class="sub">GSTIN: ${esc(customer.gstNumber)}</div>` : ''}
+    </div>
+    <div style="text-align:right">
+      <div class="lbl">Period</div>
+      <div style="margin-top:2px">${esc(formatDisplayDate(statement.from))}</div>
+      <div class="sub">to</div>
+      <div>${esc(formatDisplayDate(statement.to))}</div>
+    </div>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="lbl">Total Credit</div><div class="v" style="color:#B45309">${esc(formatINR(statement.totalCredit))}</div></div>
+    <div class="card"><div class="lbl">Total Received</div><div class="v" style="color:#16A34A">${esc(formatINR(statement.totalPayment))}</div></div>
+    <div class="card"><div class="lbl">Outstanding</div><div class="v">${esc(formatINR(statement.outstanding))}</div></div>
+  </div>
+  <div class="bal">
+    <div class="row"><span>Opening balance</span><span>${esc(formatINR(statement.openingBalance))}</span></div>
+    <div class="row b"><span>Closing balance</span><span>${esc(formatINR(statement.closingBalance))}</span></div>
+  </div>
+  <table>
+    <thead><tr><th>Date</th><th>Type</th><th class="r">Amount</th><th class="r">Balance</th></tr></thead>
+    <tbody>${rows}${empty}</tbody>
+  </table>
+  <div class="foot"><span>Generated by Smart CashBook</span><span>${esc(formatDisplayDate(statement.to))}</span></div>
+</body></html>`;
+}
