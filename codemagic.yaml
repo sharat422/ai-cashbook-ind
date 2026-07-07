@@ -37,7 +37,7 @@ workflows:
       - android/app/build/outputs/**/mapping.txt
 
   ios:
-    name: iOS Simulator Build
+    name: iOS App Store Build
     max_build_duration: 90
     instance_type: mac_mini_m2
     environment:
