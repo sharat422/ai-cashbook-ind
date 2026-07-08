@@ -96,8 +96,6 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true        
-            CODE_SIGNING_ALLOWED=NO \
-            build
+        submit_to_testflight: true                    
     artifacts:
       - ios/build/Build/Products/**/*.app
