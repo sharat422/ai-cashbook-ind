@@ -40,9 +40,6 @@ workflows:
     name: iOS App Store Build
     max_build_duration: 90
     instance_type: mac_mini_m2
-
-    integrations:
-      app_store_connect: Codemagic AI Smart Cashbook
       
     environment:
       node: 18.20.4
@@ -95,7 +92,10 @@ workflows:
 
     publishing:
       app_store_connect:
-        auth: integration
+        auth: api_key
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true                    
     artifacts:
       - ios/build/Build/Products/**/*.app
