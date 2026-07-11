@@ -80,7 +80,8 @@ workflows:
           
       - name: Set up iOS code signing
         script: |
-          xcode-project use-profiles --warn-only
+          xcode-project use-profiles \
+            --custom-export-options='{"testFlightInternalTestingOnly": true}'
 
       - name: Increment iOS build number
         script: |
