@@ -78,11 +78,11 @@ workflows:
           bundle install
           bundle exec pod install
           
-      -- name: Set up iOS code signing
+       - name: Set up iOS code signing
          script: |
-          xcode-project use-profiles \
-            --project "$CM_BUILD_DIR/ios/AISmartCashBook.xcodeproj" \
-            --custom-export-options='{"testFlightInternalTestingOnly": true}'
+           xcode-project use-profiles \
+             --project "$CM_BUILD_DIR/ios/AISmartCashBook.xcodeproj" \
+             --custom-export-options='{"testFlightInternalTestingOnly": true}'
       
       - name: Increment iOS build number
         script: |
