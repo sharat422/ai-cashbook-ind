@@ -81,8 +81,9 @@ workflows:
       - name: Set up iOS code signing
         script: |
           xcode-project use-profiles \
+            --project "$CM_BUILD_DIR/ios/AISmartCashBook.xcodeproj" \
             --custom-export-options='{"testFlightInternalTestingOnly": true}'
-
+      
       - name: Increment iOS build number
         script: |
           cd "$CM_BUILD_DIR/ios"
@@ -102,4 +103,3 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
