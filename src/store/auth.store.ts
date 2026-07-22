@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 
-import {APP_CONFIG} from '@config/constants';
 import type {Business, User} from '@features/auth/types';
 import {
   DEFAULT_APP_LANGUAGE,
@@ -51,8 +50,6 @@ export const useAuthStore = create<AuthState>()(
       preferredLanguage: DEFAULT_APP_LANGUAGE,
 
       status: () => {
-        // TEMPORARY: bypass login and land on the Dashboard directly.
-        if (APP_CONFIG.bypassAuth) return 'authenticated';
         const {token, business} = get();
         if (!token) return 'unauthenticated';
         if (!business) return 'pending-business';

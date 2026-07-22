@@ -54,6 +54,19 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
+@app.get("/")
+def root() -> dict:
+    """Friendly landing payload so hitting the bare URL doesn't 404. The real
+    API lives under /api/v1; interactive docs are at /docs."""
+    return {
+        "status": "ok",
+        "service": "Smart CashBook API",
+        "docs": "/docs",
+        "health": "/health",
+        "api": "/api/v1",
+    }
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
