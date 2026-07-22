@@ -1,0 +1,30 @@
+name: Keep backend awake
+
+# Pings the Render backend so the free-tier instance doesn't spin down after
+# 15 min idle (which causes a ~30-60s cold start on the next app launch).
+# Runs on a schedule and can also be triggered manually from the Actions tab.
+#
+# Notes:
+# - GitHub cron is best-effort and can be delayed several minutes under load,
+#   so we ping every 10 min to stay comfortably under Render's 15 min timeout.
+# - A single always-on free web service uses ~730 of Render's 750 free
+#   instance-hours/month. Disable this workflow (or delete it) if you approach
+#   that limit or move to a paid plan.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          echo "Pinging backend at $(date -u)"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 \
+            https://smart-cashbook-api.onrender.com/health)
+          echo "HTTP $code"
+          # 200 = awake. Any response at all means the instance is up; only a
+          # hard failure (000) should fail the job.
+          test "$code" != "000"
