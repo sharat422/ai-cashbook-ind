@@ -1,0 +1,47 @@
+# Render Blueprint — deploys the FastAPI backend in ./backend as a public
+# HTTPS web service. Create it via Render dashboard → "New +" → "Blueprint"
+# and point it at this repo. Render auto-provisions HTTPS on an
+# https://<name>.onrender.com domain.
+#
+# Notes:
+# - Free plan sleeps after ~15 min idle (first request after cold-starts in
+#   ~30-60s). SQLite data & uploaded files live on the ephemeral disk and are
+#   wiped on each redeploy/restart — fine for testing, not for real data.
+# - PUBLIC_BASE_URL is auto-derived from Render's RENDER_EXTERNAL_URL at
+#   runtime (see backend/app/config.py), so no manual URL wiring is needed.
+services:
+  - type: web
+    name: smart-cashbook-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    healthCheckPath: /health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # Signing secret for JWTs — Render generates a strong random value.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE_MINUTES
+        value: "43200"
+      # DEBUG=true + MASTER_OTP lets you log in with OTP 123456 (no SMS
+      # provider needed). Set DEBUG=false once a real SMS flow is wired.
+      - key: DEBUG
+        value: "true"
+      - key: MASTER_OTP
+        value: "123456"
+      - key: CORS_ORIGINS
+        value: "*"
+      # Zero-setup SQLite. Swap for a Render PostgreSQL DATABASE_URL when you
+      # need data to survive redeploys.
+      - key: DATABASE_URL
+        value: sqlite:///./cashbook.db
+      # Optional AI keys — blank uses the built-in deterministic fallbacks.
+      - key: ANTHROPIC_API_KEY
+        value: ""
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-4-8
+      - key: OPENAI_API_KEY
+        value: ""

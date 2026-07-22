@@ -4,6 +4,10 @@ import {createJSONStorage, persist} from 'zustand/middleware';
 
 import {APP_CONFIG} from '@config/constants';
 import type {Business, User} from '@features/auth/types';
+import {
+  DEFAULT_APP_LANGUAGE,
+  type AppLanguage,
+} from '@features/auth/utils/languagePreference';
 
 /**
  * Where the user is in the authentication lifecycle. Drives which navigator
@@ -24,6 +28,7 @@ interface AuthState {
   token: string | null;
   user: User | null;
   business: Business | null;
+  preferredLanguage: AppLanguage;
 
   // Derived selector kept as a method for ergonomic access in components.
   status: () => AuthStatus;
@@ -31,6 +36,7 @@ interface AuthState {
   // Actions
   setSession: (payload: {token: string; user: User}) => void;
   setBusiness: (business: Business) => void;
+  setPreferredLanguage: (language: AppLanguage) => void;
   logout: () => void;
   _setHydrated: (value: boolean) => void;
 }
@@ -42,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       business: null,
+      preferredLanguage: DEFAULT_APP_LANGUAGE,
 
       status: () => {
         // TEMPORARY: bypass login and land on the Dashboard directly.
@@ -54,14 +61,26 @@ export const useAuthStore = create<AuthState>()(
 
       setSession: ({token, user}) => set({token, user}),
       setBusiness: business => set({business}),
-      logout: () => set({token: null, user: null, business: null}),
+      setPreferredLanguage: language => set({preferredLanguage: language}),
+      logout: () =>
+        set({
+          token: null,
+          user: null,
+          business: null,
+          preferredLanguage: DEFAULT_APP_LANGUAGE,
+        }),
       _setHydrated: value => set({hydrated: value}),
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
       // Only persist durable session data, never the hydration flag.
-      partialize: ({token, user, business}) => ({token, user, business}),
+      partialize: ({token, user, business, preferredLanguage}) => ({
+        token,
+        user,
+        business,
+        preferredLanguage,
+      }),
       onRehydrateStorage: () => state => {
         state?._setHydrated(true);
       },

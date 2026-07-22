@@ -1,3 +1,6 @@
+import os
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +27,16 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-opus-4-8"
 
     cors_origins: str = "*"
+
+    @model_validator(mode="after")
+    def _use_render_external_url(self) -> "Settings":
+        """On Render the platform injects RENDER_EXTERNAL_URL (the public
+        https://<name>.onrender.com address). Prefer it for building absolute
+        attachment URLs unless PUBLIC_BASE_URL was set explicitly."""
+        render_url = os.environ.get("RENDER_EXTERNAL_URL")
+        if render_url and "PUBLIC_BASE_URL" not in os.environ:
+            self.public_base_url = render_url
+        return self
 
 
 settings = Settings()

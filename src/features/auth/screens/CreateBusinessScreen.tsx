@@ -16,6 +16,13 @@ import {
   type IndianState,
 } from '@config/constants';
 import {useCreateBusiness} from '@features/auth/hooks';
+import {
+  DEFAULT_APP_LANGUAGE,
+  APP_LANGUAGE_LABEL,
+  SUPPORTED_APP_LANGUAGES,
+  type AppLanguage,
+} from '@features/auth/utils/languagePreference';
+import {useAuthStore} from '@store/auth.store';
 import {validateRequired} from '@utils/validation';
 
 interface FormState {
@@ -24,6 +31,7 @@ interface FormState {
   businessType: BusinessType | null;
   state: IndianState | null;
   gstRegistered: boolean | null;
+  preferredLanguage: AppLanguage;
 }
 
 interface FormErrors {
@@ -50,13 +58,18 @@ export function CreateBusinessScreen(): React.JSX.Element {
     businessType: null,
     state: null,
     gstRegistered: null,
+    preferredLanguage: DEFAULT_APP_LANGUAGE,
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const createBusiness = useCreateBusiness();
+  const setPreferredLanguage = useAuthStore(state => state.setPreferredLanguage);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({...prev, [key]: value}));
-    if (errors[key]) setErrors(prev => ({...prev, [key]: null}));
+    const errorKey = key as keyof FormErrors;
+    if (errorKey in errors && errors[errorKey]) {
+      setErrors(prev => ({...prev, [errorKey]: null}));
+    }
   };
 
   const validate = (): boolean => {
@@ -84,6 +97,9 @@ export function CreateBusinessScreen(): React.JSX.Element {
         gstRegistered: form.gstRegistered as boolean,
       },
       {
+        onSuccess: () => {
+          setPreferredLanguage(form.preferredLanguage);
+        },
         onError: err => Alert.alert('Could not create business', err.message),
       },
     );
@@ -138,6 +154,16 @@ export function CreateBusinessScreen(): React.JSX.Element {
             value={form.gstRegistered}
             onChange={value => update('gstRegistered', value)}
             error={errors.gstRegistered}
+          />
+
+          <SegmentedControl
+            label="Preferred content language"
+            options={SUPPORTED_APP_LANGUAGES.map(language => ({
+              label: APP_LANGUAGE_LABEL[language],
+              value: language,
+            }))}
+            value={form.preferredLanguage}
+            onChange={value => update('preferredLanguage', value)}
           />
         </View>
 
