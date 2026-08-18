@@ -1,22 +1,87 @@
 # Codemagic CI/CD — AI Smart CashBook (React Native 0.76.5)
 #
-# Two ready-to-run workflows:
-#   * android — builds a release APK (self-signed with the bundled debug
-#     keystore so it runs without extra credentials).
-#   * ios     — installs Pods and compiles for the iOS Simulator with signing
-#     disabled, so it builds green on CI without certificates. To produce a
-#     signed device IPA, add a code-signing step + `xcodebuild archive`.
+# Workflows:
+#   * android          — release APK (self-signed debug keystore), builds against
+#                        STAGING by default.
+#   * ios-staging      — signed IPA → TestFlight, wired to the STAGING backend
+#                        (smart-cashbook-api.onrender.com, master OTP 123456).
+#   * ios-production   — signed IPA → TestFlight, wired to the PRODUCTION backend
+#                        (smart-cashbook-api-prod.onrender.com).
 #
-# Both copy `.env.example` to `.env` so react-native-config has sane defaults.
+# Each workflow bakes its own API_BASE_URL into the app at build time (the
+# "Seed .env" step overrides .env.example), so a build ALWAYS points at the
+# right backend automatically — no manual env editing. See PRODUCTION_SETUP.md.
+#
+# NOTE: both iOS workflows use the same bundle id, so their builds land in the
+# SAME TestFlight app — distinguish them by the build's "What to Test" notes.
+# For side-by-side installs, give staging a separate bundle id (e.g.
+# ...aismartcashbook.staging) + its own App ID/profile in Apple Developer.
+
+definitions:
+  # ---- Shared iOS pieces (referenced by both iOS workflows) ----------------
+  ios_scripts: &ios_scripts
+    - name: Install npm dependencies
+      script: npm ci
+
+    - name: Seed .env for react-native-config
+      script: |
+        cp -f .env.example .env || true
+        # Each workflow sets API_BASE_URL below; bake it into the build.
+        if [ -n "$API_BASE_URL" ]; then
+          awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
+          echo "Building against API_BASE_URL=$API_BASE_URL"
+        fi
+
+    - name: Install CocoaPods dependencies
+      script: |
+        cd ios
+        bundle install
+        bundle exec pod install
+
+    - name: Set up iOS code signing
+      script: |
+        xcode-project use-profiles \
+          --project "$CM_BUILD_DIR/ios/AISmartCashBook.xcodeproj" \
+          --custom-export-options='{"testFlightInternalTestingOnly": true}'
+
+    - name: Increment iOS build number
+      script: |
+        cd "$CM_BUILD_DIR/ios"
+        agvtool new-version -all "$PROJECT_BUILD_NUMBER"
+
+    - name: Build signed IPA
+      script: |
+        xcode-project build-ipa \
+          --workspace "$CM_BUILD_DIR/ios/$XCODE_WORKSPACE" \
+          --scheme "$XCODE_SCHEME"
+
+  ios_artifacts: &ios_artifacts
+    - build/ios/ipa/*.ipa
+    - /tmp/xcodebuild_logs/*.log
+    - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+  ios_publishing: &ios_publishing
+    app_store_connect:
+      auth: integration
+
+  ios_vars: &ios_vars
+    XCODE_WORKSPACE: "AISmartCashBook.xcworkspace"
+    XCODE_SCHEME: "AISmartCashBook"
+    BUNDLE_ID: "com.syntaro.aismartcashbook"
 
 workflows:
+  # ==========================================================================
+  # ANDROID (staging backend by default)
+  # ==========================================================================
   android:
-    name: Android Release Build
+    name: Android Release Build (staging)
     max_build_duration: 60
     instance_type: linux_x2
     environment:
       node: 18.20.4
       java: 17
+      vars:
+        API_BASE_URL: "https://smart-cashbook-api.onrender.com"
     cache:
       cache_paths:
         - $HOME/.gradle/caches
@@ -27,9 +92,6 @@ workflows:
       - name: Seed .env for react-native-config
         script: |
           cp -f .env.example .env || true
-          # Per-build backend target: set API_BASE_URL in this workflow's
-          # environment (e.g. the production URL) to override the staging
-          # default baked into .env.example. Leave it unset to build staging.
           if [ -n "$API_BASE_URL" ]; then
             awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
             echo "Building against API_BASE_URL=$API_BASE_URL"
@@ -44,14 +106,15 @@ workflows:
       - android/app/build/outputs/**/*.apk
       - android/app/build/outputs/**/mapping.txt
 
-  ios:
-    name: iOS App Store Build
+  # ==========================================================================
+  # iOS · STAGING → TestFlight (smart-cashbook-api.onrender.com)
+  # ==========================================================================
+  ios-staging:
+    name: iOS · Staging (TestFlight)
     max_build_duration: 90
     instance_type: mac_mini_m2
-
     integrations:
       app_store_connect: AICashBook
-      
     environment:
       node: 18.20.4
       # Pin to an Xcode that RN 0.76.5 + its pods (Folly/RNSVG C++) compile
@@ -63,59 +126,37 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.syntaro.aismartcashbook
       vars:
-        XCODE_WORKSPACE: "AISmartCashBook.xcworkspace"
-        XCODE_SCHEME: "AISmartCashBook"
-        BUNDLE_ID: "com.syntaro.aismartcashbook"
-        
+        <<: *ios_vars
+        API_BASE_URL: "https://smart-cashbook-api.onrender.com"
     cache:
       cache_paths:
-        # ios/Pods is intentionally NOT cached — pod install runs clean every
-        # build so dependency version changes (e.g. RNSVG pin) never leave
-        # stale generated Pods artifacts behind.
         - node_modules
-    scripts:
-      - name: Install npm dependencies
-        script: npm ci
-        
-      - name: Seed .env for react-native-config
-        script: |
-          cp -f .env.example .env || true
-          # Per-build backend target: set API_BASE_URL in this workflow's
-          # environment (e.g. the production URL) to override the staging
-          # default baked into .env.example. Leave it unset to build staging.
-          if [ -n "$API_BASE_URL" ]; then
-            awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
-            echo "Building against API_BASE_URL=$API_BASE_URL"
-          fi
-        
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios
-          bundle install
-          bundle exec pod install
-          
-      - name: Set up iOS code signing
-        script: |
-          xcode-project use-profiles \
-            --project "$CM_BUILD_DIR/ios/AISmartCashBook.xcodeproj" \
-            --custom-export-options='{"testFlightInternalTestingOnly": true}'
-      
-      - name: Increment iOS build number
-        script: |
-          cd "$CM_BUILD_DIR/ios"
-          agvtool new-version -all "$PROJECT_BUILD_NUMBER"    
-          
-      - name: Build signed IPA
-        script: |
-          xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/ios/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+    scripts: *ios_scripts
+    artifacts: *ios_artifacts
+    publishing: *ios_publishing
 
-    artifacts:
-       - build/ios/ipa/*.ipa
-       - /tmp/xcodebuild_logs/*.log
-       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-
-    publishing:
-      app_store_connect:
-        auth: integration
+  # ==========================================================================
+  # iOS · PRODUCTION → TestFlight (smart-cashbook-api-prod.onrender.com)
+  # ==========================================================================
+  ios-production:
+    name: iOS · Production (TestFlight)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: AICashBook
+    environment:
+      node: 18.20.4
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.syntaro.aismartcashbook
+      vars:
+        <<: *ios_vars
+        API_BASE_URL: "https://smart-cashbook-api-prod.onrender.com"
+    cache:
+      cache_paths:
+        - node_modules
+    scripts: *ios_scripts
+    artifacts: *ios_artifacts
+    publishing: *ios_publishing

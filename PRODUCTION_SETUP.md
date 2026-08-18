@@ -30,19 +30,25 @@ data never mix. Each has its own web service, its own PostgreSQL, and its own
 blueprint manages both environments. Set each service's secrets (§4–§6)
 separately in its own **Environment** tab.
 
-**Point an app build at an environment.** Both CI workflows default to the
-staging URL (from `.env.example`). To build against **production**, set an
-`API_BASE_URL` variable in the Codemagic workflow's environment — the build
-overrides `.env` automatically (see the "Seed .env" step in `codemagic.yaml`):
+**Point an app build at an environment — already wired.** `codemagic.yaml`
+defines dedicated iOS workflows that each bake the correct backend URL at build
+time (via the "Seed .env" step), so you just pick the workflow:
 
-| Build | `API_BASE_URL` in Codemagic |
-|---|---|
-| Staging (default) | *(unset)* → `https://smart-cashbook-api.onrender.com` |
-| Production | `https://smart-cashbook-api-prod.onrender.com` |
+| Codemagic workflow | Builds against | Publishes |
+|---|---|---|
+| **`ios-staging`** | `https://smart-cashbook-api.onrender.com` | TestFlight |
+| **`ios-production`** | `https://smart-cashbook-api-prod.onrender.com` | TestFlight |
+| `android` | staging (default) | APK artifact |
 
-> Tip: the cleanest setup is two Codemagic workflows (or two env groups) —
-> "staging" and "production" — so each always builds against the right backend.
-> Ask and I'll wire them.
+Start a build in Codemagic → choose `ios-staging` (USA testing now) or
+`ios-production` (India launch). No env editing needed.
+
+> Both iOS workflows use the **same bundle id**, so their builds land in the
+> same TestFlight app — tell them apart via each build's "What to Test" notes.
+> For side-by-side installs, give staging its own bundle id
+> (`…aismartcashbook.staging`) + App ID/profile in Apple Developer, then set it
+> in the `ios-staging` workflow. An `android-production` workflow can be added
+> the same way when you distribute Android.
 
 > Migrating from the earlier single-service blueprint? Re-applying creates the
 > two new databases; the old `smart-cashbook-db` (if you created it) can be
