@@ -16,6 +16,7 @@ from .routers import (
     expenses,
     incomes,
     khata,
+    notifications,
     transactions,
 )
 from .storage import UPLOAD_DIR
@@ -47,6 +48,7 @@ for module in (
     daily_summary,
     khata,
     ai_routes,
+    notifications,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

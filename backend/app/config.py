@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
 
+    # --- WhatsApp Business Cloud API (server-side notification delivery) ---
+    # Blank = feature disabled; the /notifications/whatsapp endpoint returns 503
+    # and the app treats WhatsApp as unavailable (falls back to the in-app inbox).
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_api_version: str = "v21.0"
+    # Country code prepended to bare 10-digit recipients (India by default).
+    whatsapp_default_country_code: str = "91"
+
     cors_origins: str = "*"
 
     @model_validator(mode="after")

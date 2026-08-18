@@ -7,5 +7,8 @@ python-multipart==0.0.20
 PyJWT==2.10.1
 openai==1.59.6
 anthropic==0.42.0
+# HTTP client for outbound calls (WhatsApp Cloud API). Also pulled in by
+# openai/anthropic, but pinned explicitly since we import it directly.
+httpx==0.28.1
 # Optional — only needed when DATABASE_URL points at PostgreSQL.
 psycopg2-binary==2.9.10

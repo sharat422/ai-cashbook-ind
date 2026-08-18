@@ -1,14 +1,26 @@
 # Render Blueprint — deploys the FastAPI backend in ./backend as a public
-# HTTPS web service. Create it via Render dashboard → "New +" → "Blueprint"
-# and point it at this repo. Render auto-provisions HTTPS on an
-# https://<name>.onrender.com domain.
+# HTTPS web service with a managed PostgreSQL database. Create/update it via
+# Render dashboard → "New +" → "Blueprint" pointed at this repo. Render
+# auto-provisions HTTPS on an https://<name>.onrender.com domain.
 #
-# Notes:
-# - Free plan sleeps after ~15 min idle (first request after cold-starts in
-#   ~30-60s). SQLite data & uploaded files live on the ephemeral disk and are
-#   wiped on each redeploy/restart — fine for testing, not for real data.
-# - PUBLIC_BASE_URL is auto-derived from Render's RENDER_EXTERNAL_URL at
-#   runtime (see backend/app/config.py), so no manual URL wiring is needed.
+# Production notes:
+# - Data now lives in a managed PostgreSQL database (below), so it SURVIVES
+#   redeploys/restarts — required for real/live users.
+# - Uploaded receipt files still live on the instance disk (ephemeral). For
+#   durable attachments, move storage to S3/Cloudinary later.
+# - Free web instances sleep after ~15 min idle (first request cold-starts in
+#   ~30-60s). The keep-alive GitHub Action pings /health to keep it warm. Move
+#   the web service (and DB) to a paid plan for always-on production.
+# - PUBLIC_BASE_URL is auto-derived from Render's RENDER_EXTERNAL_URL at runtime
+#   (see backend/app/config.py), so no manual URL wiring is needed.
+# - Secrets marked `sync: false` are NOT stored in git — set their values in the
+#   Render dashboard (Environment tab) after the first deploy.
+databases:
+  - name: smart-cashbook-db
+    plan: free                # 1 GB, deleted ~90 days after creation; upgrade for prod
+    databaseName: cashbook
+    user: cashbook
+
 services:
   - type: web
     name: smart-cashbook-api
@@ -26,22 +38,40 @@ services:
         generateValue: true
       - key: JWT_EXPIRE_MINUTES
         value: "43200"
-      # DEBUG=true + MASTER_OTP lets you log in with OTP 123456 (no SMS
-      # provider needed). Set DEBUG=false once a real SMS flow is wired.
+      # Persistent PostgreSQL connection string, injected from the database above.
+      # backend/app/database.py normalizes the postgres:// scheme for SQLAlchemy.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smart-cashbook-db
+          property: connectionString
+      # DEBUG=true + MASTER_OTP lets users log in with OTP 123456 without an SMS
+      # provider. ⚠️ For live users this means ANYONE can log in as any number —
+      # keep it ONLY for controlled testing; wire a real SMS OTP before wide release.
       - key: DEBUG
         value: "true"
       - key: MASTER_OTP
         value: "123456"
       - key: CORS_ORIGINS
         value: "*"
-      # Zero-setup SQLite. Swap for a Render PostgreSQL DATABASE_URL when you
-      # need data to survive redeploys.
-      - key: DATABASE_URL
-        value: sqlite:///./cashbook.db
-      # Optional AI keys — blank uses the built-in deterministic fallbacks.
+      # --- AI providers: paste real keys in the Render dashboard to enable. ---
+      # Blank => deterministic fallbacks (heuristic categorize/insights, empty
+      # receipt draft). See PRODUCTION_SETUP.md for how to obtain each key.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
       - key: ANTHROPIC_API_KEY
-        value: ""
+        sync: false
       - key: ANTHROPIC_MODEL
         value: claude-opus-4-8
-      - key: OPENAI_API_KEY
-        value: ""
+      # --- WhatsApp Business Cloud API: set in the dashboard to enable. ---
+      # Blank => /notifications/whatsapp returns 503 and the app falls back to
+      # the in-app inbox. See PRODUCTION_SETUP.md.
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v21.0
+      - key: WHATSAPP_DEFAULT_COUNTRY_CODE
+        value: "91"

@@ -2,6 +2,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import React, {useEffect, useState} from 'react';
 
 import {APP_CONFIG} from '@config/constants';
+import {useSyncBusiness} from '@features/auth/hooks';
 import {SplashScreen} from '@features/auth/screens/SplashScreen';
 import {useAuthStatus, useIsHydrated} from '@store/auth.store';
 import {AppNavigator} from './AppNavigator';
@@ -21,6 +22,9 @@ export function RootNavigator(): React.JSX.Element {
   const hydrated = useIsHydrated();
   const status = useAuthStatus();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  // Reconcile the business for a returning user (token but no cached business).
+  useSyncBusiness();
 
   useEffect(() => {
     const timer = setTimeout(

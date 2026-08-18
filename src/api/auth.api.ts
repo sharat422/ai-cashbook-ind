@@ -47,3 +47,16 @@ export function createBusiness(
     body: input,
   });
 }
+
+/**
+ * Fetch the authenticated user's business.
+ *
+ *   GET /api/v1/businesses/me -> Business
+ *
+ * Used on launch to reconcile a returning user who has a token but no locally
+ * cached business (new device / cleared storage) so they skip onboarding.
+ * Rejects with a 400 ApiError when the user has not created a business yet.
+ */
+export function getMyBusiness(): Promise<Business> {
+  return apiRequest<Business>('/businesses/me', {method: 'GET'});
+}
