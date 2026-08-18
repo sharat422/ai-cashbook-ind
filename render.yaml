@@ -1,27 +1,37 @@
-# Render Blueprint — deploys the FastAPI backend in ./backend as a public
-# HTTPS web service with a managed PostgreSQL database. Create/update it via
-# Render dashboard → "New +" → "Blueprint" pointed at this repo. Render
-# auto-provisions HTTPS on an https://<name>.onrender.com domain.
+# Render Blueprint — TWO environments for the FastAPI backend:
 #
-# Production notes:
-# - Data now lives in a managed PostgreSQL database (below), so it SURVIVES
-#   redeploys/restarts — required for real/live users.
-# - Uploaded receipt files still live on the instance disk (ephemeral). For
-#   durable attachments, move storage to S3/Cloudinary later.
-# - Free web instances sleep after ~15 min idle (first request cold-starts in
-#   ~30-60s). The keep-alive GitHub Action pings /health to keep it warm. Move
-#   the web service (and DB) to a paid plan for always-on production.
-# - PUBLIC_BASE_URL is auto-derived from Render's RENDER_EXTERNAL_URL at runtime
-#   (see backend/app/config.py), so no manual URL wiring is needed.
-# - Secrets marked `sync: false` are NOT stored in git — set their values in the
-#   Render dashboard (Environment tab) after the first deploy.
+#   • staging     smart-cashbook-api        → https://smart-cashbook-api.onrender.com
+#                 Testing playground. DEBUG=true so testers log in with OTP 123456.
+#                 Its own throwaway Postgres. This is what current TestFlight builds hit.
+#
+#   • production  smart-cashbook-api-prod   → https://smart-cashbook-api-prod.onrender.com
+#                 Real users. DEBUG=false (real auth — see note), Singapore region
+#                 (closer to India), its own separate Postgres so test data never
+#                 mixes with production data.
+#
+# Each environment has an INDEPENDENT JWT_SECRET, so a token minted in staging is
+# invalid in production and vice-versa. Secrets (`sync: false`) are set per-service
+# in the Render dashboard, never in git. See PRODUCTION_SETUP.md.
+#
+# Apply/refresh: Render → New + → Blueprint → this repo → Apply (manages BOTH envs).
+# Free web instances sleep after ~15 min idle; move each to a paid plan for
+# always-on before real launch.
+
 databases:
-  - name: smart-cashbook-db
-    plan: free                # 1 GB, deleted ~90 days after creation; upgrade for prod
+  - name: smart-cashbook-db-staging
+    plan: free
     databaseName: cashbook
     user: cashbook
+  - name: smart-cashbook-db-prod
+    plan: free
+    databaseName: cashbook
+    user: cashbook
+    region: singapore
 
 services:
+  # =========================================================================
+  # STAGING — keeps the existing URL (smart-cashbook-api.onrender.com)
+  # =========================================================================
   - type: web
     name: smart-cashbook-api
     runtime: python
@@ -33,29 +43,21 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
-      # Signing secret for JWTs — Render generates a strong random value.
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRE_MINUTES
         value: "43200"
-      # Persistent PostgreSQL connection string, injected from the database above.
-      # backend/app/database.py normalizes the postgres:// scheme for SQLAlchemy.
       - key: DATABASE_URL
         fromDatabase:
-          name: smart-cashbook-db
+          name: smart-cashbook-db-staging
           property: connectionString
-      # DEBUG=true + MASTER_OTP lets users log in with OTP 123456 without an SMS
-      # provider. ⚠️ For live users this means ANYONE can log in as any number —
-      # keep it ONLY for controlled testing; wire a real SMS OTP before wide release.
+      # Staging: master OTP ON so testers can log in with 123456 (no SMS needed).
       - key: DEBUG
         value: "true"
       - key: MASTER_OTP
         value: "123456"
       - key: CORS_ORIGINS
         value: "*"
-      # --- AI providers: paste real keys in the Render dashboard to enable. ---
-      # Blank => deterministic fallbacks (heuristic categorize/insights, empty
-      # receipt draft). See PRODUCTION_SETUP.md for how to obtain each key.
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
@@ -64,9 +66,54 @@ services:
         sync: false
       - key: ANTHROPIC_MODEL
         value: claude-opus-4-8
-      # --- WhatsApp Business Cloud API: set in the dashboard to enable. ---
-      # Blank => /notifications/whatsapp returns 503 and the app falls back to
-      # the in-app inbox. See PRODUCTION_SETUP.md.
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v21.0
+      - key: WHATSAPP_DEFAULT_COUNTRY_CODE
+        value: "91"
+
+  # =========================================================================
+  # PRODUCTION — new URL (smart-cashbook-api-prod.onrender.com), Singapore region
+  # =========================================================================
+  - type: web
+    name: smart-cashbook-api-prod
+    runtime: python
+    rootDir: backend
+    plan: free            # ⬆ bump to "starter" for always-on before launch
+    region: singapore     # low latency to India
+    healthCheckPath: /health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE_MINUTES
+        value: "43200"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smart-cashbook-db-prod
+          property: connectionString
+      # Production posture: real auth. ⚠️ With DEBUG=false the master OTP is
+      # DISABLED, so login requires a real SMS-OTP provider to be wired first.
+      # For a controlled India test BEFORE SMS is wired, temporarily set
+      # DEBUG=true + MASTER_OTP in the Render dashboard for THIS service only.
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-4-8
       - key: WHATSAPP_ACCESS_TOKEN
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID

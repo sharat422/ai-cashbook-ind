@@ -25,7 +25,15 @@ workflows:
       - name: Install npm dependencies
         script: npm ci
       - name: Seed .env for react-native-config
-        script: cp -f .env.example .env || true
+        script: |
+          cp -f .env.example .env || true
+          # Per-build backend target: set API_BASE_URL in this workflow's
+          # environment (e.g. the production URL) to override the staging
+          # default baked into .env.example. Leave it unset to build staging.
+          if [ -n "$API_BASE_URL" ]; then
+            awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
+            echo "Building against API_BASE_URL=$API_BASE_URL"
+          fi
       - name: Make gradlew executable
         script: chmod +x android/gradlew
       - name: Build Android release APK
@@ -70,7 +78,15 @@ workflows:
         script: npm ci
         
       - name: Seed .env for react-native-config
-        script: cp -f .env.example .env || true
+        script: |
+          cp -f .env.example .env || true
+          # Per-build backend target: set API_BASE_URL in this workflow's
+          # environment (e.g. the production URL) to override the staging
+          # default baked into .env.example. Leave it unset to build staging.
+          if [ -n "$API_BASE_URL" ]; then
+            awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
+            echo "Building against API_BASE_URL=$API_BASE_URL"
+          fi
         
       - name: Install CocoaPods dependencies
         script: |

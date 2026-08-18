@@ -11,7 +11,49 @@ exactly how to obtain it.
 
 ---
 
+## 0. Two environments: staging vs production
+
+`render.yaml` defines **two independent backends** so test data and real user
+data never mix. Each has its own web service, its own PostgreSQL, and its own
+`JWT_SECRET` (a token from one is invalid in the other).
+
+| | **Staging** | **Production** |
+|---|---|---|
+| Service | `smart-cashbook-api` | `smart-cashbook-api-prod` |
+| URL | `https://smart-cashbook-api.onrender.com` | `https://smart-cashbook-api-prod.onrender.com` |
+| Database | `smart-cashbook-db-staging` | `smart-cashbook-db-prod` |
+| Region | Oregon (US) | Singapore (near India) |
+| `DEBUG` | `true` (login with OTP `123456`) | `false` (real auth — see §7) |
+| Use it for | USA testing now, iterating | India final test + launch |
+
+**Apply both:** Render → **New +** → **Blueprint** → this repo → **Apply**. One
+blueprint manages both environments. Set each service's secrets (§4–§6)
+separately in its own **Environment** tab.
+
+**Point an app build at an environment.** Both CI workflows default to the
+staging URL (from `.env.example`). To build against **production**, set an
+`API_BASE_URL` variable in the Codemagic workflow's environment — the build
+overrides `.env` automatically (see the "Seed .env" step in `codemagic.yaml`):
+
+| Build | `API_BASE_URL` in Codemagic |
+|---|---|
+| Staging (default) | *(unset)* → `https://smart-cashbook-api.onrender.com` |
+| Production | `https://smart-cashbook-api-prod.onrender.com` |
+
+> Tip: the cleanest setup is two Codemagic workflows (or two env groups) —
+> "staging" and "production" — so each always builds against the right backend.
+> Ask and I'll wire them.
+
+> Migrating from the earlier single-service blueprint? Re-applying creates the
+> two new databases; the old `smart-cashbook-db` (if you created it) can be
+> deleted — its staging data is disposable.
+
+---
+
 ## 1. Environment variables at a glance
+
+> The table below applies to **each** service. Set them per-service (staging and
+> production have separate Environment tabs and separate secrets).
 
 Set these on the **Render dashboard** → your `smart-cashbook-api` service →
 **Environment** (secrets are `sync: false` in `render.yaml`, so they live only
