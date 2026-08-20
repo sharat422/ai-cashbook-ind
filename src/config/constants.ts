@@ -9,7 +9,7 @@ export const APP_CONFIG = {
    * TEMPORARY: skip phone/OTP login and open the app straight to the
    * landing (Dashboard) screen. Set back to `false` to re-enable auth.
    */
-  bypassAuth: true,
+  bypassAuth: false,
   /** Base URL for the backend API. Swap with env-driven config in production. */
   apiBaseUrl: 'https://api.smartcashbook.example.com',
   /** How long the splash screen stays visible while bootstrapping (ms). */
