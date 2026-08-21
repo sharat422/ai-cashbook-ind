@@ -5,6 +5,7 @@ import type {
   CustomerPage,
   CustomerQuery,
 } from '@features/customers/domain/entities';
+import {toQueryString} from '@utils/query';
 import {
   fromCustomerDraft,
   toCustomer,
@@ -24,13 +25,14 @@ import {
  */
 export const customerRemote = {
   async list(query: CustomerQuery): Promise<CustomerPage> {
-    const params = new URLSearchParams({limit: String(query.limit)});
-    if (query.cursor) params.set('cursor', query.cursor);
-    if (query.search.trim()) params.set('search', query.search.trim());
-    const dto = await apiRequest<CustomerPageDto>(
-      `/customers?${params.toString()}`,
-      {method: 'GET'},
-    );
+    const qs = toQueryString({
+      limit: query.limit,
+      cursor: query.cursor,
+      search: query.search.trim(),
+    });
+    const dto = await apiRequest<CustomerPageDto>(`/customers?${qs}`, {
+      method: 'GET',
+    });
     return toCustomerPage(dto);
   },
 

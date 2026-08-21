@@ -3,6 +3,7 @@ import type {
   KhataFilters,
   KhataSummary,
 } from '@features/khata/domain/entities';
+import {toQueryString} from '@utils/query';
 import {toKhataSummary, type KhataSummaryDto} from './khata.dto';
 
 /**
@@ -12,16 +13,15 @@ import {toKhataSummary, type KhataSummaryDto} from './khata.dto';
  */
 export const khataRemote = {
   async getSummary(filters: KhataFilters): Promise<KhataSummary> {
-    const params = new URLSearchParams({
+    const qs = toQueryString({
       from: filters.from,
       to: filters.to,
       branch: filters.branch,
       business: filters.business,
     });
-    const dto = await apiRequest<KhataSummaryDto>(
-      `/khata/summary?${params.toString()}`,
-      {method: 'GET'},
-    );
+    const dto = await apiRequest<KhataSummaryDto>(`/khata/summary?${qs}`, {
+      method: 'GET',
+    });
     return toKhataSummary(dto);
   },
 };

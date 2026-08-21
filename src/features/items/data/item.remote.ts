@@ -1,5 +1,6 @@
 import {apiRequest} from '@api/client';
 import type {Item, ItemDraft, ItemPage} from '@features/items/domain/entities';
+import {toQueryString} from '@utils/query';
 import {
   fromItemDraft,
   toItem,
@@ -15,10 +16,8 @@ import {
  */
 export const itemRemote = {
   async list(search: string, limit = 50, cursor?: string): Promise<ItemPage> {
-    const params = new URLSearchParams({limit: String(limit)});
-    if (cursor) params.set('cursor', cursor);
-    if (search.trim()) params.set('search', search.trim());
-    const dto = await apiRequest<ItemPageDto>(`/items?${params.toString()}`, {
+    const qs = toQueryString({limit, cursor, search: search.trim()});
+    const dto = await apiRequest<ItemPageDto>(`/items?${qs}`, {
       method: 'GET',
     });
     return toItemPage(dto);

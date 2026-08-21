@@ -1,5 +1,6 @@
 import {apiRequest} from '@api/client';
 import type {ReportSummary} from '@features/reports/domain/entities';
+import {toQueryString} from '@utils/query';
 import {toReportSummary, type ReportSummaryDto} from './report.dto';
 
 /**
@@ -9,11 +10,10 @@ import {toReportSummary, type ReportSummaryDto} from './report.dto';
  */
 export const reportRemote = {
   async getSummary(from: string, to: string): Promise<ReportSummary> {
-    const params = new URLSearchParams({from, to});
-    const dto = await apiRequest<ReportSummaryDto>(
-      `/reports/summary?${params.toString()}`,
-      {method: 'GET'},
-    );
+    const qs = toQueryString({from, to});
+    const dto = await apiRequest<ReportSummaryDto>(`/reports/summary?${qs}`, {
+      method: 'GET',
+    });
     return toReportSummary(dto);
   },
 };

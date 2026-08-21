@@ -3,25 +3,23 @@ import type {
   TransactionPage,
   TransactionQuery,
 } from '@features/transactions/domain/entities';
+import {toQueryString} from '@utils/query';
 import {toTransactionPage, type TransactionPageDto} from './transaction.dto';
 
 /** Serialize a query into backend params, omitting empty/default values. */
 function buildQueryString(query: TransactionQuery): string {
-  const params = new URLSearchParams();
-  params.set('limit', String(query.limit));
-  params.set('sort_by', query.sort.field);
-  params.set('sort_dir', query.sort.direction);
-
-  if (query.cursor) params.set('cursor', query.cursor);
-  if (query.search.trim()) params.set('search', query.search.trim());
-  if (query.type !== 'all') params.set('type', query.type);
-  if (query.categories.length > 0) {
-    params.set('categories', query.categories.join(','));
-  }
-  if (query.dateFrom) params.set('date_from', query.dateFrom);
-  if (query.dateTo) params.set('date_to', query.dateTo);
-
-  return params.toString();
+  return toQueryString({
+    limit: query.limit,
+    sort_by: query.sort.field,
+    sort_dir: query.sort.direction,
+    cursor: query.cursor,
+    search: query.search.trim(),
+    type: query.type !== 'all' ? query.type : undefined,
+    categories:
+      query.categories.length > 0 ? query.categories.join(',') : undefined,
+    date_from: query.dateFrom,
+    date_to: query.dateTo,
+  });
 }
 
 /**
