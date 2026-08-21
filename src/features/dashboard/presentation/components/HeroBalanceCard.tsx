@@ -7,6 +7,8 @@ import {formatINR} from '@utils/currency';
 export interface HeroBalanceCardProps {
   balance: number;
   caption?: string;
+  /** Localized card title; defaults to English. */
+  label?: string;
 }
 
 /**
@@ -16,12 +18,13 @@ export interface HeroBalanceCardProps {
 function HeroBalanceCardBase({
   balance,
   caption,
+  label = 'Cash Balance',
 }: HeroBalanceCardProps): React.JSX.Element {
   const negative = balance < 0;
   return (
     <View className="rounded-3xl bg-slate-900 px-5 py-6">
       <Text className="text-xs font-medium uppercase tracking-wide text-slate-400">
-        Cash Balance
+        {label}
       </Text>
       <Text
         className={`mt-2 text-4xl font-bold ${

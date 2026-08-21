@@ -12,6 +12,7 @@ import {useExpenseStore} from '@features/expense/presentation/store/expense.stor
 import {useConnectivity} from '@features/income/presentation/hooks';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
 import {useUnreadCount} from '@/services/notifications';
+import {useT} from '@/i18n';
 import type {SyncStatus} from '@/shared/types/attachment';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
@@ -39,6 +40,7 @@ interface ActivityItem {
 export function DashboardScreen({
   navigation,
 }: AppScreenProps<'Dashboard'>): React.JSX.Element {
+  const t = useT();
   const business = useAuthStore(state => state.business);
   const logout = useAuthStore(state => state.logout);
   const incomes = useIncomeStore(state => state.entries);
@@ -83,9 +85,9 @@ export function DashboardScreen({
   }, [refetch]);
 
   const onLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
-      {text: 'Cancel', style: 'cancel'},
-      {text: 'Log out', style: 'destructive', onPress: logout},
+    Alert.alert(t('common.logoutConfirmTitle'), t('common.logoutConfirmMsg'), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('common.logout'), style: 'destructive', onPress: logout},
     ]);
   };
 
@@ -111,9 +113,9 @@ export function DashboardScreen({
         {/* Header */}
         <View className="flex-row items-start justify-between">
           <View className="flex-1 pr-3">
-            <Text variant="caption">Welcome back</Text>
+            <Text variant="caption">{t('dashboard.welcome')}</Text>
             <Text variant="title" className="mt-1">
-              {business?.businessName ?? 'Your business'}
+              {business?.businessName ?? t('dashboard.yourBusiness')}
             </Text>
           </View>
           <View className="flex-row items-center" style={{gap: 8}}>
@@ -142,11 +144,14 @@ export function DashboardScreen({
         </View>
         {!online ? (
           <Text className="mt-2 text-sm font-medium text-amber-700">
-            Offline{pendingCount > 0 ? ` · ${pendingCount} pending sync` : ''}
+            {t('dashboard.offline')}
+            {pendingCount > 0
+              ? t('dashboard.pendingSyncSuffix', {count: pendingCount})
+              : ''}
           </Text>
         ) : pendingCount > 0 ? (
           <Text className="mt-2 text-sm font-medium text-muted">
-            Syncing {pendingCount} item{pendingCount === 1 ? '' : 's'}…
+            {t('dashboard.syncing', {count: pendingCount})}
           </Text>
         ) : null}
 
@@ -186,13 +191,13 @@ export function DashboardScreen({
         {/* Quick actions */}
         <View className="mt-6 flex-row" style={{gap: 12}}>
           <Button
-            title="+ Income"
+            title={t('dashboard.income')}
             className="flex-1"
             fullWidth={false}
             onPress={() => navigation.navigate('AddIncome')}
           />
           <Button
-            title="− Expense"
+            title={t('dashboard.expense')}
             variant="secondary"
             className="flex-1"
             fullWidth={false}
@@ -201,14 +206,14 @@ export function DashboardScreen({
         </View>
         <View className="mt-3 flex-row" style={{gap: 12}}>
           <Button
-            title="📷 Scan receipt"
+            title={t('dashboard.scanReceipt')}
             variant="secondary"
             className="flex-1"
             fullWidth={false}
             onPress={() => navigation.navigate('ReceiptCapture')}
           />
           <Button
-            title="✨ Categorize"
+            title={t('dashboard.categorize')}
             variant="secondary"
             className="flex-1"
             fullWidth={false}
@@ -217,14 +222,14 @@ export function DashboardScreen({
         </View>
         <View className="mt-3 flex-row" style={{gap: 12}}>
           <Button
-            title="📅 Daily summary"
+            title={t('dashboard.dailySummary')}
             variant="secondary"
             className="flex-1"
             fullWidth={false}
             onPress={() => navigation.navigate('DailySummary')}
           />
           <Button
-            title="👥 Customers"
+            title={t('dashboard.customers')}
             variant="secondary"
             className="flex-1"
             fullWidth={false}
@@ -233,14 +238,14 @@ export function DashboardScreen({
         </View>
         <View className="mt-3 flex-row" style={{gap: 12}}>
           <Button
-            title="📒 Khata"
+            title={t('dashboard.khata')}
             variant="secondary"
             className="flex-1"
             fullWidth={false}
             onPress={() => navigation.navigate('KhataDashboard')}
           />
           <Button
-            title="📊 Reports"
+            title={t('dashboard.reports')}
             variant="secondary"
             className="flex-1"
             fullWidth={false}
@@ -250,15 +255,17 @@ export function DashboardScreen({
 
         {/* Recent activity */}
         <View className="mt-8 mb-2 flex-row items-center justify-between">
-          <Text variant="label">Recent activity</Text>
+          <Text variant="label">{t('dashboard.recentActivity')}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => navigation.navigate('TransactionHistory')}>
-            <Text className="text-sm font-semibold text-primary">View all</Text>
+            <Text className="text-sm font-semibold text-primary">
+              {t('dashboard.viewAll')}
+            </Text>
           </Pressable>
         </View>
         {activity.length === 0 ? (
-          <Text variant="caption">No transactions recorded yet.</Text>
+          <Text variant="caption">{t('dashboard.noTransactions')}</Text>
         ) : (
           <View style={{gap: 8}}>
             {activity.map(item => (
@@ -268,7 +275,11 @@ export function DashboardScreen({
         )}
 
         <View className="mt-8">
-          <Button title="Log out" variant="secondary" onPress={onLogout} />
+          <Button
+            title={t('common.logout')}
+            variant="secondary"
+            onPress={onLogout}
+          />
         </View>
       </ScrollView>
     </Screen>

@@ -13,6 +13,7 @@ import {
   SUPPORTED_APP_LANGUAGES,
 } from '@features/auth/utils/languagePreference';
 import {PIN_LENGTH, useAppLockStore} from '@features/security/store/appLock.store';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 
@@ -27,6 +28,7 @@ type PinMode = 'idle' | 'set' | 'confirm';
 export function SettingsScreen({
   navigation,
 }: AppScreenProps<'Settings'>): React.JSX.Element {
+  const t = useT();
   const lockEnabled = useAppLockStore(s => s.enabled);
   const setPin = useAppLockStore(s => s.setPin);
   const disableLock = useAppLockStore(s => s.disableLock);
@@ -61,9 +63,9 @@ export function SettingsScreen({
     if (pin === firstPin) {
       setPin(pin);
       cancelPinSetup();
-      Alert.alert('App lock enabled', 'You’ll be asked for this PIN on launch.');
+      Alert.alert(t('settings.appLockEnabled'), t('settings.appLockEnabledMsg'));
     } else {
-      setError('PINs did not match. Start again.');
+      setError(t('settings.pinMismatch'));
       setFirstPin('');
       setPinInput('');
       setMode('set');
@@ -77,37 +79,37 @@ export function SettingsScreen({
       setPinInput('');
       setError(null);
     } else if (!value && lockEnabled) {
-      Alert.alert('Turn off app lock?', 'Your PIN will be removed.', [
-        {text: 'Cancel', style: 'cancel'},
-        {text: 'Turn off', style: 'destructive', onPress: disableLock},
+      Alert.alert(t('settings.turnOffLock'), t('settings.turnOffLockMsg'), [
+        {text: t('common.cancel'), style: 'cancel'},
+        {text: t('settings.turnOff'), style: 'destructive', onPress: disableLock},
       ]);
     }
   };
 
   const onLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
-      {text: 'Cancel', style: 'cancel'},
-      {text: 'Log out', style: 'destructive', onPress: logout},
+    Alert.alert(t('common.logoutConfirmTitle'), t('common.logoutConfirmMsg'), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('common.logout'), style: 'destructive', onPress: logout},
     ]);
   };
 
   return (
     <Screen>
       <View className="py-8">
-        <Text variant="title">Settings</Text>
+        <Text variant="title">{t('settings.title')}</Text>
 
         {/* Security */}
         <Text variant="label" className="mt-8 mb-3">
-          Security
+          {t('settings.security')}
         </Text>
         <View className="rounded-2xl border border-border bg-white p-4">
           <View className="flex-row items-center justify-between">
             <View className="flex-1 pr-3">
               <Text className="text-base font-semibold text-slate-900">
-                App lock
+                {t('settings.appLock')}
               </Text>
               <Text variant="caption" className="mt-0.5">
-                Require a {PIN_LENGTH}-digit PIN to open the app.
+                {t('settings.appLockDesc', {n: PIN_LENGTH})}
               </Text>
             </View>
             <View className="w-28">
@@ -122,7 +124,7 @@ export function SettingsScreen({
           {mode !== 'idle' ? (
             <View className="mt-5 border-t border-border pt-5">
               <Text className="text-center text-base font-semibold text-slate-900">
-                {mode === 'set' ? 'Set a PIN' : 'Confirm your PIN'}
+                {mode === 'set' ? t('settings.setPin') : t('settings.confirmPin')}
               </Text>
               <View className="mt-4 self-center" style={{width: 224}}>
                 <OtpInput
@@ -140,7 +142,7 @@ export function SettingsScreen({
                 </Text>
               ) : null}
               <Button
-                title="Cancel"
+                title={t('common.cancel')}
                 variant="ghost"
                 className="mt-3"
                 onPress={cancelPinSetup}
@@ -151,11 +153,11 @@ export function SettingsScreen({
 
         {/* Preferences */}
         <Text variant="label" className="mt-8 mb-3">
-          Preferences
+          {t('settings.preferences')}
         </Text>
         <View className="rounded-2xl border border-border bg-white p-4">
           <Text className="mb-2 text-base font-semibold text-slate-900">
-            Content language
+            {t('settings.contentLanguage')}
           </Text>
           <SegmentedControl
             value={language}
@@ -169,22 +171,22 @@ export function SettingsScreen({
 
         {/* Business */}
         <Text variant="label" className="mt-8 mb-3">
-          Business
+          {t('settings.business')}
         </Text>
         <Button
-          title="🏷️ Item catalog"
+          title={t('settings.itemCatalog')}
           variant="secondary"
           onPress={() => navigation.navigate('Items')}
         />
         <Button
-          title="🔔 Notifications"
+          title={t('settings.notifications')}
           variant="secondary"
           className="mt-3"
           onPress={() => navigation.navigate('Notifications')}
         />
 
         <Button
-          title="Log out"
+          title={t('common.logout')}
           variant="secondary"
           className="mt-3"
           onPress={onLogout}
