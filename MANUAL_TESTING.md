@@ -390,6 +390,138 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 
 ---
 
+## 17. App Lock & Settings
+
+### 17.1 Open Settings
+- **Steps:** Dashboard → tap the ⚙️ button (top-right, next to the bell).
+- **Expected:** Settings screen with sections: **Security** (App lock), **Preferences** (Content language), **Business** (Item catalog, Notifications), and **Log out**.
+
+### 17.2 Enable app lock (set PIN)
+- **Steps:** Settings → App lock → **On** → enter a 4-digit PIN → re-enter the same PIN on "Confirm your PIN".
+- **Expected:** "App lock enabled" alert; toggle stays **On**.
+
+### 17.3 PIN mismatch
+- **Steps:** Enable app lock, but enter a different 4 digits on the confirm step.
+- **Expected:** "PINs did not match. Start again." and it returns to the "Set a PIN" step.
+
+### 17.4 Lock on background
+- **Steps:** With app lock on, background the app (Home) and reopen it.
+- **Expected:** A full-screen 🔒 "Enter your PIN" overlay appears before any content.
+
+### 17.5 Unlock
+- **Steps:** On the lock screen, enter the correct PIN.
+- **Expected:** Overlay disappears and the app returns exactly where it was (state preserved).
+
+### 17.6 Wrong PIN
+- **Steps:** Enter an incorrect PIN on the lock screen.
+- **Expected:** "Incorrect PIN. Try again."; the field clears; the app stays locked.
+
+### 17.7 Cold-start lock
+- **Steps:** Fully close (swipe away) and relaunch the app.
+- **Expected:** The PIN screen appears before the Dashboard/splash content.
+
+### 17.8 Disable app lock
+- **Steps:** Settings → App lock → **Off** → confirm "Turn off app lock?".
+- **Expected:** PIN removed; relaunching the app no longer prompts for a PIN.
+
+### 17.9 Change content language
+- **Steps:** Settings → Preferences → pick a different language.
+- **Expected:** Selection persists (still selected after leaving and returning).
+
+### 17.10 Log out from Settings
+- **Steps:** Settings → **Log out** → confirm.
+- **Expected:** Returns to Login; reopening stays logged out.
+
+---
+
+## 18. Reports & exports
+
+### 18.1 Open Reports
+- **Steps:** Dashboard → **📊 Reports**.
+- **Expected:** Reports screen with date-range chips (Today/Week/Month/Quarter), a custom range field, a Net-profit hero, and category tables.
+
+### 18.2 Date range
+- **Steps:** Tap each preset; then pick a custom from/to range.
+- **Expected:** Figures recompute for the range; picking custom dates switches the selection to custom.
+
+### 18.3 Profit & Loss figures
+- **Steps:** Record some income and expenses (via §3/§4) in the range, open Reports.
+- **Expected:** **Net profit = income − expense**; Income and Expense subtotals shown; profit turns red when negative.
+
+### 18.4 Category breakdown
+- **Steps:** With mixed categories, view the report.
+- **Expected:** "Income by category" and "Expense by category" lists, largest first, each with an amount and a proportional share bar.
+
+### 18.5 Empty range
+- **Steps:** Choose a range with no entries.
+- **Expected:** "Nothing to report" empty state.
+
+### 18.6 Export PDF
+- **Steps:** Tap **⬇ PDF**.
+- **Expected:** OS share sheet opens; the shared file is a clean, branded P&L PDF (open it / print / send to WhatsApp).
+
+### 18.7 Export CSV (Excel)
+- **Steps:** Tap **⬇ CSV (Excel)**.
+- **Expected:** Share sheet opens with a `.csv`; opening it in Excel/Sheets shows totals + category rows.
+
+### 18.8 Offline reports
+- **Steps:** Enable Airplane mode → open/refresh Reports.
+- **Expected:** Amber "Offline — figures computed on this device" banner; figures come from local entries; export still works.
+
+---
+
+## 19. Item / product catalog (GST)
+
+### 19.1 Open the catalog
+- **Steps:** Settings → Business → **🏷️ Item catalog**.
+- **Expected:** Items list with search + **+ Add**; "No items yet" empty state when empty.
+
+### 19.2 Add a product
+- **Steps:** + Add → Name, Type = **Product**, Sale price, (optional) Purchase price, Unit, HSN code, GST slab chip (e.g. **18%**), Track stock **On** + opening qty → **Add item**.
+- **Expected:** Item saved and shown in the list with price, GST %, and stock.
+
+### 19.3 Add a service
+- **Steps:** + Add → Type = **Service**, SAC code, GST **18%**, price → save.
+- **Expected:** Saved; row shows "Service".
+
+### 19.4 Validation
+- **Steps:** Try saving with an empty name; then with no sale price.
+- **Expected:** "Enter an item name" / "Enter a valid sale price".
+
+### 19.5 Search
+- **Steps:** Search by name or HSN/SAC.
+- **Expected:** Debounced filtering; "No items found" for no match.
+
+### 19.6 Edit
+- **Steps:** Tap an item → change price/GST → **Save changes**.
+- **Expected:** Updated values persist in the list.
+
+### 19.7 Delete
+- **Steps:** Open an item → **Delete item** → confirm.
+- **Expected:** Removed from the catalog.
+
+---
+
+## 20. Auth / onboarding UI (visual)
+
+### 20.1 New card layout
+- **Steps:** Log out and step through Login → OTP → (new user) Create business.
+- **Expected:** Each screen shows the refreshed look — a centered **₹ Smart CashBook** wordmark, a bold centered heading, and a white rounded card holding the form. All fields, validation, and flows behave exactly as before.
+
+---
+
+## 21. WhatsApp delivery & returning-user session
+
+### 21.1 WhatsApp notification (only when configured)
+- **Steps:** With `WHATSAPP_ENABLED=true` in the app build **and** server `WHATSAPP_ACCESS_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` set: Daily summary → **Send summary now**.
+- **Expected:** The summary arrives on WhatsApp; `GET /api/v1/notifications/whatsapp/status` returns `{"configured": true}`. If not configured, the channel is silently skipped and the in-app inbox still receives it (no error to the user).
+
+### 21.2 Returning user on a new device
+- **Steps:** On a fresh install (or after clearing storage), log in with a number that already has a business.
+- **Expected:** Lands directly on the **Dashboard** (business fetched via `/businesses/me`) — not pushed back through onboarding, and no duplicate business is created.
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -397,11 +529,14 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 3. Add a customer → add credit → receive payment → outstanding correct.
 4. Khata dashboard shows receivable/overdue; insights load.
 5. Airplane mode → add entries (Pending) → reconnect → all sync, no dupes.
-6. Log out → back to Login.
+6. Reports → Month → figures correct → export PDF opens the share sheet.
+7. Settings → enable App lock → background & reopen → unlock with PIN.
+8. Settings → Item catalog → add a product with an 18% GST slab → appears in the list.
+9. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 43) and `cd backend && python -m pytest`
-(backend, 45). See [TESTING.md](TESTING.md).
+release: `npm test` (frontend, 60) and `cd backend && python -m pytest`
+(backend, 56). See [TESTING.md](TESTING.md).
