@@ -1,7 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import {Alert, Pressable, View} from 'react-native';
 
-import {Button, OtpInput, Screen, Text} from '@components/ui';
+import {Button, OtpInput, Text} from '@components/ui';
+import {AuthShell} from '@features/auth/components/AuthShell';
 import {MOCK_OTP} from '@api/auth.api';
 import {APP_CONFIG} from '@config/constants';
 import {useRequestOtp, useVerifyOtp} from '@features/auth/hooks';
@@ -75,48 +76,13 @@ export function OtpScreen({
   }, [otp]);
 
   return (
-    <Screen>
-      <View className="flex-1 justify-center py-10">
-        <Text variant="title">Verify your number</Text>
-        <Text variant="subtitle" className="mt-2">
-          Enter the {APP_CONFIG.otpLength}-digit code sent to{' '}
-          <Text className="font-semibold text-slate-900">+91 {mobile}</Text>.
-        </Text>
-        <Pressable className="mt-1" onPress={() => navigation.goBack()}>
-          <Text className="text-sm font-semibold text-primary">
-            Change number
-          </Text>
-        </Pressable>
-
-        <View className="mt-8">
-          <OtpInput
-            value={otp}
-            onChange={value => {
-              setOtp(value);
-              if (error) setError(null);
-            }}
-            length={APP_CONFIG.otpLength}
-          />
-          {error ? (
-            <Text className="mt-2 text-xs text-danger">{error}</Text>
-          ) : null}
-          <Text variant="caption" className="mt-3">
-            Demo mode: use OTP {MOCK_OTP}
-          </Text>
-        </View>
-
-        <Button
-          title="Verify & Continue"
-          className="mt-6"
-          loading={verifyOtp.isPending}
-          onPress={onVerify}
-        />
-
-        <View className="mt-5 flex-row justify-center">
+    <AuthShell
+      title="Verify your number"
+      subtitle={`Enter the ${APP_CONFIG.otpLength}-digit code sent to +91 ${mobile}.`}
+      footer={
+        <View className="flex-row items-center justify-center" style={{gap: 6}}>
           {secondsLeft > 0 ? (
-            <Text variant="caption">
-              Resend OTP in {secondsLeft}s
-            </Text>
+            <Text variant="caption">Resend OTP in {secondsLeft}s</Text>
           ) : (
             <Pressable onPress={onResend} disabled={requestOtp.isPending}>
               <Text className="text-sm font-semibold text-primary">
@@ -124,8 +90,35 @@ export function OtpScreen({
               </Text>
             </Pressable>
           )}
+          <Text variant="caption">·</Text>
+          <Pressable onPress={() => navigation.goBack()}>
+            <Text className="text-sm font-semibold text-primary">
+              Change number
+            </Text>
+          </Pressable>
         </View>
-      </View>
-    </Screen>
+      }>
+      <OtpInput
+        value={otp}
+        onChange={value => {
+          setOtp(value);
+          if (error) setError(null);
+        }}
+        length={APP_CONFIG.otpLength}
+      />
+      {error ? (
+        <Text className="mt-2 text-xs text-danger">{error}</Text>
+      ) : null}
+      <Text variant="caption" className="mt-3 text-center">
+        Demo mode: use OTP {MOCK_OTP}
+      </Text>
+
+      <Button
+        title="Verify & Continue"
+        className="mt-6"
+        loading={verifyOtp.isPending}
+        onPress={onVerify}
+      />
+    </AuthShell>
   );
 }

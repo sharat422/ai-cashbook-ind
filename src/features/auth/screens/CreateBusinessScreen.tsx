@@ -4,11 +4,10 @@ import {Alert, View} from 'react-native';
 import {
   Button,
   Input,
-  Screen,
   SegmentedControl,
   Select,
-  Text,
 } from '@components/ui';
+import {AuthShell} from '@features/auth/components/AuthShell';
 import {
   BUSINESS_TYPES,
   INDIAN_STATES,
@@ -106,14 +105,10 @@ export function CreateBusinessScreen(): React.JSX.Element {
   };
 
   return (
-    <Screen>
-      <View className="py-8">
-        <Text variant="title">Set up your business</Text>
-        <Text variant="subtitle" className="mt-2">
-          Tell us a bit about your business to finish setting up your account.
-        </Text>
-
-        <View className="mt-8" style={{gap: 18}}>
+    <AuthShell
+      title="Set up your business"
+      subtitle="Tell us a bit about your business to finish setting up your account.">
+      <View style={{gap: 18}}>
           <Input
             label="Business name"
             placeholder="e.g. Sharma Traders"
@@ -167,13 +162,12 @@ export function CreateBusinessScreen(): React.JSX.Element {
           />
         </View>
 
-        <Button
-          title="Create business"
-          className="mt-8"
-          loading={createBusiness.isPending}
-          onPress={onSubmit}
-        />
-      </View>
-    </Screen>
+      <Button
+        title="Create business"
+        className="mt-8"
+        loading={createBusiness.isPending}
+        onPress={onSubmit}
+      />
+    </AuthShell>
   );
 }

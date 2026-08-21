@@ -1,7 +1,8 @@
 import React, {useState} from 'react';
-import {Alert, View} from 'react-native';
+import {Alert} from 'react-native';
 
-import {Button, Input, Screen, Text} from '@components/ui';
+import {Button, Input, Text} from '@components/ui';
+import {AuthShell} from '@features/auth/components/AuthShell';
 import {useRequestOtp} from '@features/auth/hooks';
 import type {AuthScreenProps} from '@navigation/types';
 import {onlyDigits, validateMobile} from '@utils/validation';
@@ -33,43 +34,44 @@ export function LoginScreen({
   };
 
   return (
-    <Screen>
-      <View className="flex-1 justify-center py-10">
-        <Text variant="title">Welcome to Smart CashBook</Text>
-        <Text variant="subtitle" className="mt-2">
-          Enter your mobile number to continue. We'll send you a one-time
-          password to verify it.
+    <AuthShell
+      title="Welcome"
+      subtitle="Enter your mobile number and we'll send you a one-time password to sign in."
+      footer={
+        <Text className="text-center text-xs leading-5 text-muted">
+          By continuing you agree to our{' '}
+          <Text className="text-xs font-semibold text-primary">
+            Terms of Service
+          </Text>{' '}
+          and{' '}
+          <Text className="text-xs font-semibold text-primary">
+            Privacy Policy
+          </Text>
+          .
         </Text>
+      }>
+      <Input
+        label="Mobile number"
+        prefix="+91"
+        placeholder="10-digit mobile number"
+        keyboardType="number-pad"
+        maxLength={10}
+        value={mobile}
+        onChangeText={text => {
+          setMobile(onlyDigits(text));
+          if (error) setError(null);
+        }}
+        error={error}
+        returnKeyType="done"
+        onSubmitEditing={onContinue}
+      />
 
-        <View className="mt-8">
-          <Input
-            label="Mobile number"
-            prefix="+91"
-            placeholder="10-digit mobile number"
-            keyboardType="number-pad"
-            maxLength={10}
-            value={mobile}
-            onChangeText={text => {
-              setMobile(onlyDigits(text));
-              if (error) setError(null);
-            }}
-            error={error}
-            returnKeyType="done"
-            onSubmitEditing={onContinue}
-          />
-        </View>
-
-        <Button
-          title="Continue"
-          className="mt-6"
-          loading={requestOtp.isPending}
-          onPress={onContinue}
-        />
-
-        <Text variant="caption" className="mt-4 text-center">
-          By continuing you agree to our Terms of Service and Privacy Policy.
-        </Text>
-      </View>
-    </Screen>
+      <Button
+        title="Continue"
+        className="mt-5"
+        loading={requestOtp.isPending}
+        onPress={onContinue}
+      />
+    </AuthShell>
   );
 }
