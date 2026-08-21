@@ -27,6 +27,7 @@ export type OnboardingStackParamList = {
 /** Screens for a fully onboarded user. */
 export type AppStackParamList = {
   Dashboard: undefined;
+  Settings: undefined;
   AddIncome: undefined;
   AddExpense:
     | {initialValues?: ExpensePrefill; initialAttachment?: Attachment | null}

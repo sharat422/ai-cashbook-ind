@@ -16,6 +16,7 @@ import {CreditSyncManager} from '@features/customers/presentation/CreditSyncMana
 import {DailySummaryManager} from '@features/daily-summary/presentation/DailySummaryManager';
 import {ExpenseSyncManager} from '@features/expense/presentation/ExpenseSyncManager';
 import {OfflineSyncManager} from '@features/income/presentation/OfflineSyncManager';
+import {LockGate} from '@features/security/presentation/LockGate';
 import {RootNavigator} from '@navigation/RootNavigator';
 
 function App(): React.JSX.Element {
@@ -29,7 +30,9 @@ function App(): React.JSX.Element {
         <CreditSyncManager />
         {/* Dispatches the daily summary notification when due. */}
         <DailySummaryManager />
-        <RootNavigator />
+        <LockGate>
+          <RootNavigator />
+        </LockGate>
       </QueryProvider>
     </SafeAreaProvider>
   );

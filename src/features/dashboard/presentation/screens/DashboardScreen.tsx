@@ -116,20 +116,29 @@ export function DashboardScreen({
               {business?.businessName ?? 'Your business'}
             </Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Notifications"
-            onPress={() => navigation.navigate('Notifications')}
-            className="h-10 w-10 items-center justify-center rounded-full border border-border bg-white">
-            <Text className="text-lg">🔔</Text>
-            {unreadCount > 0 ? (
-              <View className="absolute -right-1 -top-1 h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1">
-                <Text className="text-[10px] font-bold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
+          <View className="flex-row items-center" style={{gap: 8}}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+              onPress={() => navigation.navigate('Notifications')}
+              className="h-10 w-10 items-center justify-center rounded-full border border-border bg-white">
+              <Text className="text-lg">🔔</Text>
+              {unreadCount > 0 ? (
+                <View className="absolute -right-1 -top-1 h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1">
+                  <Text className="text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              onPress={() => navigation.navigate('Settings')}
+              className="h-10 w-10 items-center justify-center rounded-full border border-border bg-white">
+              <Text className="text-lg">⚙️</Text>
+            </Pressable>
+          </View>
         </View>
         {!online ? (
           <Text className="mt-2 text-sm font-medium text-amber-700">
