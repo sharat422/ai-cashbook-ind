@@ -167,11 +167,19 @@ export function SettingsScreen({
           />
         </View>
 
-        {/* Notifications shortcut */}
+        {/* Business */}
+        <Text variant="label" className="mt-8 mb-3">
+          Business
+        </Text>
+        <Button
+          title="🏷️ Item catalog"
+          variant="secondary"
+          onPress={() => navigation.navigate('Items')}
+        />
         <Button
           title="🔔 Notifications"
           variant="secondary"
-          className="mt-8"
+          className="mt-3"
           onPress={() => navigation.navigate('Notifications')}
         />
 

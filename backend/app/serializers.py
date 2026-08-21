@@ -3,7 +3,7 @@
 The app's auth/business DTOs are camelCase; all other DTOs are snake_case.
 """
 
-from .models import Business, Customer, Expense, Income, LedgerEntry
+from .models import Business, Customer, Expense, Income, Item, LedgerEntry
 
 
 def income_dto(m: Income) -> dict:
@@ -58,6 +58,22 @@ def ledger_dto(m: LedgerEntry) -> dict:
         "payment_method": m.payment_method,
         "reference_number": m.reference_number,
         "attachment_url": m.attachment_url,
+        "created_at": m.created_at,
+    }
+
+
+def item_dto(m: Item) -> dict:
+    return {
+        "id": m.id,
+        "name": m.name,
+        "type": m.type,
+        "sale_price": m.sale_price,
+        "purchase_price": m.purchase_price,
+        "unit": m.unit,
+        "hsn_sac": m.hsn_sac,
+        "gst_rate": m.gst_rate,
+        "track_stock": m.track_stock,
+        "stock_qty": m.stock_qty,
         "created_at": m.created_at,
     }
 

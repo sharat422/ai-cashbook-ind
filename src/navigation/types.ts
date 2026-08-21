@@ -2,6 +2,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import type {Customer} from '@features/customers/domain/entities';
 import type {ExpenseCategory} from '@features/expense/domain/entities';
+import type {Item} from '@features/items/domain/entities';
 import type {Attachment} from '@/shared/types/attachment';
 
 /** Prefill payload used to seed the Add Expense form (e.g. from a receipt scan). */
@@ -29,6 +30,8 @@ export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
   Reports: undefined;
+  Items: undefined;
+  ItemForm: {item?: Item} | undefined;
   AddIncome: undefined;
   AddExpense:
     | {initialValues?: ExpensePrefill; initialAttachment?: Attachment | null}

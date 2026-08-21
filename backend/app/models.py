@@ -119,6 +119,27 @@ class LedgerEntry(Base):
     customer: Mapped[Customer] = relationship(back_populates="ledger")
 
 
+class Item(Base):
+    """A product or service in the business catalog (for GST invoicing)."""
+
+    __tablename__ = "items"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200), index=True)
+    type: Mapped[str] = mapped_column(String(20), default="product")  # product | service
+    sale_price: Mapped[float] = mapped_column(Float, default=0.0)
+    purchase_price: Mapped[float] = mapped_column(Float, default=0.0)
+    unit: Mapped[str | None] = mapped_column(String(20), nullable=True)  # pcs, kg, hr…
+    hsn_sac: Mapped[str | None] = mapped_column(String(20), nullable=True)  # HSN/SAC code
+    gst_rate: Mapped[float] = mapped_column(Float, default=0.0)  # 0/5/12/18/28
+    track_stock: Mapped[bool] = mapped_column(Boolean, default=False)
+    stock_qty: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
 class AiDecision(Base):
     """Audit log of AI outputs (categorization / receipt scan / insights)."""
 

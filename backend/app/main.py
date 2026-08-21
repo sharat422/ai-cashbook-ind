@@ -15,6 +15,7 @@ from .routers import (
     dashboard,
     expenses,
     incomes,
+    items,
     khata,
     notifications,
     reports,
@@ -51,6 +52,7 @@ for module in (
     ai_routes,
     notifications,
     reports,
+    items,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 
