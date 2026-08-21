@@ -17,6 +17,7 @@ import {KhataInsightsScreen} from '@features/insights/presentation/screens/Khata
 import {NotificationsScreen} from '@features/notifications/presentation/screens/NotificationsScreen';
 import {ReceiptCaptureScreen} from '@features/receipt-scanner/presentation/screens/ReceiptCaptureScreen';
 import {ReceiptReviewScreen} from '@features/receipt-scanner/presentation/screens/ReceiptReviewScreen';
+import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
 import type {AppStackParamList} from './types';
@@ -29,6 +30,7 @@ export function AppNavigator(): React.JSX.Element {
     <Stack.Navigator screenOptions={{headerShown: false}}>
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen
         name="AddIncome"
         component={AddIncomeScreen}

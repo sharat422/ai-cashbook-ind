@@ -231,12 +231,22 @@ export function DashboardScreen({
             onPress={() => navigation.navigate('Customers')}
           />
         </View>
-        <Button
-          title="📒 Khata dashboard"
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('KhataDashboard')}
-        />
+        <View className="mt-3 flex-row" style={{gap: 12}}>
+          <Button
+            title="📒 Khata"
+            variant="secondary"
+            className="flex-1"
+            fullWidth={false}
+            onPress={() => navigation.navigate('KhataDashboard')}
+          />
+          <Button
+            title="📊 Reports"
+            variant="secondary"
+            className="flex-1"
+            fullWidth={false}
+            onPress={() => navigation.navigate('Reports')}
+          />
+        </View>
 
         {/* Recent activity */}
         <View className="mt-8 mb-2 flex-row items-center justify-between">

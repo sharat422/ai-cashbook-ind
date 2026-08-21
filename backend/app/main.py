@@ -17,6 +17,7 @@ from .routers import (
     incomes,
     khata,
     notifications,
+    reports,
     transactions,
 )
 from .storage import UPLOAD_DIR
@@ -49,6 +50,7 @@ for module in (
     khata,
     ai_routes,
     notifications,
+    reports,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 
