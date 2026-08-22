@@ -39,8 +39,13 @@ export function useReminderTemplates() {
 
 /** Reminder history for a customer (newest first), reactive. */
 export function useReminderHistory(customerId: string): Reminder[] {
-  return useReminderHistoryStore(s =>
-    s.reminders.filter(r => r.customerId === customerId),
+  // Select the stable `reminders` reference, then derive the filtered list in a
+  // memo. Filtering *inside* the selector returns a new array every render,
+  // which makes zustand's useSyncExternalStore loop ("Maximum update depth").
+  const reminders = useReminderHistoryStore(s => s.reminders);
+  return useMemo(
+    () => reminders.filter(r => r.customerId === customerId),
+    [reminders, customerId],
   );
 }
 
