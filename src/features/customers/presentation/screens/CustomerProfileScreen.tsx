@@ -12,6 +12,7 @@ import {FilterChip} from '@components/filters';
 import {
   Avatar,
   EmptyState,
+  ErrorBoundary,
   ErrorState,
   Screen,
   SuccessOverlay,
@@ -201,13 +202,16 @@ export function CustomerProfileScreen({
         <Detail label="Notes" value={customer.notes} />
       </View>
 
-      {/* AI payment-risk insight */}
+      {/* AI payment-risk insight (isolated: a failure here won't break the
+          rest of the profile, so Edit/Add credit stay reachable). */}
       {risk ? (
         <View className="mt-6">
-          <RiskInsightCard
-            prediction={risk.prediction}
-            features={risk.features}
-          />
+          <ErrorBoundary>
+            <RiskInsightCard
+              prediction={risk.prediction}
+              features={risk.features}
+            />
+          </ErrorBoundary>
         </View>
       ) : null}
 

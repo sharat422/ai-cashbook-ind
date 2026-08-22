@@ -4,6 +4,7 @@ export * from './BottomSheet';
 export * from './Button';
 export * from './Confetti';
 export * from './EmptyState';
+export * from './ErrorBoundary';
 export * from './ErrorState';
 export * from './Input';
 export * from './OtpInput';

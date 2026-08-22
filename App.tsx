@@ -11,6 +11,7 @@ import React from 'react';
 import {StatusBar} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 
+import {ErrorBoundary} from '@components/ui';
 import {QueryProvider} from '@/providers/QueryProvider';
 import {CreditSyncManager} from '@features/customers/presentation/CreditSyncManager';
 import {DailySummaryManager} from '@features/daily-summary/presentation/DailySummaryManager';
@@ -30,9 +31,11 @@ function App(): React.JSX.Element {
         <CreditSyncManager />
         {/* Dispatches the daily summary notification when due. */}
         <DailySummaryManager />
-        <LockGate>
-          <RootNavigator />
-        </LockGate>
+        <ErrorBoundary>
+          <LockGate>
+            <RootNavigator />
+          </LockGate>
+        </ErrorBoundary>
       </QueryProvider>
     </SafeAreaProvider>
   );
