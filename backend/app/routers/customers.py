@@ -15,7 +15,9 @@ router = APIRouter(tags=["customers"])
 
 class CustomerBody(BaseModel):
     full_name: str
-    mobile: str
+    # Optional so quick flows (e.g. AI voice entry) can create a party by name;
+    # the mobile can be filled in later from the customer form.
+    mobile: str = ""
     gst_number: str | None = None
     business_name: str | None = None
     address: str | None = None

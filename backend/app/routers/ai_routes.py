@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ..ai import categorize_text, scan_receipt
+from datetime import datetime, timezone
+
+from ..ai import categorize_text, parse_transaction, scan_receipt
 from ..database import get_db
 from ..deps import get_current_business
 from ..models import AiDecision, Business
@@ -15,6 +17,34 @@ router = APIRouter(tags=["ai"])
 
 class CategorizeBody(BaseModel):
     text: str
+
+
+class ParseTransactionBody(BaseModel):
+    text: str
+    # Client's local date (YYYY-MM-DD); defaults to server UTC today.
+    today: str | None = None
+
+
+@router.post("/parse-transaction")
+def parse_transaction_route(
+    body: ParseTransactionBody,
+    business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Turn a spoken/typed sentence (any of several Indian languages) into a
+    structured transaction: {customer_name, type, amount, category, date}."""
+    today = body.today or datetime.now(timezone.utc).date().isoformat()
+    result = parse_transaction(body.text, today)
+
+    db.add(AiDecision(
+        business_id=business.id,
+        kind="voice_transaction",
+        input_text=body.text,
+        output_json=json.dumps(result),
+        confidence=result.get("confidence"),
+    ))
+    db.commit()
+    return result
 
 
 @router.post("/categorize")

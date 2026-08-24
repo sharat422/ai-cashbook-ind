@@ -82,6 +82,159 @@ def categorize_text(text: str) -> tuple[str, float]:
 
 
 # ---------------------------------------------------------------------------
+# OpenAI — natural-language / voice transaction parsing (multilingual)
+# ---------------------------------------------------------------------------
+# Indian number words (Hinglish/Hindi) for the offline fallback parser.
+_NUM_WORDS = {
+    "ek": 1, "do": 2, "teen": 3, "tin": 3, "char": 4, "chaar": 4,
+    "paanch": 5, "panch": 5, "che": 6, "chhe": 6, "cheh": 6,
+    "saat": 7, "aath": 8, "nau": 9, "das": 10,
+    "gyarah": 11, "barah": 12, "bees": 20, "pachas": 50, "sau": 100,
+}
+_MULTIPLIERS = {"sau": 100, "hazaar": 1000, "hajar": 1000,
+                "hazar": 1000, "lakh": 100000, "lac": 100000, "crore": 10000000}
+
+# Keyword hints for direction, across common languages/transliterations.
+_CREDIT_HINTS = [
+    "diya", "diye", "diyaa", "de diya", "maal", "saman", "udhaar", "udhar",
+    "credit", "gave", "sold", "sale", "bech", "becha", "ldiya", "kharch",
+    "ఇచ్చా", "கொடுத்த", "ಕೊಟ್ಟ", "দিলাম", "દીધું",
+]
+_PAYMENT_HINTS = [
+    "mile", "mila", "milе", "received", "aaya", "aya", "paisa", "payment",
+    "paid", "jama", "vasool", "wapas", "return", "chukaya", "diye paise",
+    "వచ్చా", "வந்த", "ಬಂತು", "পেলাম", "મળ્યા",
+]
+
+
+def _heuristic_amount(text: str) -> float | None:
+    low = text.lower()
+    # 1) explicit digits (handle "2,500" / "2500")
+    import re
+
+    digits = re.findall(r"\d[\d,]*", low)
+    if digits:
+        try:
+            return float(digits[0].replace(",", ""))
+        except ValueError:
+            pass
+    # 2) number words + multipliers, e.g. "teen hazaar", "do sau", "ek lakh"
+    tokens = re.findall(r"[a-z]+", low)
+    total = 0.0
+    i = 0
+    matched = False
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok in _MULTIPLIERS:
+            prev = tokens[i - 1] if i > 0 else ""
+            base = _NUM_WORDS.get(prev, 1)
+            total += base * _MULTIPLIERS[tok]
+            matched = True
+        i += 1
+    if matched:
+        return total
+    # 3) a bare number word ("paanch" = 5) as a last resort
+    for tok in tokens:
+        if tok in _NUM_WORDS:
+            return float(_NUM_WORDS[tok])
+    return None
+
+
+def _heuristic_name(text: str) -> str | None:
+    import re
+
+    # Name usually precedes "ko"/"se"/"ne" (Ramesh ko…, Suresh se…).
+    m = re.search(r"([A-Z][a-zA-Z]+)\s+(ko|se|ne|ku|ki)\b", text)
+    if m:
+        return m.group(1)
+    # else first capitalized word that isn't the sentence start noise
+    for w in re.findall(r"[A-Z][a-zA-Z]{2,}", text):
+        return w
+    return None
+
+
+def _heuristic_parse(text: str, today: str) -> dict:
+    low = text.lower()
+    is_payment = any(h in low for h in _PAYMENT_HINTS) and not any(
+        h in low for h in ("maal", "udhaar", "udhar", "diya")
+    )
+    kind = "payment" if is_payment else "credit"
+    return {
+        "customer_name": _heuristic_name(text),
+        "type": kind,
+        "amount": _heuristic_amount(text),
+        "category": "Payment" if kind == "payment" else "Sale",
+        "date": today,
+        "confidence": 0.4,
+        "raw_text": text,
+        "source": "rule",
+    }
+
+
+def _normalize_parsed(data: dict, text: str, today: str) -> dict:
+    kind = str(data.get("type", "")).lower()
+    if kind not in ("credit", "payment"):
+        kind = "credit"
+    amount = data.get("amount")
+    try:
+        amount = float(amount) if amount is not None else None
+    except (TypeError, ValueError):
+        amount = None
+    date = str(data.get("date") or today)[:10]
+    name = data.get("customer_name")
+    return {
+        "customer_name": (str(name).strip() or None) if name else None,
+        "type": kind,
+        "amount": amount,
+        "category": data.get("category")
+        or ("Payment" if kind == "payment" else "Sale"),
+        "date": date,
+        "confidence": 0.85,
+        "raw_text": text,
+        "source": "ai",
+    }
+
+
+def parse_transaction(text: str, today: str) -> dict:
+    """Extract a structured transaction from a natural-language sentence in any
+    of several Indian languages. Falls back to a heuristic parser without a key."""
+    if not settings.openai_api_key:
+        return _heuristic_parse(text, today)
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.openai_api_key)
+        prompt = (
+            "You extract ONE business transaction from an Indian shopkeeper's "
+            "sentence, which may be in English, Hindi, Hinglish (Roman Hindi), "
+            "Telugu, Tamil, Kannada, Marathi, Gujarati, Bengali, Malayalam or "
+            "Punjabi.\n\n"
+            "Return ONLY JSON with keys: customer_name (party name as written, or "
+            "null), type ('credit' or 'payment'), amount (number in INR; convert "
+            "words e.g. 'teen hazaar'=3000, 'do sau'=200, 'ek lakh'=100000; null "
+            "if none), category (short label like 'Sale' or 'Payment'), date "
+            "(YYYY-MM-DD).\n\n"
+            "'credit' = the shopkeeper GAVE goods or lent money and the customer "
+            "now OWES (e.g. 'maal diya', 'udhaar diya', 'sold', 'gave').\n"
+            "'payment' = the shopkeeper RECEIVED money (e.g. 'mile', 'paisa aaya', "
+            "'received', 'paid me').\n"
+            f"If no date is stated, use {today}.\n\n"
+            f'Sentence: "{text}"'
+        )
+        resp = client.chat.completions.create(
+            model=settings.openai_model,
+            response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        data = json.loads(resp.choices[0].message.content or "{}")
+        return _normalize_parsed(data, text, today)
+    except Exception as exc:  # noqa: BLE001 — degrade gracefully
+        log.warning("OpenAI parse_transaction failed, using heuristic: %s", exc)
+        return _heuristic_parse(text, today)
+
+
+# ---------------------------------------------------------------------------
 # Anthropic Claude — receipt extraction (vision)
 # ---------------------------------------------------------------------------
 _EMPTY_FIELD = {"value": None, "confidence": 0.0}

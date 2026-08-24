@@ -32,6 +32,7 @@ export type AppStackParamList = {
   Reports: undefined;
   Items: undefined;
   ItemForm: {item?: Item} | undefined;
+  AITransaction: undefined;
   AddIncome: undefined;
   AddExpense:
     | {initialValues?: ExpensePrefill; initialAttachment?: Attachment | null}

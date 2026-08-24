@@ -17,6 +17,7 @@ import {KhataInsightsScreen} from '@features/insights/presentation/screens/Khata
 import {NotificationsScreen} from '@features/notifications/presentation/screens/NotificationsScreen';
 import {ReceiptCaptureScreen} from '@features/receipt-scanner/presentation/screens/ReceiptCaptureScreen';
 import {ReceiptReviewScreen} from '@features/receipt-scanner/presentation/screens/ReceiptReviewScreen';
+import {AITransactionScreen} from '@features/ai-entry/presentation/screens/AITransactionScreen';
 import {ItemListScreen} from '@features/items/presentation/screens/ItemListScreen';
 import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
@@ -33,6 +34,11 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
+      <Stack.Screen
+        name="AITransaction"
+        component={AITransactionScreen}
+        options={{presentation: 'modal'}}
+      />
       <Stack.Screen name="Items" component={ItemListScreen} />
       <Stack.Screen
         name="ItemForm"
