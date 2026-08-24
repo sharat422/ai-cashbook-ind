@@ -371,11 +371,19 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 
 ---
 
-## 15. Language preference
+## 15. Language / localization
 
 ### 15.1 Onboarding language
 - **Steps:** During onboarding pick Hindi (or other supported) as preferred content language.
-- **Expected:** Preference is saved to the profile; used where content localization applies (e.g., collection message default).
+- **Expected:** Preference is saved to the profile.
+
+### 15.2 Switch language in Settings (live localization)
+- **Steps:** Settings → Preferences → Content language → pick **Hindi**.
+- **Expected:** The app **immediately** re-renders in Hindi where localized — the **Dashboard** (आय / व्यय / नकद शेष / रिपोर्ट / hero labels / quick actions / recent activity / logout) and the **Settings** screen. Switch back to English to revert.
+
+### 15.3 Fallback languages
+- **Steps:** Pick Kannada / Tamil / Telugu.
+- **Expected:** Currently falls back to English on localized screens (Hindi is the translated set so far) — no missing text or crash. Other screens remain English until localized.
 
 ---
 
@@ -522,6 +530,63 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 
 ---
 
+## 22. AI transaction entry (natural language / voice)
+
+Open from the Dashboard **🎤 AI Entry** button. Type a sentence **or** tap the
+phone keyboard's 🎤 and speak. Works in English, Hindi, Hinglish, Telugu, Tamil,
+Kannada, Marathi, Gujarati, Bengali, Malayalam, Punjabi.
+
+> Full multilingual accuracy needs `OPENAI_API_KEY` set on the backend
+> (§4 of PRODUCTION_SETUP.md). With it blank, a **basic offline parser** handles
+> digits, Hindi number words ("teen hazaar"=3000), and common English/Hinglish
+> patterns — the cases below all pass on the basic parser.
+
+### 22.1 Credit — Hinglish
+- **Steps:** Enter `Ramesh ko 2500 ka maal diya` → **Read transaction**.
+- **Expected:** Review shows Customer **Ramesh**, Type **Gave · Udhaar (credit)**, Amount **₹2,500**, Date **today**.
+
+### 22.2 Payment — Hinglish
+- **Steps:** Enter `Suresh se teen hazaar mile` → Read.
+- **Expected:** Customer **Suresh**, Type **Received (payment)**, Amount **₹3,000**.
+
+### 22.3 Credit — English
+- **Steps:** Enter `gave ramesh 500 for groceries` → Read.
+- **Expected:** Customer **Ramesh** (capitalized), Type **credit**, Amount **₹500**, Category **Groceries**.
+
+### 22.4 Payment — English
+- **Steps:** Enter `ramesh paid 2000` → Read.
+- **Expected:** Customer **Ramesh**, Type **payment**, Amount **₹2,000**.
+
+### 22.5 Voice via keyboard mic
+- **Steps:** Tap the sentence box → tap the 🎤 on the keyboard → speak a transaction in your language → Read.
+- **Expected:** Speech becomes text, then parses as above. *(Requires the keyboard/dictation language installed on the phone.)*
+
+### 22.6 Edit before saving
+- **Steps:** After parsing, change any field (customer, type, amount, date) in the review card.
+- **Expected:** Edits are respected on save.
+
+### 22.7 Confirm & save (find-or-create customer)
+- **Steps:** With a new name, tap **Confirm & save**.
+- **Expected:** A customer is created (or matched if the name already exists) and the credit/payment is added to their khata; a success alert offers **View customer** (opens the profile with the new entry in the timeline).
+
+### 22.8 Validation
+- **Steps:** Clear the customer name, or leave the amount empty, then Confirm.
+- **Expected:** Inline "Enter the customer name" / "Enter an amount".
+
+### 22.9 Example chips
+- **Steps:** Tap a suggested example chip.
+- **Expected:** Fills the input so you can parse it in one tap.
+
+---
+
+## 23. Crash resilience (error boundary)
+
+### 23.1 Recoverable errors
+- **Steps:** If any screen hits an unexpected error (e.g. a future bug).
+- **Expected:** Instead of the whole app white-screening/crashing, a **"Something went wrong"** card appears showing the error message with a **Try again** button. (This is what surfaced the customer-open bug.)
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -532,11 +597,13 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 6. Reports → Month → figures correct → export PDF opens the share sheet.
 7. Settings → enable App lock → background & reopen → unlock with PIN.
 8. Settings → Item catalog → add a product with an 18% GST slab → appears in the list.
-9. Log out → back to Login.
+9. 🎤 AI Entry → `ramesh paid 2000` → Read → Confirm & save → customer + payment created.
+10. Settings → switch language to Hindi → Dashboard renders in Hindi.
+11. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 60) and `cd backend && python -m pytest`
-(backend, 56). See [TESTING.md](TESTING.md).
+release: `npm test` (frontend, 70) and `cd backend && python -m pytest`
+(backend, 63). See [TESTING.md](TESTING.md).

@@ -140,17 +140,58 @@ def _heuristic_amount(text: str) -> float | None:
     return None
 
 
+# Tokens that are never a customer name (verbs, fillers, units, numbers).
+_NAME_STOPWORDS = {
+    "gave", "give", "given", "sold", "sell", "sells", "paid", "pay", "pays",
+    "received", "receive", "got", "get", "gets", "took", "take",
+    "to", "from", "for", "the", "a", "an", "of", "and", "on", "in", "at",
+    "rs", "rupees", "rupee", "inr", "money", "amount", "cash",
+    "ka", "ki", "ke", "ko", "se", "ne", "ku", "mera", "meri",
+    "maal", "saman", "udhaar", "udhar", "credit", "payment", "sale",
+    "today", "yesterday", "tomorrow",
+    *_NUM_WORDS.keys(),
+    *_MULTIPLIERS.keys(),
+}
+
+
+def _is_name(word: str) -> bool:
+    return word.isalpha() and len(word) >= 2 and word.lower() not in _NAME_STOPWORDS
+
+
 def _heuristic_name(text: str) -> str | None:
     import re
 
-    # Name usually precedes "ko"/"se"/"ne" (Ramesh ko…, Suresh se…).
-    m = re.search(r"([A-Z][a-zA-Z]+)\s+(ko|se|ne|ku|ki)\b", text)
-    if m:
-        return m.group(1)
-    # else first capitalized word that isn't the sentence start noise
-    for w in re.findall(r"[A-Z][a-zA-Z]{2,}", text):
-        return w
+    tokens = re.findall(r"[A-Za-z]+", text)
+    low = [t.lower() for t in tokens]
+
+    # 1) Hinglish: name precedes ko/se/ne (Ramesh ko…, Suresh se…).
+    for i, w in enumerate(low):
+        if w in ("ko", "se", "ne", "ku") and i > 0 and _is_name(tokens[i - 1]):
+            return tokens[i - 1].capitalize()
+    # 2) English: name follows gave/sold/to/from ("gave ramesh…", "to ramesh").
+    for i, w in enumerate(low):
+        if w in ("gave", "give", "sold", "to", "from") and i + 1 < len(tokens):
+            if _is_name(tokens[i + 1]):
+                return tokens[i + 1].capitalize()
+    # 3) English SVO: name precedes the verb ("ramesh paid…", "ramesh gave…").
+    for i, w in enumerate(low):
+        if w in ("paid", "pays", "gave", "received", "got") and i > 0:
+            if _is_name(tokens[i - 1]):
+                return tokens[i - 1].capitalize()
+    # 4) First name-like token as a last resort.
+    for tok in tokens:
+        if _is_name(tok):
+            return tok.capitalize()
     return None
+
+
+def _heuristic_txn_category(text_for_cat: str, kind: str) -> str:
+    import re
+
+    m = re.search(r"\bfor\s+([A-Za-z][A-Za-z]+)", text_for_cat, re.IGNORECASE)
+    if m:
+        return m.group(1).capitalize()
+    return "Payment" if kind == "payment" else "Sale"
 
 
 def _heuristic_parse(text: str, today: str) -> dict:
@@ -163,7 +204,7 @@ def _heuristic_parse(text: str, today: str) -> dict:
         "customer_name": _heuristic_name(text),
         "type": kind,
         "amount": _heuristic_amount(text),
-        "category": "Payment" if kind == "payment" else "Sale",
+        "category": _heuristic_txn_category(text, kind),
         "date": today,
         "confidence": 0.4,
         "raw_text": text,

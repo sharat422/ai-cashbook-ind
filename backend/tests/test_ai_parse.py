@@ -46,3 +46,26 @@ def test_heuristic_defaults_to_credit():
     out = _heuristic_parse("gave goods to Mohan", "2026-01-01")
     assert out["type"] == "credit"
     assert out["date"] == "2026-01-01"
+
+
+def test_parse_english_gave(user, client):
+    r = client.post(
+        "/api/v1/parse-transaction",
+        headers=user.headers,
+        json={"text": "gave ramesh 500 for groceries", "today": "2026-06-17"},
+    ).json()
+    assert r["type"] == "credit"
+    assert r["amount"] == 500.0
+    assert r["customer_name"] == "Ramesh"  # lowercase name recovered + capitalized
+    assert r["category"] == "Groceries"  # extracted from "for groceries"
+
+
+def test_parse_english_paid(user, client):
+    r = client.post(
+        "/api/v1/parse-transaction",
+        headers=user.headers,
+        json={"text": "ramesh paid 2000"},
+    ).json()
+    assert r["type"] == "payment"
+    assert r["amount"] == 2000.0
+    assert r["customer_name"] == "Ramesh"
