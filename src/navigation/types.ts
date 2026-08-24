@@ -50,6 +50,7 @@ export type AppStackParamList = {
   CustomerForm: {customer?: Customer} | undefined;
   AddCredit: {customer: Customer};
   CustomerStatement: {customer: Customer};
+  RequestPayment: {customer: Customer};
   CollectionAssistant: {
     name: string;
     mobile: string;

@@ -8,6 +8,9 @@ import {
   SegmentedControl,
   Text,
 } from '@components/ui';
+import {TextField} from '@components/form';
+import {isValidUpiId} from '@features/collections/domain/upi';
+import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {
   APP_LANGUAGE_LABEL,
   SUPPORTED_APP_LANGUAGES,
@@ -36,6 +39,21 @@ export function SettingsScreen({
   const language = useAuthStore(s => s.preferredLanguage);
   const setLanguage = useAuthStore(s => s.setPreferredLanguage);
   const logout = useAuthStore(s => s.logout);
+  const businessName = useAuthStore(s => s.business?.businessName);
+
+  const savedUpi = useCollectionSettingsStore(s => s.upiId);
+  const savedPayee = useCollectionSettingsStore(s => s.payeeName);
+  const setUpi = useCollectionSettingsStore(s => s.setUpi);
+  const [upiId, setUpiId] = useState(savedUpi);
+  const [payee, setPayee] = useState(savedPayee);
+
+  const onSaveUpi = () => {
+    if (upiId.trim() && !isValidUpiId(upiId)) {
+      return Alert.alert('Invalid UPI ID', 'Use the form name@bank, e.g. shop@okhdfcbank.');
+    }
+    setUpi(upiId, payee.trim() || businessName || '');
+    Alert.alert('Saved', 'Your UPI collection details are updated.');
+  };
 
   const [mode, setMode] = useState<PinMode>('idle');
   const [firstPin, setFirstPin] = useState('');
@@ -167,6 +185,35 @@ export function SettingsScreen({
             }))}
             onChange={setLanguage}
           />
+        </View>
+
+        {/* Payments / collections */}
+        <Text variant="label" className="mt-8 mb-3">
+          Payments
+        </Text>
+        <View className="rounded-2xl border border-border bg-white p-4" style={{gap: 14}}>
+          <View>
+            <Text className="mb-1.5 text-sm font-semibold text-slate-700">
+              Your UPI ID (for collecting payments)
+            </Text>
+            <TextField
+              value={upiId}
+              onChangeText={setUpiId}
+              placeholder="e.g. shop@okhdfcbank"
+              autoCapitalize="none"
+            />
+          </View>
+          <View>
+            <Text className="mb-1.5 text-sm font-semibold text-slate-700">
+              Payee name
+            </Text>
+            <TextField
+              value={payee}
+              onChangeText={setPayee}
+              placeholder={businessName ?? 'Your business name'}
+            />
+          </View>
+          <Button title="Save UPI details" variant="secondary" onPress={onSaveUpi} />
         </View>
 
         {/* Business */}

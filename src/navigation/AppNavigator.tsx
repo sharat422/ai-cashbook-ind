@@ -18,6 +18,7 @@ import {NotificationsScreen} from '@features/notifications/presentation/screens/
 import {ReceiptCaptureScreen} from '@features/receipt-scanner/presentation/screens/ReceiptCaptureScreen';
 import {ReceiptReviewScreen} from '@features/receipt-scanner/presentation/screens/ReceiptReviewScreen';
 import {AITransactionScreen} from '@features/ai-entry/presentation/screens/AITransactionScreen';
+import {RequestPaymentScreen} from '@features/collections/presentation/screens/RequestPaymentScreen';
 import {ItemListScreen} from '@features/items/presentation/screens/ItemListScreen';
 import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
@@ -90,6 +91,7 @@ export function AppNavigator(): React.JSX.Element {
         name="CustomerStatement"
         component={CustomerStatementScreen}
       />
+      <Stack.Screen name="RequestPayment" component={RequestPaymentScreen} />
       <Stack.Screen
         name="CollectionAssistant"
         component={CollectionAssistantScreen}

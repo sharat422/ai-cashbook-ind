@@ -165,6 +165,10 @@ export function CustomerProfileScreen({
       {/* Secondary actions */}
       <View className="mt-3 flex-row flex-wrap" style={{gap: 8}}>
         <SecondaryAction
+          label="💳 Request"
+          onPress={() => navigation.navigate('RequestPayment', {customer})}
+        />
+        <SecondaryAction
           label="🔔 Reminder"
           onPress={() => setReminderOpen(true)}
         />

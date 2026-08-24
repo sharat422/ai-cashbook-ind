@@ -39,6 +39,7 @@ const REFERENCE_HINT: Record<PaymentMethod, string> = {
   bank: 'Bank reference / UTR',
   card: 'Card / auth reference',
   cheque: 'Cheque number',
+  credit: 'Reference (optional)',
   other: 'Reference (optional)',
 };
 

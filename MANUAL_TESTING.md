@@ -263,7 +263,7 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 
 ### 9.4 Receive payment
 - **Steps:** Customer profile → **Receive payment** → enter an amount (≤ outstanding), pick a **method** → submit.
-- **Expected:** Method chips offer **Cash / UPI / Bank Transfer / Card / Cheque / Other**; a reference field adapts to the method (UPI txn ID, UTR, cheque no.). Confetti success overlay; **Outstanding decreases**; payment appears in the timeline; totals update.
+- **Expected:** Method chips offer **Cash / UPI / Bank Transfer / Card / Cheque / Credit / Other**; a reference field adapts to the method (UPI txn ID, UTR, cheque no.). Confetti success overlay; **Outstanding decreases**; payment appears in the timeline; totals update.
 
 ### 9.5 Overpayment / balance sign
 - **Steps:** Record payments exceeding total credit.
@@ -603,6 +603,45 @@ Kannada, Marathi, Gujarati, Bengali, Malayalam, Punjabi.
 
 ---
 
+## 24. UPI payment collection
+
+Collect dues straight into your own UPI — no payment gateway. (Payment **links**
+with a hosted pay page, **auto-reconciliation**, and **auto-scheduling** are
+roadmap items that need a gateway/native scheduling — not in this build.)
+
+### 24.1 Set your UPI ID
+- **Steps:** Settings → **Payments** → enter your UPI ID (e.g. `shop@okhdfcbank`) + payee name → **Save UPI details**.
+- **Expected:** Saved. An invalid format (no `@bank`) shows "Invalid UPI ID".
+
+### 24.2 Request payment (QR + details)
+- **Steps:** Customer profile → **💳 Request** (secondary action).
+- **Expected:** "Request payment" screen with the amount (defaults to the customer's outstanding, editable), a **UPI QR code**, and details (UPI ID, Amount, Customer, Reference, Status = Pending).
+
+### 24.3 Not configured yet
+- **Steps:** Open Request payment before setting a UPI ID.
+- **Expected:** An amber prompt "Add your UPI ID to collect payments" with a **Set UPI ID in Settings** button (no QR shown).
+
+### 24.4 Amount drives the QR
+- **Steps:** Change the amount.
+- **Expected:** The QR regenerates for the new amount (encodes `upi://pay?pa=…&am=…`).
+
+### 24.5 Send on WhatsApp
+- **Steps:** Tap **Send request on WhatsApp**.
+- **Expected:** WhatsApp opens to the customer's number pre-filled with the amount, your UPI ID, a tappable `upi://` link, and the reference (falls back to SMS if WhatsApp isn't installed).
+
+### 24.6 Share request
+- **Steps:** Tap **Share payment request**.
+- **Expected:** OS share sheet with the same message/link.
+
+### 24.7 Customer pays + Mark as received
+- **Steps:** Customer scans the QR (or taps the link) and pays into your UPI. Then tap **✓ Mark as received**.
+- **Expected:** A **UPI payment** for the amount is recorded on the customer's khata (method = UPI, with the reference); **outstanding decreases**; it appears in the timeline.
+
+### 24.8 QR resilience
+- **Expected:** If the QR fails to render on a device, the screen still shows the link/details and the "Something went wrong" card only replaces the QR area (not the whole screen).
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -615,11 +654,12 @@ Kannada, Marathi, Gujarati, Bengali, Malayalam, Punjabi.
 8. Settings → Item catalog → add a product with an 18% GST slab → appears in the list.
 9. 🎤 AI Entry → `ramesh paid 2000` → Read → Confirm & save → customer + payment created.
 10. Settings → switch language to Hindi → Dashboard renders in Hindi.
-11. Log out → back to Login.
+11. Settings → Payments → set UPI ID → customer → 💳 Request → QR shows → Mark as received.
+12. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 70) and `cd backend && python -m pytest`
+release: `npm test` (frontend, 75) and `cd backend && python -m pytest`
 (backend, 63). See [TESTING.md](TESTING.md).

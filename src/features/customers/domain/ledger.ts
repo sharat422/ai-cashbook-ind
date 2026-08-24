@@ -15,6 +15,7 @@ export type PaymentMethod =
   | 'bank'
   | 'card'
   | 'cheque'
+  | 'credit'
   | 'other';
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
@@ -23,6 +24,7 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   bank: 'Bank Transfer',
   card: 'Card',
   cheque: 'Cheque',
+  credit: 'Credit',
   other: 'Other',
 };
 
@@ -33,6 +35,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'bank',
   'card',
   'cheque',
+  'credit',
   'other',
 ];
 
