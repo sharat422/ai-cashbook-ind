@@ -123,6 +123,22 @@ export function KhataDashboardScreen({
           <Text className="text-base font-semibold text-white">→</Text>
         </Pressable>
 
+        {/* Customer intelligence banner */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('CustomerInsights')}
+          className="mt-3 flex-row items-center justify-between rounded-2xl border border-border bg-white px-4 py-3">
+          <View className="flex-1 pr-2">
+            <Text className="text-sm font-bold text-slate-900">
+              🔎 Customer intelligence
+            </Text>
+            <Text className="text-xs text-muted">
+              Aging, risk & who to chase
+            </Text>
+          </View>
+          <Text className="text-base font-semibold text-primary">→</Text>
+        </Pressable>
+
         {/* Filters */}
         <View className="mt-4 flex-row flex-wrap" style={{gap: 8}}>
           {DATE_PRESETS.map(p => (

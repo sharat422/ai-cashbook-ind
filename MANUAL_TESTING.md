@@ -642,6 +642,30 @@ roadmap items that need a gateway/native scheduling — not in this build.)
 
 ---
 
+## 25. Customer intelligence
+
+### 25.1 Payment Score (#17)
+- **Steps:** Open a customer with some ledger history.
+- **Expected:** A **Payment Score /100** card (higher = better payer) with a risk pill (Low/Medium/High) and stats: **Usually pays** (avg delay in days), **Current overdue** (₹), and **History** (txn count). Derived from payment delays, outstanding, frequency and history.
+
+### 25.2 Credit limit — set (#18)
+- **Steps:** Customer profile → **🎯 Limit** → enter e.g. ₹50,000 → **Save limit**.
+- **Expected:** Limit saved for that customer (persists across app restarts). "Remove limit" clears it.
+
+### 25.3 Credit limit — approaching / exceeded warnings
+- **Steps:** With a ₹50,000 limit, take the customer's dues to ~₹47,500, then over ₹50,000 (add credit).
+- **Expected:** At ≥95% → amber **"⚠️ Approaching credit limit"** on the profile; over the limit → red **"🚨 Credit limit exceeded by ₹X"**. Adding credit that would breach the limit shows the same warning on the **Add credit** screen before saving.
+
+### 25.4 Receivables aging (#19)
+- **Steps:** Khata dashboard → **🔎 Customer intelligence** → Receivables aging.
+- **Expected:** Buckets **Current / 1–30 / 31–60 / 61–90 / 90+ days** with amounts + a total. Payments are applied to the **oldest** dues first (FIFO), so clearing an old credit empties the old bucket.
+
+### 25.5 Customer insights — smart lists (#20)
+- **Steps:** Same screen, scroll the question cards.
+- **Expected:** **Who owes the most** (top debtors), **Who is late** (overdue + days), **Who paid this month**, **Who hasn't purchased recently** (dormant >30 days), **Which customers are high risk** (score). Tapping a row jumps to that customer (search).
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -655,11 +679,12 @@ roadmap items that need a gateway/native scheduling — not in this build.)
 9. 🎤 AI Entry → `ramesh paid 2000` → Read → Confirm & save → customer + payment created.
 10. Settings → switch language to Hindi → Dashboard renders in Hindi.
 11. Settings → Payments → set UPI ID → customer → 💳 Request → QR shows → Mark as received.
-12. Log out → back to Login.
+12. Khata → 🔎 Customer intelligence → aging buckets + "who owes the most" populated.
+13. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
 release: `npm test` (frontend, 75) and `cd backend && python -m pytest`
-(backend, 63). See [TESTING.md](TESTING.md).
+(backend, 67). See [TESTING.md](TESTING.md).

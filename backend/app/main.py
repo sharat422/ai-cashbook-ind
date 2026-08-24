@@ -14,6 +14,7 @@ from .routers import (
     daily_summary,
     dashboard,
     expenses,
+    customer_insights,
     incomes,
     items,
     khata,
@@ -53,6 +54,7 @@ for module in (
     notifications,
     reports,
     items,
+    customer_insights,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

@@ -30,6 +30,7 @@ export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
   Reports: undefined;
+  CustomerInsights: undefined;
   Items: undefined;
   ItemForm: {item?: Item} | undefined;
   AITransaction: undefined;

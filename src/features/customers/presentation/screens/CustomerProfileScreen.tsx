@@ -32,6 +32,12 @@ import {
   useLedgerMutations,
   useRiskPrediction,
 } from '@features/customers/presentation/hooks';
+import {CreditLimitSheet} from '@features/customer-intel/presentation/components/CreditLimitSheet';
+import {
+  creditLimitStatus,
+  useCreditLimit,
+  useCreditLimitStore,
+} from '@features/customer-intel/store/creditLimit.store';
 import {useConnectivity} from '@features/income/presentation/hooks';
 import {SendReminderSheet} from '@features/reminders/presentation/components';
 import type {AppScreenProps} from '@navigation/types';
@@ -59,11 +65,17 @@ export function CustomerProfileScreen({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
   const [reminderOpen, setReminderOpen] = useState(false);
+  const [limitOpen, setLimitOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
+
+  const creditLimit = useCreditLimit(customer.id);
+  const setCreditLimit = useCreditLimitStore(s => s.setLimit);
+  const clearCreditLimit = useCreditLimitStore(s => s.clearLimit);
   const businessName = useAuthStore(s => s.business?.businessName);
 
   const ledger = ledgerQuery.data;
   const outstanding = ledger?.outstanding ?? customer.outstandingAmount;
+  const limitInfo = creditLimitStatus(Math.max(outstanding, 0), creditLimit);
   const status =
     outstanding <= 0 ? 'no-dues' : customer.isOverdue ? 'overdue' : 'pending';
   const style = STATUS_STYLE[status];
@@ -148,6 +160,23 @@ export function CustomerProfileScreen({
         </View>
       </View>
 
+      {/* Credit limit alert (#18) */}
+      {limitInfo.status !== 'ok' ? (
+        <View
+          className={`mt-3 rounded-xl px-4 py-3 ${
+            limitInfo.status === 'exceeded' ? 'bg-red-50' : 'bg-amber-50'
+          }`}>
+          <Text
+            className={`text-sm font-medium ${
+              limitInfo.status === 'exceeded' ? 'text-danger' : 'text-amber-800'
+            }`}>
+            {limitInfo.status === 'exceeded'
+              ? `🚨 Credit limit exceeded by ${formatINR(limitInfo.over)}.`
+              : `⚠️ Approaching credit limit (${formatINR(creditLimit ?? 0)}).`}
+          </Text>
+        </View>
+      ) : null}
+
       {/* Primary actions */}
       <View className="mt-5 flex-row" style={{gap: 12}}>
         <ActionButton
@@ -189,6 +218,10 @@ export function CustomerProfileScreen({
           }
         />
         <SecondaryAction
+          label="🎯 Limit"
+          onPress={() => setLimitOpen(true)}
+        />
+        <SecondaryAction
           label="✏️ Edit"
           onPress={() => navigation.navigate('CustomerForm', {customer})}
         />
@@ -205,6 +238,58 @@ export function CustomerProfileScreen({
         <Detail label="Address" value={customer.address} />
         <Detail label="Notes" value={customer.notes} />
       </View>
+
+      {/* Payment score (#17) — good-payer score = 100 − risk. */}
+      {risk ? (
+        <View className="mt-6 rounded-2xl border border-border bg-white p-4">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text variant="caption">Payment Score</Text>
+              <Text className="text-3xl font-bold text-slate-900">
+                {100 - risk.prediction.score}
+                <Text className="text-base font-normal text-muted">/100</Text>
+              </Text>
+            </View>
+            <View
+              className={`rounded-full px-3 py-1 ${
+                risk.prediction.category === 'low'
+                  ? 'bg-green-50'
+                  : risk.prediction.category === 'medium'
+                  ? 'bg-amber-50'
+                  : 'bg-red-50'
+              }`}>
+              <Text
+                className={`text-xs font-semibold ${
+                  risk.prediction.category === 'low'
+                    ? 'text-success'
+                    : risk.prediction.category === 'medium'
+                    ? 'text-amber-700'
+                    : 'text-danger'
+                }`}>
+                {risk.prediction.category === 'low'
+                  ? 'Low risk'
+                  : risk.prediction.category === 'medium'
+                  ? 'Medium risk'
+                  : 'High risk'}
+              </Text>
+            </View>
+          </View>
+          <View className="mt-4 flex-row rounded-xl bg-slate-50 p-3" style={{gap: 8}}>
+            <ScoreStat
+              label="Usually pays"
+              value={`${Math.round(risk.features.avgPaymentDelayDays)}d`}
+            />
+            <ScoreStat
+              label="Current overdue"
+              value={formatINR(customer.isOverdue ? Math.max(outstanding, 0) : 0)}
+            />
+            <ScoreStat
+              label="History"
+              value={`${risk.features.historyCount} txns`}
+            />
+          </View>
+        </View>
+      ) : null}
 
       {/* AI payment-risk insight (isolated: a failure here won't break the
           rest of the profile, so Edit/Add credit stay reachable). */}
@@ -296,6 +381,21 @@ export function CustomerProfileScreen({
         businessName={businessName}
         onClose={() => setReminderOpen(false)}
       />
+
+      <CreditLimitSheet
+        visible={limitOpen}
+        current={creditLimit}
+        customerName={customer.fullName}
+        onClose={() => setLimitOpen(false)}
+        onSave={amt => {
+          setCreditLimit(customer.id, amt);
+          setLimitOpen(false);
+        }}
+        onRemove={() => {
+          clearCreditLimit(customer.id);
+          setLimitOpen(false);
+        }}
+      />
     </Screen>
   );
 }
@@ -335,6 +435,23 @@ function SecondaryAction({
       className="rounded-full border border-border bg-white px-3.5 py-2">
       <Text className="text-sm font-medium text-slate-700">{label}</Text>
     </Pressable>
+  );
+}
+
+function ScoreStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.JSX.Element {
+  return (
+    <View className="flex-1">
+      <Text className="text-[10px] uppercase text-muted">{label}</Text>
+      <Text className="mt-0.5 text-sm font-semibold text-slate-900" numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
   );
 }
 

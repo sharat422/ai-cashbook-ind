@@ -11,6 +11,10 @@ import {
 } from '@components/form';
 import {Button, Screen, SuccessOverlay, Text} from '@components/ui';
 import type {Attachment} from '@/shared/types/attachment';
+import {
+  creditLimitStatus,
+  useCreditLimit,
+} from '@features/customer-intel/store/creditLimit.store';
 import {useLedgerMutations} from '@features/customers/presentation/hooks';
 import {useCreditDraftStore} from '@features/customers/presentation/store/creditDraft.store';
 import {useConnectivity} from '@features/income/presentation/hooks';
@@ -31,6 +35,7 @@ export function AddCreditScreen({
 }: AppScreenProps<'AddCredit'>): React.JSX.Element {
   const {customer} = route.params;
   const online = useConnectivity();
+  const creditLimit = useCreditLimit(customer.id);
   const {addCredit} = useLedgerMutations(customer.id);
   const saveDraft = useCreditDraftStore(s => s.saveDraft);
   const clearDraft = useCreditDraftStore(s => s.clearDraft);
@@ -137,6 +142,28 @@ export function AddCreditScreen({
             </Text>
           </View>
         ) : null}
+
+        {(() => {
+          const projected =
+            customer.outstandingAmount + (Number.isNaN(amount) ? 0 : amount);
+          const info = creditLimitStatus(projected, creditLimit);
+          if (info.status === 'ok') return null;
+          return (
+            <View
+              className={`mt-4 rounded-xl px-4 py-3 ${
+                info.status === 'exceeded' ? 'bg-red-50' : 'bg-amber-50'
+              }`}>
+              <Text
+                className={`text-sm font-medium ${
+                  info.status === 'exceeded' ? 'text-danger' : 'text-amber-800'
+                }`}>
+                {info.status === 'exceeded'
+                  ? `🚨 This will exceed the credit limit by ${formatINR(info.over)}.`
+                  : `⚠️ This nears the ${formatINR(creditLimit ?? 0)} credit limit.`}
+              </Text>
+            </View>
+          );
+        })()}
 
         {/* Large amount field */}
         <View className="mt-6 rounded-3xl bg-slate-900 px-5 pb-6 pt-5">
