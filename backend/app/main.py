@@ -10,6 +10,7 @@ from .database import Base, engine
 from .routers import (
     ai_routes,
     auth,
+    business,
     customers,
     daily_summary,
     dashboard,
@@ -55,6 +56,7 @@ for module in (
     reports,
     items,
     customer_insights,
+    business,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

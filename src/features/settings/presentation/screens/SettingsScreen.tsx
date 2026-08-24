@@ -226,6 +226,12 @@ export function SettingsScreen({
           onPress={() => navigation.navigate('Items')}
         />
         <Button
+          title="🪙 Cash counter"
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('CashCounter')}
+        />
+        <Button
           title={t('settings.notifications')}
           variant="secondary"
           className="mt-3"

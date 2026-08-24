@@ -666,6 +666,42 @@ roadmap items that need a gateway/native scheduling — not in this build.)
 
 ---
 
+## 26. Cash counter
+
+### 26.1 Count physical cash
+- **Steps:** Settings → Business → **🪙 Cash counter**. Enter counts, e.g. ₹500 × 10, ₹200 × 5, ₹100 × 8, ₹50 × 4.
+- **Expected:** Each row shows its subtotal (₹5,000 / ₹1,000 / ₹800 / ₹200) and the bottom bar shows **Total ₹7,000** with the piece count (27). Only digits are accepted.
+
+### 26.2 Reset
+- **Steps:** Tap **Reset**.
+- **Expected:** All counts clear and the total returns to ₹0.
+
+---
+
+## 27. Business summary (AI daily digest, profit, trends, forecast)
+
+Open from the Dashboard **📈 Business summary** button.
+
+### 27.1 Morning digest (#26)
+- **Steps:** Record some sales/expenses/payments dated yesterday, then open Business summary.
+- **Expected:** A time-based greeting ("Good morning/afternoon/evening 👋") and a **Yesterday** card with **Sales / Collections / Expenses**, plus a dark card with **Outstanding, Overdue, Expected today** (avg daily collection), and **N customers need attention** (overdue count).
+
+### 27.2 Profit dashboard (#29)
+- **Expected:** A **This month** card with Sales, Expenses, **Estimated profit** (green/red), and **Margin %** (profit ÷ sales).
+
+### 27.3 Trends (#30)
+- **Steps:** Have activity in both this month and last month.
+- **Expected:** "Trends vs last month" shows Sales / Collections / Expenses with ▲/▼ and a %. Up-sales/collections render green; up-expenses render red. "No prior data" when last month is empty.
+
+### 27.4 Cash-flow forecast (#31)
+- **Expected:** "Cash-flow forecast" (based on the last 3 months): **Expected in**, **Expected out**, **Net** (green when positive).
+
+### 27.5 Offline / empty
+- **Steps:** New business with no data / airplane mode.
+- **Expected:** Zeros and "No prior data" where applicable; a retryable error card if the backend is unreachable.
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -680,11 +716,13 @@ roadmap items that need a gateway/native scheduling — not in this build.)
 10. Settings → switch language to Hindi → Dashboard renders in Hindi.
 11. Settings → Payments → set UPI ID → customer → 💳 Request → QR shows → Mark as received.
 12. Khata → 🔎 Customer intelligence → aging buckets + "who owes the most" populated.
-13. Log out → back to Login.
+13. Dashboard → 📈 Business summary → yesterday digest, profit, trends, forecast render.
+14. Settings → 🪙 Cash counter → ₹500×10 + ₹200×5 + ₹100×8 + ₹50×4 = ₹7,000.
+15. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 75) and `cd backend && python -m pytest`
-(backend, 67). See [TESTING.md](TESTING.md).
+release: `npm test` (frontend, 79) and `cd backend && python -m pytest`
+(backend, 69). See [TESTING.md](TESTING.md).

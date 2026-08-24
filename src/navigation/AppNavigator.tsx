@@ -20,6 +20,8 @@ import {ReceiptReviewScreen} from '@features/receipt-scanner/presentation/screen
 import {AITransactionScreen} from '@features/ai-entry/presentation/screens/AITransactionScreen';
 import {RequestPaymentScreen} from '@features/collections/presentation/screens/RequestPaymentScreen';
 import {CustomerInsightsScreen} from '@features/customer-intel/presentation/screens/CustomerInsightsScreen';
+import {CashCounterScreen} from '@features/cash-counter/presentation/screens/CashCounterScreen';
+import {BusinessScreen} from '@features/business/presentation/screens/BusinessScreen';
 import {ItemListScreen} from '@features/items/presentation/screens/ItemListScreen';
 import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
@@ -37,6 +39,8 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="CustomerInsights" component={CustomerInsightsScreen} />
+      <Stack.Screen name="CashCounter" component={CashCounterScreen} />
+      <Stack.Screen name="Business" component={BusinessScreen} />
       <Stack.Screen
         name="AITransaction"
         component={AITransactionScreen}

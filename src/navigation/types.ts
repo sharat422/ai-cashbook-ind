@@ -29,8 +29,10 @@ export type OnboardingStackParamList = {
 export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
+  Business: undefined;
   Reports: undefined;
   CustomerInsights: undefined;
+  CashCounter: undefined;
   Items: undefined;
   ItemForm: {item?: Item} | undefined;
   AITransaction: undefined;
