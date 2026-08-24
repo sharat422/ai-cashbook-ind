@@ -6,6 +6,7 @@ import {AmountInput, DateField, FormField, NotesInput, TextField} from '@compone
 import {BottomSheet, Button, Text} from '@components/ui';
 import {
   PAYMENT_METHOD_LABEL,
+  PAYMENT_METHODS,
   type PaymentMethod,
 } from '@features/customers/domain/ledger';
 import {formatINR} from '@utils/currency';
@@ -29,14 +30,16 @@ export interface ReceivePaymentSheetProps {
   onSubmit: (input: ReceivePaymentInput) => void;
 }
 
-const METHODS: PaymentMethod[] = ['cash', 'upi', 'bank', 'cheque'];
+const METHODS = PAYMENT_METHODS;
 
 /** Reference label/placeholder per method. */
 const REFERENCE_HINT: Record<PaymentMethod, string> = {
   cash: 'Reference (optional)',
   upi: 'UPI transaction ID',
   bank: 'Bank reference / UTR',
+  card: 'Card / auth reference',
   cheque: 'Cheque number',
+  other: 'Reference (optional)',
 };
 
 /**

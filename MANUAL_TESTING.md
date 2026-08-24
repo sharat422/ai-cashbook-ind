@@ -262,8 +262,8 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 - **Expected:** "Draft saved" alert; on reopen "Draft restored" with values; **Discard** clears it.
 
 ### 9.4 Receive payment
-- **Steps:** Customer profile → **Receive payment** → enter an amount (≤ outstanding), method → submit.
-- **Expected:** Confetti success overlay; **Outstanding decreases**; payment appears in the timeline; totals update.
+- **Steps:** Customer profile → **Receive payment** → enter an amount (≤ outstanding), pick a **method** → submit.
+- **Expected:** Method chips offer **Cash / UPI / Bank Transfer / Card / Cheque / Other**; a reference field adapts to the method (UPI txn ID, UTR, cheque no.). Confetti success overlay; **Outstanding decreases**; payment appears in the timeline; totals update.
 
 ### 9.5 Overpayment / balance sign
 - **Steps:** Record payments exceeding total credit.
@@ -576,6 +576,22 @@ Kannada, Marathi, Gujarati, Bengali, Malayalam, Punjabi.
 ### 22.9 Example chips
 - **Steps:** Tap a suggested example chip.
 - **Expected:** Fills the input so you can parse it in one tap.
+
+### 22.10 Never blind-creates — confirmation card
+- **Steps:** Parse any sentence.
+- **Expected:** Nothing is saved until you review the **"I understood — confirm"** card and tap **Confirm & save**. Every field is editable first.
+
+### 22.11 Payment method (for received payments)
+- **Steps:** Parse a payment (e.g. `ramesh paid 2000`) → in review, Type = **Received** → a **Payment method** row appears.
+- **Expected:** Choose Cash / UPI / Bank Transfer / Card / Cheque / Other; the chosen method is saved on the ledger entry. *(Credit entries don't show a method.)*
+
+### 22.12 Ambiguous customer — "Which Ramesh?"
+- **Steps:** Have two or more customers whose names match (e.g. "Ramesh Kumar", "Ramesh Traders"). Enter `Ramesh ko 500 diye` → Confirm & save.
+- **Expected:** Instead of creating blindly, a **"Which 'Ramesh'?"** picker lists the matching customers (name · business · mobile · outstanding). Pick one → the entry is added to that customer. A **"➕ Create new 'Ramesh'"** option is also offered.
+
+### 22.13 Exact / single match auto-resolves
+- **Steps:** Enter a name that exactly matches exactly one existing customer → Confirm.
+- **Expected:** No picker — it saves straight to that customer. A brand-new name creates the customer directly.
 
 ---
 

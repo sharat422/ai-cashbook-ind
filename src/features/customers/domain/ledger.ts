@@ -9,14 +9,32 @@ export type {Attachment};
 export type LedgerEntryType = 'credit' | 'payment';
 
 /** How a payment was received. */
-export type PaymentMethod = 'cash' | 'upi' | 'bank' | 'cheque';
+export type PaymentMethod =
+  | 'cash'
+  | 'upi'
+  | 'bank'
+  | 'card'
+  | 'cheque'
+  | 'other';
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: 'Cash',
   upi: 'UPI',
   bank: 'Bank Transfer',
+  card: 'Card',
   cheque: 'Cheque',
+  other: 'Other',
 };
+
+/** Display order for method selectors. */
+export const PAYMENT_METHODS: PaymentMethod[] = [
+  'cash',
+  'upi',
+  'bank',
+  'card',
+  'cheque',
+  'other',
+];
 
 /** Sync state of an entry created locally relative to the backend. */
 export type LedgerSyncStatus = 'synced' | 'pending';

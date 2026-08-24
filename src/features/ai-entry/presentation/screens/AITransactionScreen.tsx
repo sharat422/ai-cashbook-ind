@@ -1,22 +1,35 @@
 import React, {useState} from 'react';
 import {Alert, Pressable, ScrollView, TextInput, View} from 'react-native';
 
+import {FilterChip} from '@components/filters';
 import {AmountInput, DateField, FormField, TextField} from '@components/form';
 import {Button, Screen, SegmentedControl, Text} from '@components/ui';
-import {saveParsedTransaction} from '@features/ai-entry/domain/saveTransaction';
 import type {
   ParsedTransaction,
   ParsedType,
 } from '@features/ai-entry/domain/entities';
+import {
+  addLedgerForCustomer,
+  createCustomerByName,
+  exactMatch,
+  findCustomerCandidates,
+} from '@features/ai-entry/domain/saveTransaction';
 import {useParseTransaction} from '@features/ai-entry/presentation/hooks/useParseTransaction';
+import type {Customer} from '@features/customers/domain/entities';
+import {
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABEL,
+  type PaymentMethod,
+} from '@features/customers/domain/ledger';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
+import {formatINR} from '@utils/currency';
 import {toISODate} from '@utils/date';
 
 const EXAMPLES = [
   'Ramesh ko 2500 ka maal diya',
   'Suresh se teen hazaar mile',
-  'Priya ko 500 udhaar diya',
+  'gave ramesh 500 for groceries',
 ];
 
 const TYPE_OPTIONS: Array<{label: string; value: ParsedType}> = [
@@ -36,12 +49,16 @@ export function AITransactionScreen({
   const [type, setType] = useState<ParsedType>('credit');
   const [amount, setAmount] = useState<number>(NaN);
   const [date, setDate] = useState<string>(toISODate(new Date()));
-  const [saving, setSaving] = useState(false);
+  const [method, setMethod] = useState<PaymentMethod>('cash');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // When set, the "Which <name>?" picker is shown (multiple matches).
+  const [candidates, setCandidates] = useState<Customer[] | null>(null);
 
   const onParse = () => {
     if (!text.trim()) return;
     setError(null);
+    setCandidates(null);
     parse.mutate(
       {text: text.trim(), today: toISODate(new Date())},
       {
@@ -61,23 +78,23 @@ export function AITransactionScreen({
     );
   };
 
-  const onConfirm = async () => {
-    if (!name.trim()) return setError('Enter the customer name');
-    if (Number.isNaN(amount) || amount <= 0) return setError('Enter an amount');
-    setError(null);
-    setSaving(true);
+  /** Add the entry to a resolved customer, then confirm to the user. */
+  const commitTo = async (customerOrPromise: Customer | Promise<Customer>) => {
+    setBusy(true);
+    setCandidates(null);
     try {
-      const customer = await saveParsedTransaction({
-        customerName: name.trim(),
+      const customer = await customerOrPromise;
+      await addLedgerForCustomer(customer.id, {
         type,
         amount,
         date,
-        notes: parsed ? `Voice: ${parsed.rawText}` : undefined,
+        paymentMethod: method,
+        notes: parsed ? `Voice/AI: ${parsed.rawText}` : undefined,
       });
-      setSaving(false);
+      setBusy(false);
       Alert.alert(
         type === 'credit' ? 'Credit added' : 'Payment recorded',
-        `${type === 'credit' ? 'Udhaar' : 'Payment'} of ₹${amount} saved for ${customer.fullName}.`,
+        `${type === 'credit' ? 'Udhaar' : 'Payment'} of ${formatINR(amount)} saved for ${customer.fullName}.`,
         [
           {
             text: 'View customer',
@@ -87,10 +104,31 @@ export function AITransactionScreen({
         ],
       );
     } catch (e) {
-      setSaving(false);
+      setBusy(false);
       Alert.alert(
         'Could not save',
         e instanceof Error ? e.message : 'Check your connection and try again.',
+      );
+    }
+  };
+
+  const onConfirm = async () => {
+    if (!name.trim()) return setError('Enter the customer name');
+    if (Number.isNaN(amount) || amount <= 0) return setError('Enter an amount');
+    setError(null);
+    setBusy(true);
+    try {
+      const found = await findCustomerCandidates(name);
+      setBusy(false);
+      if (found.length === 0) return commitTo(createCustomerByName(name));
+      const one = exactMatch(name, found);
+      if (one) return commitTo(one);
+      setCandidates(found); // ambiguous → ask "Which <name>?"
+    } catch (e) {
+      setBusy(false);
+      Alert.alert(
+        'Could not check customers',
+        e instanceof Error ? e.message : 'Check your connection.',
       );
     }
   };
@@ -142,11 +180,11 @@ export function AITransactionScreen({
             onPress={onParse}
           />
 
-          {/* Review */}
+          {/* Review + confirm */}
           {parsed ? (
             <View className="mt-6 rounded-2xl border border-border bg-white p-4">
               <View className="mb-3 flex-row items-center justify-between">
-                <Text variant="label">Review & confirm</Text>
+                <Text variant="label">I understood — confirm</Text>
                 <Text variant="caption">
                   {parsed.source === 'ai' ? 'AI' : 'Basic'} ·{' '}
                   {Math.round(parsed.confidence * 100)}%
@@ -174,6 +212,21 @@ export function AITransactionScreen({
                   <AmountInput value={amount} onChange={setAmount} />
                 </FormField>
 
+                {type === 'payment' ? (
+                  <FormField label="Payment method">
+                    <View className="flex-row flex-wrap" style={{gap: 8}}>
+                      {PAYMENT_METHODS.map(m => (
+                        <FilterChip
+                          key={m}
+                          label={PAYMENT_METHOD_LABEL[m]}
+                          selected={method === m}
+                          onPress={() => setMethod(m)}
+                        />
+                      ))}
+                    </View>
+                  </FormField>
+                ) : null}
+
                 <FormField label="Date">
                   <DateField value={date} onChange={setDate} />
                 </FormField>
@@ -183,12 +236,56 @@ export function AITransactionScreen({
                 <Text className="mt-3 text-sm text-danger">{error}</Text>
               ) : null}
 
-              <Button
-                title="Confirm & save"
-                className="mt-5"
-                loading={saving}
-                onPress={onConfirm}
-              />
+              {/* Disambiguation picker OR confirm button */}
+              {candidates ? (
+                <View className="mt-5 border-t border-border pt-4">
+                  <Text variant="label">Which “{name.trim()}”?</Text>
+                  <Text variant="caption" className="mb-3 mt-1">
+                    More than one customer matches — pick one, or create new.
+                  </Text>
+                  <View style={{gap: 8}}>
+                    {candidates.map(c => (
+                      <Pressable
+                        key={c.id}
+                        onPress={() => commitTo(c)}
+                        className="flex-row items-center justify-between rounded-xl border border-border px-4 py-3">
+                        <View className="flex-1 pr-3">
+                          <Text className="font-semibold text-slate-900">
+                            {c.fullName}
+                          </Text>
+                          <Text variant="caption">
+                            {c.businessName ? `${c.businessName} · ` : ''}+91{' '}
+                            {c.mobile || '—'}
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-semibold text-slate-900">
+                          {formatINR(c.outstandingAmount)}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <Button
+                    title={`➕ Create new “${name.trim()}”`}
+                    variant="secondary"
+                    className="mt-3"
+                    loading={busy}
+                    onPress={() => commitTo(createCustomerByName(name))}
+                  />
+                  <Button
+                    title="Cancel"
+                    variant="ghost"
+                    className="mt-1"
+                    onPress={() => setCandidates(null)}
+                  />
+                </View>
+              ) : (
+                <Button
+                  title="Confirm & save"
+                  className="mt-5"
+                  loading={busy}
+                  onPress={onConfirm}
+                />
+              )}
             </View>
           ) : null}
         </View>
