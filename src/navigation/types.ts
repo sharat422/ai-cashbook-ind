@@ -30,6 +30,7 @@ export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
   Business: undefined;
+  Assistant: undefined;
   Reports: undefined;
   CustomerInsights: undefined;
   CashCounter: undefined;

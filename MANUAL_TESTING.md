@@ -702,6 +702,47 @@ Open from the Dashboard **📈 Business summary** button.
 
 ---
 
+## 28. AI Business Assistant (natural-language analytics)
+
+Open from the Dashboard **🤖 Ask AI** button. Type a question or tap a suggested
+one. The AI classifies the question; the **numbers are computed from your data**
+(never made up). Full accuracy needs `OPENAI_API_KEY` on the backend; without it
+a keyword classifier handles the common phrasings below.
+
+### 28.1 Who owes the most
+- **Steps:** Ask "Who owes me the most?"
+- **Expected:** Names your biggest debtor with the amount (e.g. "Raj Traders owes you the most: ₹3,000") + the next few.
+
+### 28.2 Collections
+- **Steps:** Ask "How much did I collect this month?"
+- **Expected:** "You collected ₹X this month." (Try "last week", "today" — the period adjusts.)
+
+### 28.3 Who is late
+- **Steps:** Ask "Which customers are late?"
+- **Expected:** Count + total overdue + who to chase first (or "No overdue customers").
+
+### 28.4 Biggest expenses
+- **Steps:** Ask "What were my biggest expenses?"
+- **Expected:** Top expense categories with amounts for the period.
+
+### 28.5 Sales
+- **Steps:** Ask "How much did I sell last week?"
+- **Expected:** "You sold ₹X last week."
+
+### 28.6 Compare months
+- **Steps:** Ask "Compare this month with last month."
+- **Expected:** Sales / Collections / Expenses this vs last month, each with a %.
+
+### 28.7 Per-customer purchases (#28)
+- **Steps:** Ask "How much did Raj Traders purchase in the last 3 months?"
+- **Expected:** A month-by-month breakdown + total (e.g. "…₹32,000 (Jun), ₹41,500 (Jul), ₹28,500 (Aug) — total ₹1,02,000"), matched to the named customer.
+
+### 28.8 Unknown / help
+- **Steps:** Ask something unrelated.
+- **Expected:** A friendly list of what it can answer (no crash, no wrong number).
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -718,11 +759,12 @@ Open from the Dashboard **📈 Business summary** button.
 12. Khata → 🔎 Customer intelligence → aging buckets + "who owes the most" populated.
 13. Dashboard → 📈 Business summary → yesterday digest, profit, trends, forecast render.
 14. Settings → 🪙 Cash counter → ₹500×10 + ₹200×5 + ₹100×8 + ₹50×4 = ₹7,000.
-15. Log out → back to Login.
+15. Dashboard → 🤖 Ask AI → "Who owes me the most?" → correct name + amount.
+16. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
 release: `npm test` (frontend, 79) and `cd backend && python -m pytest`
-(backend, 69). See [TESTING.md](TESTING.md).
+(backend, 76). See [TESTING.md](TESTING.md).

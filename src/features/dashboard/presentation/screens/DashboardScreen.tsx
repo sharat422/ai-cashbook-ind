@@ -189,12 +189,22 @@ export function DashboardScreen({
         </View>
 
         {/* Quick actions */}
-        <Button
-          title={t('dashboard.business')}
-          variant="secondary"
-          className="mt-6"
-          onPress={() => navigation.navigate('Business')}
-        />
+        <View className="mt-6 flex-row" style={{gap: 12}}>
+          <Button
+            title={t('dashboard.business')}
+            variant="secondary"
+            className="flex-1"
+            fullWidth={false}
+            onPress={() => navigation.navigate('Business')}
+          />
+          <Button
+            title={t('dashboard.askAi')}
+            variant="secondary"
+            className="flex-1"
+            fullWidth={false}
+            onPress={() => navigation.navigate('Assistant')}
+          />
+        </View>
         <Button
           title={t('dashboard.aiEntry')}
           className="mt-3"

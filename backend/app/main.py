@@ -9,6 +9,7 @@ from .config import settings
 from .database import Base, engine
 from .routers import (
     ai_routes,
+    assistant,
     auth,
     business,
     customers,
@@ -57,6 +58,7 @@ for module in (
     items,
     customer_insights,
     business,
+    assistant,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 
