@@ -743,6 +743,49 @@ a keyword classifier handles the common phrasings below.
 
 ---
 
+## 29. Recurring expenses (#24)
+
+Open from the Dashboard **🔁 Recurring** button. Templates for repeating costs
+(rent, salaries, subscriptions) so they're never forgotten; "Mark paid" records
+a real expense and rolls the schedule forward.
+
+### 29.1 Add a recurring expense
+- **Steps:** Tap **+ Add** → name "Shop rent", amount ₹15,000, category Rent, paid to "Landlord", frequency **Monthly**, repeat every 1, next due date today → **Add recurring expense**.
+- **Expected:** Returns to the list; the row appears with "Every month · Rent · next <date>" and ₹15,000. Because it's due today it shows a **DUE** badge and an amber border.
+
+### 29.2 Frequencies & interval
+- **Steps:** Add templates with **Weekly**, **Yearly**, and **Custom** frequencies; use the − / + stepper to set "repeat every 2".
+- **Expected:** The hint under "Repeat every" reads "Every 2 weeks / years / days" accordingly. Custom = every N days; weekly = every N weeks; yearly = every N years.
+
+### 29.3 Summary header
+- **Expected:** With ≥1 template, a dark card shows **Due now** (count), **Due amount** (₹ sum of due templates), and **Per month** (rough monthly run-rate across all active templates — a weekly ₹1,000 shows ≈₹4,333/mo).
+
+### 29.4 Mark paid & record (post occurrence)
+- **Steps:** On a **DUE** row tap **Mark paid & record** → confirm.
+- **Expected:** An expense for that amount/category is created dated the due date (verify in Transaction history / Dashboard figures). The template's next due date advances one cycle to a **future** date, the DUE badge clears, and "Due now" drops.
+
+### 29.5 Month-end handling
+- **Steps:** Create a monthly template with next due date **Jan 31**, then mark it paid.
+- **Expected:** Next due date lands on **Feb 28** (clamped), and a subsequent cycle returns to **Mar 31** — the intended day-of-month is preserved, not permanently shifted earlier.
+
+### 29.6 Missed cycles catch up
+- **Steps:** Create a monthly template with a next due date ~3 months in the past, then mark it paid once.
+- **Expected:** One expense is recorded and the next due date jumps to the next **future** occurrence (it doesn't stay perpetually overdue).
+
+### 29.7 Idempotent posting
+- **Steps:** Rapidly tap **Mark paid** twice for the same due date (or retry after a flaky network).
+- **Expected:** Only **one** expense is created for that template + due date (no double-charge).
+
+### 29.8 Edit / pause / delete
+- **Steps:** Tap a row → change the amount, set **Status → Paused**, save. Then reopen and **Delete**.
+- **Expected:** Paused templates never show **DUE** and are excluded from the monthly run-rate; edits persist; delete removes the row.
+
+### 29.9 Validation & empty state
+- **Steps:** Try to save with a blank name / zero amount / no category.
+- **Expected:** Inline errors block the save. A brand-new business shows the "No recurring expenses yet" empty state with an add CTA.
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -760,11 +803,12 @@ a keyword classifier handles the common phrasings below.
 13. Dashboard → 📈 Business summary → yesterday digest, profit, trends, forecast render.
 14. Settings → 🪙 Cash counter → ₹500×10 + ₹200×5 + ₹100×8 + ₹50×4 = ₹7,000.
 15. Dashboard → 🤖 Ask AI → "Who owes me the most?" → correct name + amount.
-16. Log out → back to Login.
+16. Dashboard → 🔁 Recurring → add a monthly rent due today → **Mark paid** → expense created, next due advances one month.
+17. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
 release: `npm test` (frontend, 79) and `cd backend && python -m pytest`
-(backend, 76). See [TESTING.md](TESTING.md).
+(backend, 90). See [TESTING.md](TESTING.md).

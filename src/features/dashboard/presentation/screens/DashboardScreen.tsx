@@ -273,6 +273,22 @@ export function DashboardScreen({
             onPress={() => navigation.navigate('Reports')}
           />
         </View>
+        <View className="mt-3 flex-row" style={{gap: 12}}>
+          <Button
+            title={t('dashboard.recurring')}
+            variant="secondary"
+            className="flex-1"
+            fullWidth={false}
+            onPress={() => navigation.navigate('Recurring')}
+          />
+          <Button
+            title={t('dashboard.cashCounter')}
+            variant="secondary"
+            className="flex-1"
+            fullWidth={false}
+            onPress={() => navigation.navigate('CashCounter')}
+          />
+        </View>
 
         {/* Recent activity */}
         <View className="mt-8 mb-2 flex-row items-center justify-between">

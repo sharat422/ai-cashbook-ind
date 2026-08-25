@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Float, ForeignKey, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -72,6 +72,34 @@ class Expense(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     attachment_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
+class RecurringExpense(Base):
+    """A template for a repeating expense (rent, salary, subscriptions…).
+
+    Stores a cadence; the next due date is computed by `app.recurring`. Posting
+    an occurrence creates a real Expense row and rolls `next_due_date` forward.
+    """
+
+    __tablename__ = "recurring_expenses"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    amount: Mapped[float] = mapped_column(Float)
+    category: Mapped[str] = mapped_column(String(60))
+    vendor: Mapped[str] = mapped_column(String(200))
+    frequency: Mapped[str] = mapped_column(String(20))  # weekly|monthly|yearly|custom
+    interval: Mapped[int] = mapped_column(Integer, default=1)  # every N units
+    # Preserves the intended day-of-month for monthly templates across short months.
+    anchor_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    next_due_date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
+    last_posted_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
 

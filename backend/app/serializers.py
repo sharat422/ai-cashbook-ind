@@ -3,7 +3,15 @@
 The app's auth/business DTOs are camelCase; all other DTOs are snake_case.
 """
 
-from .models import Business, Customer, Expense, Income, Item, LedgerEntry
+from .models import (
+    Business,
+    Customer,
+    Expense,
+    Income,
+    Item,
+    LedgerEntry,
+    RecurringExpense,
+)
 
 
 def income_dto(m: Income) -> dict:
@@ -74,6 +82,27 @@ def item_dto(m: Item) -> dict:
         "gst_rate": m.gst_rate,
         "track_stock": m.track_stock,
         "stock_qty": m.stock_qty,
+        "created_at": m.created_at,
+    }
+
+
+def recurring_expense_dto(m: RecurringExpense, *, today: str | None = None) -> dict:
+    from .recurring import is_due
+
+    return {
+        "id": m.id,
+        "name": m.name,
+        "amount": m.amount,
+        "category": m.category,
+        "vendor": m.vendor,
+        "frequency": m.frequency,
+        "interval": m.interval,
+        "anchor_day": m.anchor_day,
+        "next_due_date": m.next_due_date,
+        "last_posted_date": m.last_posted_date,
+        "notes": m.notes,
+        "active": m.active,
+        "is_due": bool(m.active and today and is_due(m.next_due_date, today)),
         "created_at": m.created_at,
     }
 

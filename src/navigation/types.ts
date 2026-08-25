@@ -3,6 +3,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {Customer} from '@features/customers/domain/entities';
 import type {ExpenseCategory} from '@features/expense/domain/entities';
 import type {Item} from '@features/items/domain/entities';
+import type {RecurringExpense} from '@features/recurring/domain/entities';
 import type {Attachment} from '@/shared/types/attachment';
 
 /** Prefill payload used to seed the Add Expense form (e.g. from a receipt scan). */
@@ -36,6 +37,8 @@ export type AppStackParamList = {
   CashCounter: undefined;
   Items: undefined;
   ItemForm: {item?: Item} | undefined;
+  Recurring: undefined;
+  RecurringForm: {recurring?: RecurringExpense} | undefined;
   AITransaction: undefined;
   AddIncome: undefined;
   AddExpense:

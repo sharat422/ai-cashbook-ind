@@ -25,6 +25,8 @@ import {BusinessScreen} from '@features/business/presentation/screens/BusinessSc
 import {AssistantScreen} from '@features/assistant/presentation/screens/AssistantScreen';
 import {ItemListScreen} from '@features/items/presentation/screens/ItemListScreen';
 import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScreen';
+import {RecurringListScreen} from '@features/recurring/presentation/screens/RecurringListScreen';
+import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
@@ -52,6 +54,12 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen
         name="ItemForm"
         component={ItemFormScreen}
+        options={{presentation: 'modal'}}
+      />
+      <Stack.Screen name="Recurring" component={RecurringListScreen} />
+      <Stack.Screen
+        name="RecurringForm"
+        component={RecurringFormScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen
