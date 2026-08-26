@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DEBUG-ONLY network policy. Overrides the restrictive main config so a debug
+  build can reach a local dev backend over plain HTTP. These hosts NEVER apply
+  to release builds (this file is not compiled into them).
+
+    10.0.2.2   -> host machine from the Android emulator
+    localhost  -> Metro / on-device loopback
+    10.0.3.2   -> Genymotion host alias
+
+  Add your LAN IP (e.g. 192.168.x.x) here if testing on a physical device.
+-->
+<network-security-config>
+    <!-- Everything else stays HTTPS-only, even in debug. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">10.0.3.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+</network-security-config>

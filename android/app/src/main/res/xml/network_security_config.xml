@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ATS-equivalent for Android (production/default).
+
+  Cleartext (plain HTTP) is disabled app-wide: every request must be HTTPS, and
+  an accidental http:// URL fails loudly instead of leaking data. Only the
+  system CA store is trusted here. The `debug` build variant overrides this file
+  with a permissive version that allows the local dev backend over HTTP.
+
+  Certificate pinning, when enabled, is added as a <pin-set> under a
+  <domain-config> for the API host (see docs/ANDROID_RELEASE.md).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
