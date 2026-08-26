@@ -87,6 +87,12 @@ export function CreateBusinessScreen(): React.JSX.Element {
   const onSubmit = () => {
     if (!validate()) return;
 
+    // Persist the language choice up front. It's a local UI preference (not
+    // server-dependent), so we must not gate it on a per-call mutation callback
+    // — React Query skips those if this screen unmounts as the business is
+    // created, which would silently drop the selection and show English.
+    setPreferredLanguage(form.preferredLanguage);
+
     createBusiness.mutate(
       {
         businessName: form.businessName.trim(),
@@ -96,9 +102,6 @@ export function CreateBusinessScreen(): React.JSX.Element {
         gstRegistered: form.gstRegistered as boolean,
       },
       {
-        onSuccess: () => {
-          setPreferredLanguage(form.preferredLanguage);
-        },
         onError: err => Alert.alert('Could not create business', err.message),
       },
     );

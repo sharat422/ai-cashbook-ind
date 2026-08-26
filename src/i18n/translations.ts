@@ -119,13 +119,66 @@ const hi: Partial<Record<TKey, string>> = {
   'common.logoutConfirmMsg': 'क्या आप वाकई लॉग आउट करना चाहते हैं?',
 };
 
+const te: Partial<Record<TKey, string>> = {
+  'dashboard.welcome': 'తిరిగి స్వాగతం',
+  'dashboard.yourBusiness': 'మీ వ్యాపారం',
+  'dashboard.offline': 'ఆఫ్‌లైన్',
+  'dashboard.pendingSyncSuffix': ' · {count} సింక్ పెండింగ్‌లో',
+  'dashboard.syncing': '{count} అంశాలు సింక్ అవుతున్నాయి…',
+  'dashboard.cashBalance': 'నగదు నిల్వ',
+  'dashboard.cashBalanceCaption': 'అందిన ఆదాయం మైనస్ చెల్లించిన ఖర్చులు',
+  'dashboard.todayIncome': 'నేటి ఆదాయం',
+  'dashboard.todayExpense': 'నేటి ఖర్చు',
+  'dashboard.monthlyRevenue': 'నెలవారీ ఆదాయం',
+  'dashboard.monthlyExpense': 'నెలవారీ ఖర్చు',
+  'dashboard.aiEntry': '🎤 AI ఎంట్రీ (మాట్లాడండి లేదా టైప్ చేయండి)',
+  'dashboard.business': '📈 వ్యాపార సారాంశం',
+  'dashboard.askAi': '🤖 AIని అడగండి',
+  'dashboard.income': '+ ఆదాయం',
+  'dashboard.expense': '− ఖర్చు',
+  'dashboard.scanReceipt': '📷 రసీదు స్కాన్ చేయండి',
+  'dashboard.categorize': '✨ వర్గీకరించండి',
+  'dashboard.dailySummary': '📅 రోజువారీ సారాంశం',
+  'dashboard.customers': '👥 వినియోగదారులు',
+  'dashboard.khata': '📒 ఖాతా',
+  'dashboard.reports': '📊 నివేదికలు',
+  'dashboard.recurring': '🔁 పునరావృత ఖర్చులు',
+  'dashboard.cashCounter': '🧮 నగదు లెక్కింపు',
+  'dashboard.recentActivity': 'ఇటీవలి కార్యకలాపం',
+  'dashboard.viewAll': 'అన్నీ చూడండి',
+  'dashboard.noTransactions': 'ఇంకా ఎలాంటి లావాదేవీలు నమోదు కాలేదు.',
+
+  'settings.title': 'సెట్టింగ్‌లు',
+  'settings.security': 'భద్రత',
+  'settings.appLock': 'యాప్ లాక్',
+  'settings.appLockDesc': 'యాప్ తెరవడానికి {n}-అంకెల పిన్ అవసరం.',
+  'settings.setPin': 'పిన్ సెట్ చేయండి',
+  'settings.confirmPin': 'మీ పిన్‌ను నిర్ధారించండి',
+  'settings.appLockEnabled': 'యాప్ లాక్ ప్రారంభించబడింది',
+  'settings.appLockEnabledMsg': 'ప్రారంభించినప్పుడు ఈ పిన్ మిమ్మల్ని అడుగుతుంది.',
+  'settings.pinMismatch': 'పిన్‌లు సరిపోలలేదు. మళ్లీ ప్రారంభించండి.',
+  'settings.turnOffLock': 'యాప్ లాక్ ఆపివేయాలా?',
+  'settings.turnOffLockMsg': 'మీ పిన్ తొలగించబడుతుంది.',
+  'settings.turnOff': 'ఆపివేయండి',
+  'settings.preferences': 'ప్రాధాన్యతలు',
+  'settings.contentLanguage': 'కంటెంట్ భాష',
+  'settings.business': 'వ్యాపారం',
+  'settings.itemCatalog': '🏷️ వస్తువుల జాబితా',
+  'settings.notifications': '🔔 నోటిఫికేషన్‌లు',
+
+  'common.cancel': 'రద్దు చేయండి',
+  'common.logout': 'లాగ్ అవుట్',
+  'common.logoutConfirmTitle': 'లాగ్ అవుట్',
+  'common.logoutConfirmMsg': 'మీరు ఖచ్చితంగా లాగ్ అవుట్ చేయాలనుకుంటున్నారా?',
+};
+
 export const translations: Record<AppLanguage, Partial<Record<TKey, string>>> = {
   en,
   hi,
-  // Kannada / Tamil / Telugu fall back to English until translated.
+  te,
+  // Kannada / Tamil fall back to English until translated.
   kn: {},
   ta: {},
-  te: {},
 };
 
 export {en};

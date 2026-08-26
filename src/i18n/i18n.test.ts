@@ -11,7 +11,12 @@ describe('translate', () => {
     expect(translate('hi', 'common.logout')).toBe('लॉग आउट');
   });
 
-  it('falls back to English for languages without a translation (kn/ta/te)', () => {
+  it('returns the Telugu translation when language is te', () => {
+    expect(translate('te', 'dashboard.welcome')).toBe('తిరిగి స్వాగతం');
+    expect(translate('te', 'settings.title')).toBe('సెట్టింగ్‌లు');
+  });
+
+  it('falls back to English for languages without a translation (kn/ta)', () => {
     expect(translate('kn', 'dashboard.welcome')).toBe('Welcome back');
     expect(translate('ta', 'settings.title')).toBe('Settings');
   });
