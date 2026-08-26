@@ -69,6 +69,16 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 - **Steps:** Dashboard → **Log out** → confirm.
 - **Expected:** Confirmation alert; on confirm returns to Login; reopening the app stays logged out.
 
+### 1.12 Returning login pulls the existing business
+- **Steps:** Register a business with a number, add some data, log out, then log in again with the **same** number.
+- **Expected:** You land back on **your** Dashboard with your existing business and data — **not** the Create Business screen. This holds even for a second login within the same app session (no restart needed).
+- **Note (fix):** the login→business reconciliation previously only ran once per app launch; a same-session re-login could strand you on onboarding. Now it re-runs for each new session token, and the backend refuses to create a duplicate business (returns the existing one).
+
+### 1.13 Data is business-specific (no cross-account leak)
+- **Steps:** As user A, add income/expenses/customers. Log out. Log in as a **different** number (user B) and complete onboarding.
+- **Expected:** User B's Dashboard, recent activity, customers, notifications, UPI settings and drafts are **empty** — none of A's data appears. Logging back in as A restores A's server data.
+- **Why it matters:** device-local caches (offline queues, drafts, UPI id) are cleared on logout / account switch, so a pending draft from A can never sync into B's business.
+
 ---
 
 ## 2. Dashboard
@@ -804,11 +814,13 @@ a real expense and rolls the schedule forward.
 14. Settings → 🪙 Cash counter → ₹500×10 + ₹200×5 + ₹100×8 + ₹50×4 = ₹7,000.
 15. Dashboard → 🤖 Ask AI → "Who owes me the most?" → correct name + amount.
 16. Dashboard → 🔁 Recurring → add a monthly rent due today → **Mark paid** → expense created, next due advances one month.
-17. Log out → back to Login.
+17. Log out → log in with a **different** number → onboarding → new Dashboard shows **no** data from the previous account.
+18. Log out → log in with the **original** number → lands straight on that business's Dashboard (no re-onboarding).
+19. Log out → back to Login.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 79) and `cd backend && python -m pytest`
-(backend, 90). See [TESTING.md](TESTING.md).
+release: `npm test` (frontend, 82) and `cd backend && python -m pytest`
+(backend, 93). See [TESTING.md](TESTING.md).

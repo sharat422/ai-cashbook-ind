@@ -87,3 +87,60 @@ def test_create_and_fetch_business(user, client):
     me = client.get("/api/v1/businesses/me", headers=user.headers).json()
     assert me["id"] == user.business["id"]
     assert me["ownerName"] == "Owner"
+
+
+def _relogin(client, mobile: str) -> dict:
+    """Fresh token for an already-registered mobile (a returning-user login)."""
+    vid = client.post(
+        "/api/v1/auth/otp/request", json={"mobile": mobile}
+    ).json()["verificationId"]
+    token = client.post(
+        "/api/v1/auth/otp/verify",
+        json={"verificationId": vid, "mobile": mobile, "otp": MASTER_OTP},
+    ).json()["token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_create_business_is_idempotent(user, client):
+    """A second create must not spawn a duplicate — it returns the existing one,
+    so a user's data can never split across two businesses."""
+    again = client.post(
+        "/api/v1/businesses",
+        headers=user.headers,
+        json={
+            "businessName": "A Totally Different Name",
+            "ownerName": "Someone Else",
+            "businessType": "Services",
+            "state": "Maharashtra",
+            "gstRegistered": True,
+        },
+    )
+    assert again.status_code == 200
+    # Same business id as the original, and the original fields are unchanged.
+    assert again.json()["id"] == user.business["id"]
+    assert again.json()["businessName"] == "Test Traders"
+
+
+def test_returning_login_pulls_existing_business(user, client):
+    """Logging in again with a registered number resolves the same business
+    (no re-onboarding, no data on a fresh empty business)."""
+    new_headers = _relogin(client, user.mobile)
+    me = client.get("/api/v1/businesses/me", headers=new_headers)
+    assert me.status_code == 200
+    assert me.json()["id"] == user.business["id"]
+
+
+def test_business_data_is_isolated_between_users(make_user, client):
+    """One user's expense must never appear for another (data is per-business)."""
+    from helpers import add_expense
+    from conftest import today_iso
+
+    a = make_user()
+    b = make_user()
+    add_expense(client, a.headers, amount=999, date=today_iso(), client_id="iso-x")
+
+    a_list = client.get("/api/v1/expenses", headers=a.headers).json()
+    b_list = client.get("/api/v1/expenses", headers=b.headers).json()
+    assert any(e["amount"] == 999 for e in a_list)
+    assert all(e["amount"] != 999 for e in b_list)
+    assert b_list == []

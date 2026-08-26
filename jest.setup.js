@@ -9,6 +9,11 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+// react-native-config reads a native .env at build time; under Jest there is no
+// native module. An empty object is enough — src/config/env.ts supplies a
+// fallback for every key.
+jest.mock('react-native-config', () => ({__esModule: true, default: {}}));
+
 // Connectivity wrapper calls NetInfo.fetch()/addEventListener(). Default to
 // "online"; tests that exercise the offline path override fetch per-case.
 jest.mock('@react-native-community/netinfo', () => ({

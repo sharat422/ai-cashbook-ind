@@ -5,6 +5,7 @@ import {APP_CONFIG} from '@config/constants';
 import {useSyncBusiness} from '@features/auth/hooks';
 import {SplashScreen} from '@features/auth/screens/SplashScreen';
 import {useAuthStatus, useIsHydrated} from '@store/auth.store';
+import {useSessionDataReset} from '@store/sessionReset';
 import {AppNavigator} from './AppNavigator';
 import {AuthNavigator} from './AuthNavigator';
 import {OnboardingNavigator} from './OnboardingNavigator';
@@ -25,6 +26,8 @@ export function RootNavigator(): React.JSX.Element {
 
   // Reconcile the business for a returning user (token but no cached business).
   useSyncBusiness();
+  // Wipe the previous business's local data on logout / account switch.
+  useSessionDataReset();
 
   useEffect(() => {
     const timer = setTimeout(

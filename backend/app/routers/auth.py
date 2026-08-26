@@ -79,6 +79,16 @@ def create_business(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # The app is single-business per user. If one already exists (e.g. a
+    # returning user who briefly landed on onboarding before /businesses/me
+    # resolved), return it instead of creating a duplicate that would split
+    # their data across two businesses.
+    existing = db.scalars(
+        select(Business).where(Business.user_id == user.id)
+    ).first()
+    if existing is not None:
+        return business_dto(existing)
+
     business = Business(
         user_id=user.id,
         business_name=body.businessName,

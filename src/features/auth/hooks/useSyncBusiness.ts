@@ -17,11 +17,15 @@ export function useSyncBusiness(): void {
   const token = useAuthStore(state => state.token);
   const business = useAuthStore(state => state.business);
   const setBusiness = useAuthStore(state => state.setBusiness);
-  const attempted = useRef(false);
+  // Track which token we've fetched for, not just "have we tried once". A single
+  // boolean guard would block the fetch after a log out → log in with a *new*
+  // token in the same app session, stranding a returning user on onboarding.
+  const attemptedToken = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!token || business || attempted.current) return;
-    attempted.current = true;
+    if (!token || business) return;
+    if (attemptedToken.current === token) return;
+    attemptedToken.current = token;
 
     let active = true;
     getMyBusiness()
