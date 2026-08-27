@@ -143,6 +143,11 @@ workflows:
     scripts:
       - name: Install npm dependencies
         script: npm ci
+      - name: Run tests + type check (a red suite blocks the release)
+        script: |
+          set -e
+          npm test -- --ci
+          node node_modules/typescript/bin/tsc --noEmit
       - name: Seed .env for react-native-config
         script: |
           cp -f .env.example .env || true

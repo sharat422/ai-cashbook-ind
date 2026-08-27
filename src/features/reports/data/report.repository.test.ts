@@ -63,7 +63,7 @@ it('falls back to on-device figures on a NetworkError', async () => {
 });
 
 it('rethrows a genuine server error (ApiError)', async () => {
-  mockApi.mockRejectedValueOnce(new ApiError('500'));
+  mockApi.mockRejectedValueOnce(new ApiError(500, 'internal'));
   await expect(
     reportRepository.getSummary('2026-06-01', '2026-06-30'),
   ).rejects.toBeInstanceOf(ApiError);

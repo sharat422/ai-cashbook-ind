@@ -61,6 +61,6 @@ it('falls back to on-device figures on a NetworkError', async () => {
 });
 
 it('rethrows a genuine server error (ApiError) instead of masking it', async () => {
-  mockApi.mockRejectedValueOnce(new ApiError('500 internal'));
+  mockApi.mockRejectedValueOnce(new ApiError(500, 'internal'));
   await expect(dashboardRepository.getSummary()).rejects.toBeInstanceOf(ApiError);
 });
