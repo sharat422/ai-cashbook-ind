@@ -1,12 +1,26 @@
 # Codemagic CI/CD — AI Smart CashBook (React Native 0.76.5)
 #
 # Workflows:
-#   * android          — release APK (self-signed debug keystore), builds against
-#                        STAGING by default.
-#   * ios-staging      — signed IPA → TestFlight, wired to the STAGING backend
-#                        (smart-cashbook-api.onrender.com, master OTP 123456).
-#   * ios-production   — signed IPA → TestFlight, wired to the PRODUCTION backend
-#                        (smart-cashbook-api-prod.onrender.com).
+#   * android            — release APK (self-signed debug keystore), builds against
+#                          STAGING by default. For QA sideloading, NOT the Play Store.
+#   * android-production — signed .aab (upload key) → PRODUCTION backend, for Play
+#                          Store submission. Signing secrets come from the encrypted
+#                          env group `android_release_keystore` (see below).
+#   * ios-staging        — signed IPA → TestFlight, wired to the STAGING backend
+#                          (smart-cashbook-api.onrender.com, master OTP 123456).
+#   * ios-production     — signed IPA → TestFlight, wired to the PRODUCTION backend
+#                          (smart-cashbook-api-prod.onrender.com).
+#
+# android-production signing — create an encrypted variable GROUP named
+# `android_release_keystore` (Codemagic → app settings → Environment variables,
+# tick "Secure") with these four values:
+#   * CM_KEYSTORE          — the upload keystore (.jks) base64-encoded
+#                            (`base64 smartcashbook-upload.jks | pbcopy`)
+#   * CM_KEYSTORE_PASSWORD — store password
+#   * CM_KEY_ALIAS         — key alias (e.g. smartcashbook-upload)
+#   * CM_KEY_PASSWORD      — key password
+# The build decodes the keystore and writes android/keystore.properties, which
+# build.gradle already reads to switch on release signing. See docs/ANDROID_RELEASE.md.
 #
 # Each workflow bakes its own API_BASE_URL into the app at build time (the
 # "Seed .env" step overrides .env.example), so a build ALWAYS points at the
@@ -105,6 +119,79 @@ workflows:
     artifacts:
       - android/app/build/outputs/**/*.apk
       - android/app/build/outputs/**/mapping.txt
+
+  # ==========================================================================
+  # ANDROID · PRODUCTION → signed .aab for the Play Store
+  # ==========================================================================
+  android-production:
+    name: Android · Production (signed AAB for Play)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 18.20.4
+      java: 17
+      groups:
+        # Provides CM_KEYSTORE (base64 .jks), CM_KEYSTORE_PASSWORD,
+        # CM_KEY_ALIAS, CM_KEY_PASSWORD — see the header notes.
+        - android_release_keystore
+      vars:
+        API_BASE_URL: "https://smart-cashbook-api-prod.onrender.com"
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - node_modules
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Seed .env for react-native-config
+        script: |
+          cp -f .env.example .env || true
+          if [ -n "$API_BASE_URL" ]; then
+            awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
+            echo "Building against API_BASE_URL=$API_BASE_URL"
+          fi
+      - name: Materialize the release keystore + signing properties
+        script: |
+          set -e
+          # Fail fast if any secret is missing, so we never silently ship a
+          # debug-signed bundle (build.gradle would otherwise fall back to it).
+          : "${CM_KEYSTORE:?Missing CM_KEYSTORE (base64 .jks) — add the android_release_keystore group}"
+          : "${CM_KEYSTORE_PASSWORD:?Missing CM_KEYSTORE_PASSWORD}"
+          : "${CM_KEY_ALIAS:?Missing CM_KEY_ALIAS}"
+          : "${CM_KEY_PASSWORD:?Missing CM_KEY_PASSWORD}"
+          echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/android/app/upload-keystore.jks"
+          cat > "$CM_BUILD_DIR/android/keystore.properties" <<EOF
+          RELEASE_STORE_FILE=upload-keystore.jks
+          RELEASE_STORE_PASSWORD=$CM_KEYSTORE_PASSWORD
+          RELEASE_KEY_ALIAS=$CM_KEY_ALIAS
+          RELEASE_KEY_PASSWORD=$CM_KEY_PASSWORD
+          EOF
+          echo "keystore.properties written; upload key decoded."
+      - name: Make gradlew executable
+        script: chmod +x android/gradlew
+      - name: Build signed release AAB
+        script: |
+          cd android
+          # PROJECT_BUILD_NUMBER is Codemagic's incrementing build index → a
+          # unique, increasing Play versionCode on every run.
+          ./gradlew bundleRelease --no-daemon --stacktrace \
+            -PversionCodeOverride="$PROJECT_BUILD_NUMBER" \
+            -PversionNameOverride="1.0.$PROJECT_BUILD_NUMBER"
+      - name: Confirm the AAB is signed (not an unsigned artifact)
+        script: |
+          AAB=$(find android/app/build/outputs/bundle -name "*.aab" | head -1)
+          echo "Built bundle: $AAB"
+          jarsigner -verify "$AAB" && echo "AAB carries a valid signature."
+    artifacts:
+      - android/app/build/outputs/bundle/**/*.aab
+      - android/app/build/outputs/**/mapping.txt
+    # To auto-publish, create a Google Play service account, store its JSON as the
+    # encrypted var GCLOUD_SERVICE_ACCOUNT_CREDENTIALS, and uncomment:
+    # publishing:
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal
+    #     submit_as_draft: true
 
   # ==========================================================================
   # iOS · STAGING → TestFlight (smart-cashbook-api.onrender.com)

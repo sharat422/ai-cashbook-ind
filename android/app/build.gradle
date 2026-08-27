@@ -103,8 +103,10 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         // Play requires targetSdk 35 for new/updated apps as of Aug 2025.
         targetSdkVersion 35
-        versionCode 1
-        versionName "1.0"
+        // CI overrides these per build so every Play upload gets a unique,
+        // increasing versionCode (pass -PversionCodeOverride / -PversionNameOverride).
+        versionCode project.hasProperty('versionCodeOverride') ? project.property('versionCodeOverride').toString().toInteger() : 1
+        versionName project.hasProperty('versionNameOverride') ? project.property('versionNameOverride').toString() : "1.0"
     }
     signingConfigs {
         debug {

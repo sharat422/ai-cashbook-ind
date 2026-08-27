@@ -176,13 +176,31 @@ warning on the Dashboard for rooted/jailbroken devices — never hard-exits. Uni
    (§3.1–3.2) is being implemented. Needs a device/CI rebuild to verify the native path —
    I can't build from this Windows shell; JS logic is unit-tested with the native module mocked.
 
-## 7. Build the signed AAB (once §6 #1–2 are settled)
+## 7. Build the signed AAB
+
+### In CI (recommended — no local Android toolchain needed)
+
+The **`android-production`** workflow in `codemagic.yaml` builds the signed `.aab`. One-time
+setup: create an encrypted variable **group** `android_release_keystore` in Codemagic with:
+
+| Variable | Value |
+|---|---|
+| `CM_KEYSTORE` | the upload `.jks`, base64-encoded (`base64 smartcashbook-upload.jks`) |
+| `CM_KEYSTORE_PASSWORD` | store password |
+| `CM_KEY_ALIAS` | key alias |
+| `CM_KEY_PASSWORD` | key password |
+
+The build decodes the keystore, writes `android/keystore.properties`, runs `bundleRelease`
+with a unique `versionCode` (= Codemagic build number), verifies the signature, and exposes
+the `.aab` + `mapping.txt` as artifacts. It fails fast if any secret is missing (so it can
+never silently emit a debug-signed bundle). Auto-publish to a Play track is a commented-out
+`publishing: google_play:` block — enable it once you add a Play service-account JSON.
+
+### Locally (if you have the Android SDK)
 
 ```bash
+# with android/keystore.properties present:
 cd android
-./gradlew bundleRelease         # -> app/build/outputs/bundle/release/app-release.aab
-# APK for local device testing:
-./gradlew assembleRelease
+./gradlew bundleRelease      # -> app/build/outputs/bundle/release/app-release.aab
+./gradlew assembleRelease    # APK for sideload testing
 ```
-Codemagic already builds iOS; mirror these Gradle tasks in `codemagic.yaml` for Android,
-injecting the four `keystore.properties` values from encrypted env vars.
