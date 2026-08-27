@@ -4,12 +4,14 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {Text} from '@components/ui';
 import {APP_CONFIG} from '@config/constants';
+import {useT} from '@/i18n';
 
 /**
  * Branding splash shown while the persisted auth state rehydrates. Purely
  * presentational — RootNavigator decides when to dismiss it.
  */
 export function SplashScreen(): React.JSX.Element {
+  const t = useT();
   return (
     <SafeAreaView className="flex-1 bg-primary">
       <View className="flex-1 items-center justify-center px-6">
@@ -20,7 +22,7 @@ export function SplashScreen(): React.JSX.Element {
           {APP_CONFIG.name}
         </Text>
         <Text className="mt-1 text-sm text-white/80">
-          Smart books for growing businesses
+          {t('auth.splash.tagline')}
         </Text>
       </View>
       <View className="items-center pb-10">

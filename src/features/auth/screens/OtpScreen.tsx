@@ -6,6 +6,7 @@ import {AuthShell} from '@features/auth/components/AuthShell';
 import {MOCK_OTP} from '@api/auth.api';
 import {APP_CONFIG} from '@config/constants';
 import {useRequestOtp, useVerifyOtp} from '@features/auth/hooks';
+import {useT} from '@/i18n';
 import type {AuthScreenProps} from '@navigation/types';
 import {validateOtp} from '@utils/validation';
 
@@ -18,6 +19,7 @@ export function OtpScreen({
   route,
   navigation,
 }: AuthScreenProps<'Otp'>): React.JSX.Element {
+  const t = useT();
   const {verificationId, mobile} = route.params;
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +64,9 @@ export function OtpScreen({
           setOtp('');
           setError(null);
           setSecondsLeft(APP_CONFIG.otpResendSeconds);
-          Alert.alert('OTP sent', `A new OTP was sent to +91 ${mobile}.`);
+          Alert.alert(t('auth.otp.sentTitle'), t('auth.otp.sentMsg', {mobile}));
         },
-        onError: err => Alert.alert('Could not resend OTP', err.message),
+        onError: err => Alert.alert(t('auth.otp.resendError'), err.message),
       },
     );
   };
@@ -77,23 +79,25 @@ export function OtpScreen({
 
   return (
     <AuthShell
-      title="Verify your number"
-      subtitle={`Enter the ${APP_CONFIG.otpLength}-digit code sent to +91 ${mobile}.`}
+      title={t('auth.otp.title')}
+      subtitle={t('auth.otp.subtitle', {n: APP_CONFIG.otpLength, mobile})}
       footer={
         <View className="flex-row items-center justify-center" style={{gap: 6}}>
           {secondsLeft > 0 ? (
-            <Text variant="caption">Resend OTP in {secondsLeft}s</Text>
+            <Text variant="caption">
+              {t('auth.otp.resendIn', {n: secondsLeft})}
+            </Text>
           ) : (
             <Pressable onPress={onResend} disabled={requestOtp.isPending}>
               <Text className="text-sm font-semibold text-primary">
-                Resend OTP
+                {t('auth.otp.resend')}
               </Text>
             </Pressable>
           )}
           <Text variant="caption">·</Text>
           <Pressable onPress={() => navigation.goBack()}>
             <Text className="text-sm font-semibold text-primary">
-              Change number
+              {t('auth.otp.changeNumber')}
             </Text>
           </Pressable>
         </View>
@@ -110,11 +114,11 @@ export function OtpScreen({
         <Text className="mt-2 text-xs text-danger">{error}</Text>
       ) : null}
       <Text variant="caption" className="mt-3 text-center">
-        Demo mode: use OTP {MOCK_OTP}
+        {t('auth.otp.demo', {otp: MOCK_OTP})}
       </Text>
 
       <Button
-        title="Verify & Continue"
+        title={t('auth.otp.verify')}
         className="mt-6"
         loading={verifyOtp.isPending}
         onPress={onVerify}

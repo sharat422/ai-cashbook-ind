@@ -4,6 +4,7 @@ import {Alert} from 'react-native';
 import {Button, Input, Text} from '@components/ui';
 import {AuthShell} from '@features/auth/components/AuthShell';
 import {useRequestOtp} from '@features/auth/hooks';
+import {useT} from '@/i18n';
 import type {AuthScreenProps} from '@navigation/types';
 import {onlyDigits, validateMobile} from '@utils/validation';
 
@@ -11,6 +12,7 @@ import {onlyDigits, validateMobile} from '@utils/validation';
 export function LoginScreen({
   navigation,
 }: AuthScreenProps<'Login'>): React.JSX.Element {
+  const t = useT();
   const [mobile, setMobile] = useState('');
   const [error, setError] = useState<string | null>(null);
   const requestOtp = useRequestOtp();
@@ -27,7 +29,7 @@ export function LoginScreen({
           navigation.navigate('Otp', {verificationId, mobile});
         },
         onError: err => {
-          Alert.alert('Could not send OTP', err.message);
+          Alert.alert(t('auth.login.otpError'), err.message);
         },
       },
     );
@@ -35,25 +37,25 @@ export function LoginScreen({
 
   return (
     <AuthShell
-      title="Welcome"
-      subtitle="Enter your mobile number and we'll send you a one-time password to sign in."
+      title={t('auth.login.title')}
+      subtitle={t('auth.login.subtitle')}
       footer={
         <Text className="text-center text-xs leading-5 text-muted">
-          By continuing you agree to our{' '}
+          {t('auth.login.agreePrefix')}
           <Text className="text-xs font-semibold text-primary">
-            Terms of Service
-          </Text>{' '}
-          and{' '}
+            {t('auth.terms')}
+          </Text>
+          {t('auth.login.and')}
           <Text className="text-xs font-semibold text-primary">
-            Privacy Policy
+            {t('auth.privacy')}
           </Text>
           .
         </Text>
       }>
       <Input
-        label="Mobile number"
+        label={t('auth.login.mobileLabel')}
         prefix="+91"
-        placeholder="10-digit mobile number"
+        placeholder={t('auth.login.mobilePlaceholder')}
         keyboardType="number-pad"
         maxLength={10}
         value={mobile}
@@ -67,7 +69,7 @@ export function LoginScreen({
       />
 
       <Button
-        title="Continue"
+        title={t('auth.login.continue')}
         className="mt-5"
         loading={requestOtp.isPending}
         onPress={onContinue}

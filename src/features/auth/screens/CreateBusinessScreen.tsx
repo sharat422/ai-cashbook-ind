@@ -22,6 +22,7 @@ import {
   type AppLanguage,
 } from '@features/auth/utils/languagePreference';
 import {useAuthStore} from '@store/auth.store';
+import {useT} from '@/i18n';
 import {validateRequired} from '@utils/validation';
 
 interface FormState {
@@ -41,16 +42,16 @@ interface FormErrors {
   gstRegistered?: string | null;
 }
 
-const GST_OPTIONS = [
-  {label: 'Yes', value: true},
-  {label: 'No', value: false},
-] as const;
-
 /**
  * Step 3 (onboarding): create the business profile. Saving it transitions the
  * auth store to "authenticated", which moves the user to the Dashboard.
  */
 export function CreateBusinessScreen(): React.JSX.Element {
+  const t = useT();
+  const GST_OPTIONS = [
+    {label: t('common.yes'), value: true},
+    {label: t('common.no'), value: false},
+  ] as const;
   const [form, setForm] = useState<FormState>({
     businessName: '',
     ownerName: '',
@@ -102,35 +103,35 @@ export function CreateBusinessScreen(): React.JSX.Element {
         gstRegistered: form.gstRegistered as boolean,
       },
       {
-        onError: err => Alert.alert('Could not create business', err.message),
+        onError: err => Alert.alert(t('auth.business.error'), err.message),
       },
     );
   };
 
   return (
     <AuthShell
-      title="Set up your business"
-      subtitle="Tell us a bit about your business to finish setting up your account.">
+      title={t('auth.business.title')}
+      subtitle={t('auth.business.subtitle')}>
       <View style={{gap: 18}}>
           <Input
-            label="Business name"
-            placeholder="e.g. Sharma Traders"
+            label={t('auth.business.nameLabel')}
+            placeholder={t('auth.business.namePlaceholder')}
             value={form.businessName}
             onChangeText={value => update('businessName', value)}
             error={errors.businessName}
           />
 
           <Input
-            label="Owner name"
-            placeholder="e.g. Rajesh Sharma"
+            label={t('auth.business.ownerLabel')}
+            placeholder={t('auth.business.ownerPlaceholder')}
             value={form.ownerName}
             onChangeText={value => update('ownerName', value)}
             error={errors.ownerName}
           />
 
           <Select
-            label="Business type"
-            placeholder="Select business type"
+            label={t('auth.business.typeLabel')}
+            placeholder={t('auth.business.typePlaceholder')}
             options={BUSINESS_TYPES}
             value={form.businessType}
             onSelect={value => update('businessType', value)}
@@ -138,8 +139,8 @@ export function CreateBusinessScreen(): React.JSX.Element {
           />
 
           <Select
-            label="State"
-            placeholder="Select state"
+            label={t('auth.business.stateLabel')}
+            placeholder={t('auth.business.statePlaceholder')}
             options={INDIAN_STATES}
             value={form.state}
             onSelect={value => update('state', value)}
@@ -147,7 +148,7 @@ export function CreateBusinessScreen(): React.JSX.Element {
           />
 
           <SegmentedControl
-            label="GST registered?"
+            label={t('auth.business.gstLabel')}
             options={GST_OPTIONS}
             value={form.gstRegistered}
             onChange={value => update('gstRegistered', value)}
@@ -155,7 +156,7 @@ export function CreateBusinessScreen(): React.JSX.Element {
           />
 
           <SegmentedControl
-            label="Preferred content language"
+            label={t('auth.business.languageLabel')}
             options={SUPPORTED_APP_LANGUAGES.map(language => ({
               label: APP_LANGUAGE_LABEL[language],
               value: language,
@@ -166,7 +167,7 @@ export function CreateBusinessScreen(): React.JSX.Element {
         </View>
 
       <Button
-        title="Create business"
+        title={t('auth.business.submit')}
         className="mt-8"
         loading={createBusiness.isPending}
         onPress={onSubmit}

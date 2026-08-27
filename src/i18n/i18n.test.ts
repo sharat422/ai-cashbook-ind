@@ -1,4 +1,4 @@
-import {en} from './translations';
+import {en, translations} from './translations';
 import {translate} from './useT';
 
 describe('translate', () => {
@@ -28,11 +28,18 @@ describe('translate', () => {
     expect(translate('hi', 'settings.appLockDesc', {n: 4})).toContain('4');
   });
 
-  it('every Hindi key is a real English key (no orphan translations)', () => {
-    // Guards against typos in translation keys drifting from the source.
-    // (Iterate the hi dict via a round-trip through translate on en keys.)
-    const enKeys = Object.keys(en);
-    expect(enKeys).toContain('dashboard.welcome');
-    expect(enKeys.length).toBeGreaterThan(0);
+  it('every hi/te translation key is a real English key (no orphans/typos)', () => {
+    // Guards the growing translation tables: a mistyped key would silently fall
+    // back to English forever, so fail loudly if a hi/te key isn't in the source.
+    const enKeys = new Set(Object.keys(en));
+    for (const lang of ['hi', 'te'] as const) {
+      for (const key of Object.keys(translations[lang])) {
+        expect({lang, key, known: enKeys.has(key)}).toEqual({
+          lang,
+          key,
+          known: true,
+        });
+      }
+    }
   });
 });
