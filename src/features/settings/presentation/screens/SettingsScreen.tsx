@@ -15,7 +15,11 @@ import {
   APP_LANGUAGE_LABEL,
   SUPPORTED_APP_LANGUAGES,
 } from '@features/auth/utils/languagePreference';
-import {PIN_LENGTH, useAppLockStore} from '@features/security/store/appLock.store';
+import {
+  getSupportedBiometry,
+  PIN_LENGTH,
+  useAppLockStore,
+} from '@features/security/store/appLock.store';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
@@ -35,6 +39,29 @@ export function SettingsScreen({
   const lockEnabled = useAppLockStore(s => s.enabled);
   const setPin = useAppLockStore(s => s.setPin);
   const disableLock = useAppLockStore(s => s.disableLock);
+  const biometricEnabled = useAppLockStore(s => s.biometricEnabled);
+  const enableBiometric = useAppLockStore(s => s.enableBiometric);
+  const disableBiometric = useAppLockStore(s => s.disableBiometric);
+  const [biometrySupported, setBiometrySupported] = useState(false);
+
+  useEffect(() => {
+    getSupportedBiometry().then(type => setBiometrySupported(!!type));
+  }, []);
+
+  const onToggleBiometric = (value: boolean) => {
+    if (value) {
+      enableBiometric().then(ok => {
+        if (!ok) {
+          Alert.alert(
+            'Biometrics unavailable',
+            'No fingerprint or face unlock is set up on this device.',
+          );
+        }
+      });
+    } else {
+      void disableBiometric();
+    }
+  };
 
   const language = useAuthStore(s => s.preferredLanguage);
   const setLanguage = useAuthStore(s => s.setPreferredLanguage);
@@ -79,9 +106,18 @@ export function SettingsScreen({
     }
     // confirm
     if (pin === firstPin) {
-      setPin(pin);
-      cancelPinSetup();
-      Alert.alert(t('settings.appLockEnabled'), t('settings.appLockEnabledMsg'));
+      setPin(pin)
+        .then(() => {
+          cancelPinSetup();
+          Alert.alert(
+            t('settings.appLockEnabled'),
+            t('settings.appLockEnabledMsg'),
+          );
+        })
+        .catch(() => {
+          setError('Could not save your PIN securely. Please try again.');
+          setPinInput('');
+        });
     } else {
       setError(t('settings.pinMismatch'));
       setFirstPin('');
@@ -165,6 +201,27 @@ export function SettingsScreen({
                 className="mt-3"
                 onPress={cancelPinSetup}
               />
+            </View>
+          ) : null}
+
+          {/* Biometric unlock — only when the lock is on and the device supports it */}
+          {lockEnabled && biometrySupported ? (
+            <View className="mt-5 flex-row items-center justify-between border-t border-border pt-5">
+              <View className="flex-1 pr-3">
+                <Text className="text-base font-semibold text-slate-900">
+                  {t('settings.biometricUnlock')}
+                </Text>
+                <Text variant="caption" className="mt-0.5">
+                  {t('settings.biometricUnlockDesc')}
+                </Text>
+              </View>
+              <View className="w-28">
+                <SegmentedControl
+                  value={biometricEnabled}
+                  options={ENABLED_OPTIONS}
+                  onChange={onToggleBiometric}
+                />
+              </View>
             </View>
           ) : null}
         </View>

@@ -51,69 +51,34 @@ All in `android/`:
 
 ---
 
-## 3. Platform-parity items that need a NATIVE rebuild (code below)
+## 3. Platform-parity items
 
-These add a native dependency, so they need `npm install` → (`cd ios && pod install`) →
-rebuild. They can't be verified from a Windows/CI-less shell; the code + wiring is ready
-to drop in once you confirm the decisions in §6.
+### 3.1 Secure storage for the app-lock PIN (Keystore / Keychain) — ✅ IMPLEMENTED
 
-### 3.1 Secure storage for the app-lock PIN (Keystore / Keychain)
+`react-native-keychain` added. The PIN `{salt, pinHash}` now lives in the **Android
+Keystore** / **iOS Keychain** instead of AsyncStorage:
+- `src/features/security/data/secureStore.ts` — wrapper (save/read/clear + biometrics).
+- `src/features/security/store/appLock.store.ts` — refactored **async**; only `enabled` +
+  `biometricEnabled` persist to AsyncStorage. Includes a one-time migration that moves any
+  legacy plaintext PIN from AsyncStorage into the secure store on first launch.
+- `pinHash.ts` (SHA-256) unchanged as the hashing function.
+- Unit-tested (`appLock.store.test.ts`, 10 cases) with the native module mocked.
 
-Today `pinHash`+`salt` sit in AsyncStorage (world-readable on a rooted device). Move them
-behind `react-native-keychain`, which uses **Android Keystore** (via
-`EncryptedSharedPreferences`/StrongBox where available) and the **iOS Keychain**.
+> **Needs a native rebuild + `cd ios && pod install` (on mac/CI) to verify the real
+> Keystore/Keychain path.** I can't run that from Windows — smoke-test the lock on device
+> (set PIN → background → reopen → unlock; wrong PIN; disable).
 
-```bash
-npm install react-native-keychain
-cd ios && pod install && cd ..   # (on a mac/CI)
-```
+### 3.2 Biometric unlock (BiometricPrompt / Face ID) — ✅ IMPLEMENTED
 
-```ts
-// src/features/security/data/secureStore.ts
-import * as Keychain from 'react-native-keychain';
+Uses `react-native-keychain`'s biometric access control (no extra lib):
+- Settings shows a **Biometric unlock** toggle when the device supports it and the PIN lock
+  is on (`getSupportedBiometry()`), enrolling a biometric-gated Keychain sentinel.
+- `UnlockScreen` auto-prompts biometrics when locked and offers a **Use biometrics** button;
+  the PIN is always the fallback.
+- Manifest: `USE_BIOMETRIC` permission added.
+- Device QA: fingerprint/Face ID unlock, cancel → PIN still works, no-biometrics device.
 
-const PIN_SERVICE = 'smartcashbook.applock';
-
-/** Persist {salt, pinHash} in the platform secure store (Keystore/Keychain). */
-export async function saveAppLockSecret(payload: {salt: string; pinHash: string}) {
-  await Keychain.setGenericPassword('applock', JSON.stringify(payload), {
-    service: PIN_SERVICE,
-    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-  });
-}
-
-export async function readAppLockSecret(): Promise<{salt: string; pinHash: string} | null> {
-  const creds = await Keychain.getGenericPassword({service: PIN_SERVICE});
-  return creds ? JSON.parse(creds.password) : null;
-}
-
-export async function clearAppLockSecret() {
-  await Keychain.resetGenericPassword({service: PIN_SERVICE});
-}
-```
-
-Then `appLock.store.ts` keeps only `enabled` in AsyncStorage and moves `pinHash`/`salt`
-reads/writes to this module (its API becomes async — `setPin`/`verifyPin` return Promises).
-The existing `pinHash.ts` (SHA-256) stays as the hashing function.
-
-### 3.2 Biometric unlock (BiometricPrompt / Face ID) — optional, net-new
-
-`react-native-keychain` already exposes biometrics, so no second library is needed:
-
-```ts
-// Gate the secret behind the OS biometric prompt (Android BiometricPrompt / iOS Face·Touch ID)
-await Keychain.setGenericPassword('applock', secret, {
-  service: PIN_SERVICE,
-  accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-  accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-});
-const supported = await Keychain.getSupportedBiometryType(); // null | 'TouchID' | 'FaceID' | 'Fingerprint'
-```
-
-Android needs `<uses-permission android:name="android.permission.USE_BIOMETRIC" />` in the
-manifest. Offer PIN as the fallback (already built).
-
-### 3.3 Push notifications (FCM) — net-new, needs a Firebase project
+### 3.3 Push notifications (FCM) — DEFERRED, needs a Firebase project
 
 There is no APNs to "replace" — push doesn't exist yet. To add it:
 
@@ -145,11 +110,12 @@ key**, not the leaf, and always ship two pins. Android form:
 
 Get pins with: `openssl s_client -connect smart-cashbook-api.onrender.com:443 | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64`. **Blocked on §6** (confirm final API domain + pin strategy — a bad pin bricks the app in the field).
 
-### 3.5 Root detection (flag, don't block)
+### 3.5 Root detection (flag, don't block) — ✅ IMPLEMENTED
 
-`react-native-jail-monkey` exposes `isJailBroken()` (root/Magisk/emulator heuristics). On a
-positive, show a non-blocking warning banner and log a telemetry event — never hard-exit
-(the brief says flag, not block).
+`jail-monkey` added. `src/features/security/data/deviceIntegrity.ts` wraps `isJailBroken()`
+(fails safe to `false` on error); `DeviceIntegrityBanner` shows a **dismissible, non-blocking**
+warning on the Dashboard for rooted/jailbroken devices — never hard-exits. Unit-tested
+(`deviceIntegrity.test.ts`). Needs a native rebuild to exercise the real check.
 
 ---
 
@@ -158,9 +124,10 @@ positive, show a non-blocking warning banner and log a telemetry event — never
 | Control | State |
 |---|---|
 | Cleartext blocked (ATS-equiv) | ✅ `network_security_config.xml`, release HTTPS-only |
-| Encrypted at-rest secrets | ⚠️ pending §3.1 (Keystore-backed PIN) |
-| Certificate pinning | ⚠️ pending §3.4 (needs cert + rollover plan) |
-| Root detection (flag) | ⚠️ pending §3.5 |
+| Encrypted at-rest secrets | ✅ PIN in Keystore/Keychain (§3.1) — verify on device |
+| Biometric unlock | ✅ implemented (§3.2) — verify on device |
+| Certificate pinning | ⏳ deferred (§3.4 — needs cert + rollover plan) |
+| Root detection (flag) | ✅ implemented (§3.5) — verify on device |
 | Signing key out of VCS | ✅ `keystore.properties` + `*.jks` gitignored |
 
 ---
@@ -184,7 +151,9 @@ positive, show a non-blocking warning banner and log a telemetry event — never
 8. Reports → export **PDF/CSV** → Android share sheet opens (`react-native-share`).
 9. Recurring expense → Mark paid → expense created.
 10. Ask AI + Business summary load.
-11. App-lock: set PIN → background/reopen → unlock; (biometrics if §3.2 shipped).
+11. App-lock: set PIN → background/reopen → unlock; wrong PIN rejected; disable clears it.
+    Biometric toggle (Settings) → lock → **Use biometrics** unlock; cancel → PIN fallback.
+    Root-detection banner appears on a rooted emulator/device (dismissible, non-blocking).
 12. Offline: airplane mode → add entries (queued) → reconnect → sync, no dupes.
 13. **Hardware back button** across stacks + modals; no dead-ends.
 14. Logout → local data cleared → login as different number shows no leaked data.

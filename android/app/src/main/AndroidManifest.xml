@@ -3,6 +3,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Biometric app-unlock (BiometricPrompt) — react-native-keychain -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
     <!-- Camera capture for the receipt scanner / attachment flows -->
     <uses-permission android:name="android.permission.CAMERA" />
 

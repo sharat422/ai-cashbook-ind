@@ -50,6 +50,12 @@
 -dontwarn okio.**
 -keep class okhttp3.** { *; }
 
+# --- react-native-keychain (Android Keystore-backed secure storage) ---
+-keep class com.oblador.keychain.** { *; }
+
+# --- jail-monkey (root/jailbreak detection) ---
+-keep class com.gantman.reactnative.** { *; }
+
 # Keep JS-facing native module method annotations.
 -keepclassmembers class * { @com.facebook.react.bridge.ReactMethod <methods>; }
 -keepclassmembers class * { @com.facebook.react.uimanager.annotations.ReactProp <methods>; }

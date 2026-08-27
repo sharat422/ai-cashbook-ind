@@ -822,5 +822,5 @@ a real expense and rolls the schedule forward.
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 82) and `cd backend && python -m pytest`
+release: `npm test` (frontend, 89) and `cd backend && python -m pytest`
 (backend, 93). See [TESTING.md](TESTING.md).

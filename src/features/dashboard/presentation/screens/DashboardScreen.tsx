@@ -8,6 +8,7 @@ import {
   SummaryWidgets,
 } from '@features/dashboard/presentation/components';
 import {useDashboardSummary} from '@features/dashboard/presentation/hooks/useDashboardSummary';
+import {DeviceIntegrityBanner} from '@features/security/presentation/DeviceIntegrityBanner';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {useConnectivity} from '@features/income/presentation/hooks';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
@@ -154,6 +155,9 @@ export function DashboardScreen({
             {t('dashboard.syncing', {count: pendingCount})}
           </Text>
         ) : null}
+
+        {/* Non-blocking warning if the device looks rooted/jailbroken */}
+        <DeviceIntegrityBanner />
 
         {/* Summary widgets — skeleton / error / empty / data */}
         <View className="mt-6">
