@@ -15,6 +15,7 @@ import {
   useCreateIncome,
   useIncomeForm,
 } from '@features/income/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
 /**
@@ -24,6 +25,7 @@ import type {AppScreenProps} from '@navigation/types';
 export function AddIncomeScreen({
   navigation,
 }: AppScreenProps<'AddIncome'>): React.JSX.Element {
+  const t = useT();
   const online = useConnectivity();
   const form = useIncomeForm();
   const createIncome = useCreateIncome();
@@ -36,36 +38,34 @@ export function AddIncomeScreen({
       onSuccess: income => {
         const queued = income.syncStatus === 'pending';
         Alert.alert(
-          queued ? 'Saved offline' : 'Income added',
-          queued
-            ? "You're offline — this entry will sync automatically once you're back online."
-            : 'Your income entry has been recorded.',
-          [{text: 'OK', onPress: () => navigation.goBack()}],
+          queued ? t('entry.savedOfflineTitle') : t('income.addedTitle'),
+          queued ? t('entry.savedOfflineMsg') : t('income.addedMsg'),
+          [{text: t('common.ok'), onPress: () => navigation.goBack()}],
         );
         form.reset();
       },
-      onError: err => Alert.alert('Could not save', err.message),
+      onError: err => Alert.alert(t('form.couldNotSave'), err.message),
     });
   };
 
   return (
     <Screen>
       <View className="py-6">
-        <Text variant="title">Add Income</Text>
+        <Text variant="title">{t('income.title')}</Text>
         <Text variant="subtitle" className="mt-1">
-          Record money coming into your business.
+          {t('income.subtitle')}
         </Text>
 
         {!online ? (
           <View className="mt-4 rounded-xl bg-amber-50 px-4 py-3">
             <Text className="text-sm font-medium text-amber-700">
-              You're offline. Entries are saved on this device and sync later.
+              {t('entry.offlineBanner')}
             </Text>
           </View>
         ) : null}
 
         <View className="mt-6" style={{gap: 18}}>
-          <FormField label="Amount" required error={form.errors.amount}>
+          <FormField label={t('form.amount')} required error={form.errors.amount}>
             <AmountInput
               value={form.values.amount}
               onChange={value => form.setField('amount', value)}
@@ -74,9 +74,9 @@ export function AddIncomeScreen({
             />
           </FormField>
 
-          <FormField label="Category" required error={form.errors.category}>
+          <FormField label={t('form.category')} required error={form.errors.category}>
             <Select
-              placeholder="Select category"
+              placeholder={t('form.selectCategory')}
               options={INCOME_CATEGORIES}
               value={form.values.category}
               onSelect={value => form.setField('category', value)}
@@ -84,7 +84,7 @@ export function AddIncomeScreen({
             />
           </FormField>
 
-          <FormField label="Date" required error={form.errors.date}>
+          <FormField label={t('form.date')} required error={form.errors.date}>
             <DateField
               value={form.values.date}
               onChange={value => form.setField('date', value)}
@@ -93,9 +93,9 @@ export function AddIncomeScreen({
           </FormField>
 
           <FormField
-            label="Notes"
+            label={t('form.notes')}
             error={form.errors.notes}
-            hint="Optional — add a reference or description">
+            hint={t('form.notesHint')}>
             <NotesInput
               value={form.values.notes}
               onChange={value => form.setField('notes', value)}
@@ -103,7 +103,7 @@ export function AddIncomeScreen({
             />
           </FormField>
 
-          <FormField label="Attachment" hint="Optional — attach a receipt photo">
+          <FormField label={t('form.attachment')} hint={t('income.attachmentHint')}>
             <AttachmentPicker
               value={form.values.attachment}
               onChange={value => form.setField('attachment', value)}
@@ -112,13 +112,13 @@ export function AddIncomeScreen({
         </View>
 
         <Button
-          title="Save income"
+          title={t('income.save')}
           className="mt-8"
           loading={createIncome.isPending}
           onPress={onSubmit}
         />
         <Button
-          title="Cancel"
+          title={t('common.cancel')}
           variant="ghost"
           className="mt-2"
           onPress={() => navigation.goBack()}

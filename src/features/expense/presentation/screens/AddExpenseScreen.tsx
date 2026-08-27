@@ -14,6 +14,7 @@ import {Button, Screen, Text} from '@components/ui';
 import {EXPENSE_CATEGORIES} from '@features/expense/domain/entities';
 import {useCreateExpense, useExpenseForm} from '@features/expense/presentation/hooks';
 import {useConnectivity} from '@features/income/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
 /** Emoji per category for friendlier chips. */
@@ -40,6 +41,7 @@ export function AddExpenseScreen({
   navigation,
   route,
 }: AppScreenProps<'AddExpense'>): React.JSX.Element {
+  const t = useT();
   const online = useConnectivity();
   // Seed the form when arriving from a receipt scan (or any prefill source).
   const form = useExpenseForm({
@@ -57,7 +59,7 @@ export function AddExpenseScreen({
         form.reset();
         navigation.goBack();
       },
-      onError: err => Alert.alert('Could not save', err.message),
+      onError: err => Alert.alert(t('form.couldNotSave'), err.message),
     });
   };
 
@@ -67,7 +69,7 @@ export function AddExpenseScreen({
         {/* Hero amount card */}
         <View className="rounded-3xl bg-slate-900 px-5 pb-6 pt-5">
           <Text className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            New expense — amount
+            {t('expense.amountLabel')}
           </Text>
           <View className="mt-3">
             <AmountInput
@@ -87,13 +89,13 @@ export function AddExpenseScreen({
         {!online ? (
           <View className="mt-4 rounded-xl bg-amber-50 px-4 py-3">
             <Text className="text-sm font-medium text-amber-700">
-              You're offline. This expense is saved on-device and syncs later.
+              {t('entry.offlineBanner')}
             </Text>
           </View>
         ) : null}
 
         <View className="mt-6" style={{gap: 18}}>
-          <FormField label="Category" required error={form.errors.category}>
+          <FormField label={t('form.category')} required error={form.errors.category}>
             <ChipSelect
               options={CATEGORY_OPTIONS}
               value={form.values.category}
@@ -102,9 +104,9 @@ export function AddExpenseScreen({
             />
           </FormField>
 
-          <FormField label="Vendor / Paid to" required error={form.errors.vendor}>
+          <FormField label={t('expense.vendorLabel')} required error={form.errors.vendor}>
             <TextField
-              placeholder="e.g. Indian Oil, Landlord, Staff"
+              placeholder={t('expense.vendorPlaceholder')}
               value={form.values.vendor}
               onChangeText={value => form.setField('vendor', value)}
               error={form.errors.vendor}
@@ -113,7 +115,7 @@ export function AddExpenseScreen({
             />
           </FormField>
 
-          <FormField label="Date" required error={form.errors.date}>
+          <FormField label={t('form.date')} required error={form.errors.date}>
             <DateField
               value={form.values.date}
               onChange={value => form.setField('date', value)}
@@ -122,9 +124,9 @@ export function AddExpenseScreen({
           </FormField>
 
           <FormField
-            label="Notes"
+            label={t('form.notes')}
             error={form.errors.notes}
-            hint="Optional — add a reference or description">
+            hint={t('form.notesHint')}>
             <NotesInput
               value={form.values.notes}
               onChange={value => form.setField('notes', value)}
@@ -132,7 +134,7 @@ export function AddExpenseScreen({
             />
           </FormField>
 
-          <FormField label="Attachment" hint="Optional — attach a bill / receipt">
+          <FormField label={t('form.attachment')} hint={t('expense.attachmentHint')}>
             <AttachmentPicker
               value={form.values.attachment}
               onChange={value => form.setField('attachment', value)}
@@ -141,13 +143,13 @@ export function AddExpenseScreen({
         </View>
 
         <Button
-          title="Save expense"
+          title={t('expense.save')}
           className="mt-8"
           loading={createExpense.isPending}
           onPress={onSubmit}
         />
         <Button
-          title="Cancel"
+          title={t('common.cancel')}
           variant="ghost"
           className="mt-2"
           onPress={() => navigation.goBack()}

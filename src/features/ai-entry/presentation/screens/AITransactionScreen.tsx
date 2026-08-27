@@ -21,26 +21,23 @@ import {
   PAYMENT_METHOD_LABEL,
   type PaymentMethod,
 } from '@features/customers/domain/ledger';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
 import {toISODate} from '@utils/date';
 
-const EXAMPLES = [
-  'Ramesh ko 2500 ka maal diya',
-  'Suresh se teen hazaar mile',
-  'gave ramesh 500 for groceries',
-];
-
-const TYPE_OPTIONS: Array<{label: string; value: ParsedType}> = [
-  {label: 'Gave · Udhaar', value: 'credit'},
-  {label: 'Received', value: 'payment'},
-];
-
 export function AITransactionScreen({
   navigation,
 }: AppScreenProps<'AITransaction'>): React.JSX.Element {
+  const t = useT();
   const parse = useParseTransaction();
+
+  const EXAMPLES = [t('ai.example1'), t('ai.example2'), t('ai.example3')];
+  const TYPE_OPTIONS: Array<{label: string; value: ParsedType}> = [
+    {label: t('ai.typeCredit'), value: 'credit'},
+    {label: t('ai.typeReceived'), value: 'payment'},
+  ];
 
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<ParsedTransaction | null>(null);
@@ -71,8 +68,8 @@ export function AITransactionScreen({
         },
         onError: err =>
           Alert.alert(
-            'Could not read that',
-            err instanceof Error ? err.message : 'Please try again.',
+            t('ai.couldNotRead'),
+            err instanceof Error ? err.message : t('ai.tryAgain'),
           ),
       },
     );
@@ -93,28 +90,42 @@ export function AITransactionScreen({
       });
       setBusy(false);
       Alert.alert(
-        type === 'credit' ? 'Credit added' : 'Payment recorded',
-        `${type === 'credit' ? 'Udhaar' : 'Payment'} of ${formatINR(amount)} saved for ${customer.fullName}.`,
+        type === 'credit'
+          ? t('ai.creditAddedTitle')
+          : t('ai.paymentRecordedTitle'),
+        type === 'credit'
+          ? t('ai.savedCreditMsg', {
+              amount: formatINR(amount),
+              customer: customer.fullName,
+            })
+          : t('ai.savedPaymentMsg', {
+              amount: formatINR(amount),
+              customer: customer.fullName,
+            }),
         [
           {
-            text: 'View customer',
+            text: t('ai.viewCustomer'),
             onPress: () => navigation.replace('CustomerProfile', {customer}),
           },
-          {text: 'Done', style: 'cancel', onPress: () => navigation.goBack()},
+          {
+            text: t('common.done'),
+            style: 'cancel',
+            onPress: () => navigation.goBack(),
+          },
         ],
       );
     } catch (e) {
       setBusy(false);
       Alert.alert(
-        'Could not save',
-        e instanceof Error ? e.message : 'Check your connection and try again.',
+        t('form.couldNotSave'),
+        e instanceof Error ? e.message : t('ai.checkConnection'),
       );
     }
   };
 
   const onConfirm = async () => {
-    if (!name.trim()) return setError('Enter the customer name');
-    if (Number.isNaN(amount) || amount <= 0) return setError('Enter an amount');
+    if (!name.trim()) return setError(t('ai.enterName'));
+    if (Number.isNaN(amount) || amount <= 0) return setError(t('ai.enterAmount'));
     setError(null);
     setBusy(true);
     try {
@@ -127,8 +138,8 @@ export function AITransactionScreen({
     } catch (e) {
       setBusy(false);
       Alert.alert(
-        'Could not check customers',
-        e instanceof Error ? e.message : 'Check your connection.',
+        t('ai.couldNotCheck'),
+        e instanceof Error ? e.message : t('ai.checkConnection'),
       );
     }
   };
@@ -137,9 +148,9 @@ export function AITransactionScreen({
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="py-6">
-          <Text variant="title">🎤 AI Entry</Text>
+          <Text variant="title">{t('ai.title')}</Text>
           <Text variant="subtitle" className="mt-1">
-            Speak or type a transaction in your language — we’ll fill it in.
+            {t('ai.subtitle')}
           </Text>
 
           {/* Input */}
@@ -148,16 +159,14 @@ export function AITransactionScreen({
               className="min-h-[72px] p-0 text-base text-slate-900"
               value={text}
               onChangeText={setText}
-              placeholder="e.g. Ramesh ko 2500 ka maal diya"
+              placeholder={t('ai.inputPlaceholder')}
               placeholderTextColor={colors.muted}
               multiline
               textAlignVertical="top"
             />
           </View>
           <Text variant="caption" className="mt-2">
-            💡 Tap the 🎤 on your keyboard and speak — Hindi, Hinglish, Telugu,
-            Tamil, Kannada, Marathi, Gujarati, Bengali, Malayalam, Punjabi &
-            English.
+            {t('ai.hint')}
           </Text>
 
           {/* Examples */}
@@ -173,7 +182,7 @@ export function AITransactionScreen({
           </View>
 
           <Button
-            title="✨ Read transaction"
+            title={t('ai.read')}
             className="mt-4"
             loading={parse.isPending}
             disabled={!text.trim()}
@@ -184,23 +193,23 @@ export function AITransactionScreen({
           {parsed ? (
             <View className="mt-6 rounded-2xl border border-border bg-white p-4">
               <View className="mb-3 flex-row items-center justify-between">
-                <Text variant="label">I understood — confirm</Text>
+                <Text variant="label">{t('ai.confirmHeader')}</Text>
                 <Text variant="caption">
-                  {parsed.source === 'ai' ? 'AI' : 'Basic'} ·{' '}
-                  {Math.round(parsed.confidence * 100)}%
+                  {parsed.source === 'ai' ? t('ai.sourceAI') : t('ai.sourceBasic')}{' '}
+                  · {Math.round(parsed.confidence * 100)}%
                 </Text>
               </View>
 
               <View style={{gap: 16}}>
-                <FormField label="Customer" required>
+                <FormField label={t('ai.customer')} required>
                   <TextField
                     value={name}
                     onChangeText={setName}
-                    placeholder="Customer name"
+                    placeholder={t('ai.customerPlaceholder')}
                   />
                 </FormField>
 
-                <FormField label="Type">
+                <FormField label={t('ai.type')}>
                   <SegmentedControl
                     value={type}
                     options={TYPE_OPTIONS}
@@ -208,12 +217,12 @@ export function AITransactionScreen({
                   />
                 </FormField>
 
-                <FormField label="Amount" required>
+                <FormField label={t('form.amount')} required>
                   <AmountInput value={amount} onChange={setAmount} />
                 </FormField>
 
                 {type === 'payment' ? (
-                  <FormField label="Payment method">
+                  <FormField label={t('ai.paymentMethod')}>
                     <View className="flex-row flex-wrap" style={{gap: 8}}>
                       {PAYMENT_METHODS.map(m => (
                         <FilterChip
@@ -227,7 +236,7 @@ export function AITransactionScreen({
                   </FormField>
                 ) : null}
 
-                <FormField label="Date">
+                <FormField label={t('form.date')}>
                   <DateField value={date} onChange={setDate} />
                 </FormField>
               </View>
@@ -239,9 +248,11 @@ export function AITransactionScreen({
               {/* Disambiguation picker OR confirm button */}
               {candidates ? (
                 <View className="mt-5 border-t border-border pt-4">
-                  <Text variant="label">Which “{name.trim()}”?</Text>
+                  <Text variant="label">
+                    {t('ai.whichName', {name: name.trim()})}
+                  </Text>
                   <Text variant="caption" className="mb-3 mt-1">
-                    More than one customer matches — pick one, or create new.
+                    {t('ai.whichNameHint')}
                   </Text>
                   <View style={{gap: 8}}>
                     {candidates.map(c => (
@@ -265,14 +276,14 @@ export function AITransactionScreen({
                     ))}
                   </View>
                   <Button
-                    title={`➕ Create new “${name.trim()}”`}
+                    title={t('ai.createNew', {name: name.trim()})}
                     variant="secondary"
                     className="mt-3"
                     loading={busy}
                     onPress={() => commitTo(createCustomerByName(name))}
                   />
                   <Button
-                    title="Cancel"
+                    title={t('common.cancel')}
                     variant="ghost"
                     className="mt-1"
                     onPress={() => setCandidates(null)}
@@ -280,7 +291,7 @@ export function AITransactionScreen({
                 </View>
               ) : (
                 <Button
-                  title="Confirm & save"
+                  title={t('ai.confirmSave')}
                   className="mt-5"
                   loading={busy}
                   onPress={onConfirm}
