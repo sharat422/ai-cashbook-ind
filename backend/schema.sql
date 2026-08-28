@@ -60,7 +60,11 @@ CREATE TABLE IF NOT EXISTS customers (
     outstanding_amount    DOUBLE PRECISION NOT NULL DEFAULT 0,
     last_transaction_date VARCHAR(10),
     is_overdue            BOOLEAN NOT NULL DEFAULT false,
-    created_at            VARCHAR(40) NOT NULL
+    created_at            VARCHAR(40) NOT NULL,
+    updated_at            VARCHAR(40) NOT NULL,
+    -- Optimistic-concurrency token: +1 on every edit so a stale edit from a
+    -- second device is rejected (HTTP 409) instead of clobbering the other.
+    version               INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_customers_business ON customers(business_id);
 
@@ -90,3 +94,16 @@ CREATE TABLE IF NOT EXISTS ai_decisions (
     confidence  DOUBLE PRECISION,
     created_at  VARCHAR(40) NOT NULL
 );
+
+-- ---------------------------------------------------------------------------
+-- Migrations for EXISTING databases
+-- ---------------------------------------------------------------------------
+-- `CREATE TABLE IF NOT EXISTS` above never alters a table that already exists,
+-- and the app's SQLAlchemy create_all() only adds missing *tables*, not missing
+-- *columns*. Run these idempotent statements once against a live database to
+-- bring an older `customers` table up to date. Safe to re-run.
+
+-- 2026-08: customer optimistic-concurrency (two-device edit conflict handling).
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at VARCHAR(40);
+UPDATE customers SET updated_at = created_at WHERE updated_at IS NULL;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
