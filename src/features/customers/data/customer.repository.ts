@@ -18,8 +18,12 @@ export const customerRepository: CustomerRepository = {
   create(draft: CustomerDraft): Promise<Customer> {
     return customerRemote.create(draft);
   },
-  update(id: string, draft: CustomerDraft): Promise<Customer> {
-    return customerRemote.update(id, draft);
+  update(
+    id: string,
+    draft: CustomerDraft,
+    expectedVersion?: number,
+  ): Promise<Customer> {
+    return customerRemote.update(id, draft, expectedVersion);
   },
   remove(id: string): Promise<void> {
     return customerRemote.remove(id);

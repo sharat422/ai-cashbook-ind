@@ -52,6 +52,9 @@ def customer_dto(m: Customer) -> dict:
         "last_transaction_date": m.last_transaction_date,
         "is_overdue": m.is_overdue,
         "created_at": m.created_at,
+        "updated_at": m.updated_at or m.created_at,
+        # Optimistic-concurrency token the client echoes back on edit.
+        "version": m.version or 1,
     }
 
 

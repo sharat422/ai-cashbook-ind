@@ -14,6 +14,10 @@ export interface CustomerRepository {
   list(query: CustomerQuery, signal?: AbortSignal): Promise<CustomerPage>;
   getById(id: string): Promise<Customer>;
   create(draft: CustomerDraft): Promise<Customer>;
-  update(id: string, draft: CustomerDraft): Promise<Customer>;
+  update(
+    id: string,
+    draft: CustomerDraft,
+    expectedVersion?: number,
+  ): Promise<Customer>;
   remove(id: string): Promise<void>;
 }

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..calc import recompute_customer
 from ..database import get_db
 from ..deps import get_current_business
-from ..models import Business, Customer, LedgerEntry
+from ..models import Business, Customer, LedgerEntry, now_iso
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
 
@@ -96,12 +96,29 @@ def create_customer(
 def update_customer(
     customer_id: str,
     body: CustomerBody,
+    expected_version: int | None = None,
     business: Business = Depends(get_current_business),
     db: Session = Depends(get_db),
 ) -> dict:
     customer = _owned_customer(db, business, customer_id)
+
+    # Optimistic concurrency: if the caller tells us which version it edited and
+    # the row has moved on since (another device saved first), reject with 409
+    # instead of clobbering the other edit. Omitting the token keeps the old
+    # last-write-wins behaviour for callers that don't participate.
+    if expected_version is not None and (customer.version or 1) != expected_version:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This customer was changed on another device. "
+                "Reload the latest version and try again."
+            ),
+        )
+
     for key, value in body.model_dump().items():
         setattr(customer, key, value)
+    customer.version = (customer.version or 1) + 1
+    customer.updated_at = now_iso()
     db.commit()
     db.refresh(customer)
     return customer_dto(customer)

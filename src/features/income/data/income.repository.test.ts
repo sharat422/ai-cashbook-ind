@@ -163,3 +163,41 @@ describe('syncPending', () => {
     expect(useIncomeStore.getState().queue).toHaveLength(1);
   });
 });
+
+describe('airplane mode → reconnect → sync (full journey)', () => {
+  it('creates multiple entries offline, syncs all on reconnect, no duplicates on a second sync', async () => {
+    // ✈️ Airplane mode: capture two entries.
+    setOnline(false);
+    await incomeUseCases.create({...draft, amount: 100});
+    await incomeUseCases.create({...draft, amount: 200});
+
+    let state = useIncomeStore.getState();
+    expect(state.queue).toHaveLength(2);
+    expect(state.entries.every(e => e.syncStatus === 'pending')).toBe(true);
+    expect(mockApi).not.toHaveBeenCalled(); // nothing hit the network
+
+    // 📶 Reconnect: the server confirms each queued draft (its client_id makes
+    // the POST idempotent server-side).
+    setOnline(true);
+    mockApi
+      .mockResolvedValueOnce(serverDto('srv-a'))
+      .mockResolvedValueOnce(serverDto('srv-b'));
+
+    const first = await incomeUseCases.syncPending();
+    expect(first).toEqual({synced: 2, failed: 0});
+
+    state = useIncomeStore.getState();
+    expect(state.queue).toHaveLength(0); // queue drained
+    expect(state.entries).toHaveLength(2); // optimistic entries swapped, not duplicated
+    expect(state.entries.every(e => e.syncStatus === 'synced')).toBe(true);
+    expect(state.lastSyncedAt).not.toBeNull();
+
+    // 🔁 A second flush (e.g. another reconnect event) is a harmless no-op — the
+    // queue is empty, so no extra POSTs and no duplicate entries.
+    mockApi.mockClear();
+    const second = await incomeUseCases.syncPending();
+    expect(second).toEqual({synced: 0, failed: 0});
+    expect(mockApi).not.toHaveBeenCalled();
+    expect(useIncomeStore.getState().entries).toHaveLength(2);
+  });
+});

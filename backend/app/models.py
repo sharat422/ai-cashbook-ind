@@ -120,6 +120,11 @@ class Customer(Base):
     last_transaction_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     is_overdue: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    updated_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    # Monotonic optimistic-concurrency token: +1 on every edit. A stale edit
+    # from a second device (lower version) is rejected instead of clobbering.
+    # An integer avoids the same-microsecond collisions a timestamp token has.
+    version: Mapped[int] = mapped_column(Integer, default=1)
 
     ledger: Mapped[list["LedgerEntry"]] = relationship(
         back_populates="customer", cascade="all, delete-orphan"

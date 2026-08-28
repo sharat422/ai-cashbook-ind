@@ -17,6 +17,7 @@ export interface CustomerDto {
   last_transaction_date: string | null;
   is_overdue: boolean;
   created_at: string;
+  version?: number;
 }
 
 export interface CustomerPageDto {
@@ -38,6 +39,7 @@ export function toCustomer(dto: CustomerDto): Customer {
     lastTransactionDate: dto.last_transaction_date ?? null,
     isOverdue: Boolean(dto.is_overdue),
     createdAt: dto.created_at,
+    version: dto.version ?? 1,
   };
 }
 

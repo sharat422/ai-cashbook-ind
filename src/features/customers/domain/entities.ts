@@ -19,6 +19,8 @@ export interface Customer {
   /** Whether any outstanding amount is past its due date. */
   isOverdue: boolean;
   createdAt: string;
+  /** Optimistic-concurrency token; sent back on edit to detect two-device conflicts. */
+  version?: number;
 }
 
 /** The editable fields collected on the add/edit form. */

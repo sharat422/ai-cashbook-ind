@@ -51,8 +51,18 @@ export const customerRemote = {
     return toCustomer(dto);
   },
 
-  async update(id: string, draft: CustomerDraft): Promise<Customer> {
-    const dto = await apiRequest<CustomerDto>(`/customers/${id}`, {
+  async update(
+    id: string,
+    draft: CustomerDraft,
+    expectedVersion?: number,
+  ): Promise<Customer> {
+    // The version token lets the backend reject a stale edit (409) instead of
+    // silently overwriting another device's change.
+    const qs =
+      expectedVersion !== undefined
+        ? `?${toQueryString({expected_version: expectedVersion})}`
+        : '';
+    const dto = await apiRequest<CustomerDto>(`/customers/${id}${qs}`, {
       method: 'PATCH',
       body: fromCustomerDraft(draft),
     });

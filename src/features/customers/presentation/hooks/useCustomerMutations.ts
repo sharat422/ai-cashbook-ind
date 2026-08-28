@@ -93,10 +93,11 @@ export function useCustomerMutations() {
   const update = useMutation<
     Customer,
     Error,
-    {id: string; draft: CustomerDraft},
+    {id: string; draft: CustomerDraft; expectedVersion?: number},
     Ctx
   >({
-    mutationFn: ({id, draft}) => customerUseCases.update(id, draft),
+    mutationFn: ({id, draft, expectedVersion}) =>
+      customerUseCases.update(id, draft, expectedVersion),
     onMutate: async ({id, draft}) => {
       const ctx = await begin();
       const fields = draftFields(draft);

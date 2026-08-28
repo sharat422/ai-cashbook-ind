@@ -379,6 +379,14 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 - **Steps:** Queue offline entries, force-quit the app, reopen (still offline), then go online.
 - **Expected:** Pending entries survived the restart and sync once online.
 
+### 14.6 Two-device edit conflict (customers)
+- **Context:** Income/expense/ledger entries are **create-only + idempotent**, so they never conflict — a retried sync can't duplicate them, and there's no edit to clash. The only editable record is the **customer profile**, which now uses optimistic concurrency (a `version` token).
+- **Steps:** Open the same customer on **two devices** (A and B). On A, edit the name and **Save**. Then on B (still showing the old copy), edit and **Save**.
+- **Expected:** A saves normally. B is **rejected with an "Edited on another device" alert** and taken back — A's change is **not** silently overwritten. Reopening the customer on B shows A's latest; editing from there saves fine.
+- **Note:** A caller that doesn't send the token keeps last-write-wins (backward-compatible). Covered by backend tests (`test_stale_token_from_second_device_conflicts_409`).
+
+> **Automated coverage:** the offline create → reconnect → sync journey (incl. no-duplicate idempotency) is unit-tested end-to-end in `income.repository.test.ts` ("airplane mode → reconnect → sync"), and the conflict path in `test_customers_ledger.py`.
+
 ---
 
 ## 15. Language / localization
@@ -858,5 +866,5 @@ uploaded.** See [docs/SMS_IMPORT.md](docs/SMS_IMPORT.md).
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 112) and `cd backend && python -m pytest`
-(backend, 93). See [TESTING.md](TESTING.md).
+release: `npm test` (frontend, 113) and `cd backend && python -m pytest`
+(backend, 97). See [TESTING.md](TESTING.md).

@@ -29,6 +29,88 @@ def test_update_customer(user, client):
     assert r.json()["notes"] == "VIP"
 
 
+def test_update_bumps_version_token(user, client):
+    c = add_customer(client, user.headers)
+    assert c["version"] == 1  # present on create
+    r = client.patch(
+        f"/api/v1/customers/{c['id']}",
+        headers=user.headers,
+        json={"full_name": "Renamed", "mobile": "7777777777"},
+    )
+    assert r.status_code == 200
+    assert r.json()["version"] == 2  # moved forward
+
+
+def test_update_with_matching_token_succeeds(user, client):
+    c = add_customer(client, user.headers)
+    r = client.patch(
+        f"/api/v1/customers/{c['id']}",
+        headers=user.headers,
+        params={"expected_version": c["version"]},
+        json={"full_name": "First Edit", "mobile": "7777777777"},
+    )
+    assert r.status_code == 200
+    assert r.json()["full_name"] == "First Edit"
+
+
+def test_stale_token_from_second_device_conflicts_409(user, client):
+    """Device A and B both load the same customer; A saves, then B saves with
+    its now-stale version → 409 instead of silently clobbering A's edit."""
+    c = add_customer(client, user.headers)
+    version_both_devices_have = c["version"]
+
+    # Device A saves first (bumps version to 2).
+    a = client.patch(
+        f"/api/v1/customers/{c['id']}",
+        headers=user.headers,
+        params={"expected_version": version_both_devices_have},
+        json={"full_name": "Edited by A", "mobile": "7777777777"},
+    )
+    assert a.status_code == 200
+
+    # Device B saves with the ORIGINAL (stale) version → rejected.
+    b = client.patch(
+        f"/api/v1/customers/{c['id']}",
+        headers=user.headers,
+        params={"expected_version": version_both_devices_have},
+        json={"full_name": "Edited by B", "mobile": "6666666666"},
+    )
+    assert b.status_code == 409
+    assert "another device" in b.json()["detail"].lower()
+
+    # A's edit survived; B did not clobber it.
+    now = client.get(f"/api/v1/customers/{c['id']}", headers=user.headers).json()
+    assert now["full_name"] == "Edited by A"
+
+    # B can reload the latest version and retry successfully.
+    retry = client.patch(
+        f"/api/v1/customers/{c['id']}",
+        headers=user.headers,
+        params={"expected_version": now["version"]},
+        json={"full_name": "Edited by B", "mobile": "6666666666"},
+    )
+    assert retry.status_code == 200
+    assert retry.json()["full_name"] == "Edited by B"
+
+
+def test_update_without_token_is_last_write_wins(user, client):
+    """Backward-compatible: callers that don't send a token keep the old
+    unconditional update behaviour (no 409)."""
+    c = add_customer(client, user.headers)
+    client.patch(
+        f"/api/v1/customers/{c['id']}",
+        headers=user.headers,
+        json={"full_name": "One", "mobile": "7777777777"},
+    )
+    r = client.patch(
+        f"/api/v1/customers/{c['id']}",
+        headers=user.headers,
+        json={"full_name": "Two", "mobile": "7777777777"},
+    )
+    assert r.status_code == 200
+    assert r.json()["full_name"] == "Two"
+
+
 def test_delete_customer(user, client):
     c = add_customer(client, user.headers)
     assert client.delete(f"/api/v1/customers/{c['id']}", headers=user.headers).status_code == 204

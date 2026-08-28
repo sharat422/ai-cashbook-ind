@@ -1,6 +1,7 @@
 import React from 'react';
 import {Alert, View} from 'react-native';
 
+import {ApiError} from '@api/client';
 import {Button, Screen, Text} from '@components/ui';
 import {CustomerForm} from '@features/customers/presentation/components';
 import {
@@ -23,12 +24,28 @@ export function CustomerFormScreen({
     form.markSubmitAttempted();
     if (!form.isValid) return;
 
-    const onError = (err: Error) =>
+    const onError = (err: Error) => {
+      // 409 = another device edited this customer since it was loaded. Don't
+      // clobber their change — tell the user to reload the latest version.
+      if (err instanceof ApiError && err.status === 409) {
+        Alert.alert(
+          'Edited on another device',
+          'This customer was changed on another device. Go back and reopen it ' +
+            'to see the latest details, then re-apply your changes.',
+          [{text: 'OK', onPress: () => navigation.goBack()}],
+        );
+        return;
+      }
       Alert.alert('Could not save', err.message);
+    };
 
     if (editing) {
       update.mutate(
-        {id: editing.id, draft: form.draft},
+        {
+          id: editing.id,
+          draft: form.draft,
+          expectedVersion: editing.version,
+        },
         {onSuccess: () => navigation.goBack(), onError},
       );
     } else {

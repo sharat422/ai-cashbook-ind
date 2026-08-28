@@ -36,9 +36,13 @@ export function makeCustomerUseCases(repo: CustomerRepository) {
       return repo.create(normalize(draft));
     },
 
-    update: (id: string, draft: CustomerDraft): Promise<Customer> => {
+    update: (
+      id: string,
+      draft: CustomerDraft,
+      expectedVersion?: number,
+    ): Promise<Customer> => {
       assertValid(draft);
-      return repo.update(id, normalize(draft));
+      return repo.update(id, normalize(draft), expectedVersion);
     },
 
     remove: (id: string): Promise<void> => repo.remove(id),
