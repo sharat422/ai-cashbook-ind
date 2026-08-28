@@ -1,8 +1,9 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, {useState} from 'react';
-import {Platform, Pressable} from 'react-native';
+import {Modal, Platform, Pressable, StyleSheet, View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import {formatDisplayDate, toISODate} from '@utils/date';
 
 export interface DateFieldProps {
@@ -15,8 +16,12 @@ export interface DateFieldProps {
 }
 
 /**
- * Tappable date field backed by the native date picker. Renders an inline
- * spinner on iOS and the system dialog on Android.
+ * Tappable date field backed by the native date picker.
+ *
+ * Android shows the system dialog, which dismisses itself on pick/cancel. iOS
+ * has no self-dismissing inline spinner, so we present it in a modal with an
+ * explicit Done/Cancel bar — otherwise the spinner stays open forever (and, with
+ * two fields like the report date range, both stay open at once).
  */
 export function DateField({
   value,
@@ -24,32 +29,81 @@ export function DateField({
   error,
   maximumDate = new Date(),
 }: DateFieldProps): React.JSX.Element {
+  const t = useT();
   const [open, setOpen] = useState(false);
-  const current = value ? new Date(`${value}T00:00:00`) : new Date();
+  // Holds the in-progress iOS spinner selection until the user taps Done.
+  const [draft, setDraft] = useState<Date>(() =>
+    value ? new Date(`${value}T00:00:00`) : new Date(),
+  );
+
+  const openPicker = () => {
+    setDraft(value ? new Date(`${value}T00:00:00`) : new Date());
+    setOpen(true);
+  };
 
   return (
     <>
       <Pressable
         accessibilityRole="button"
-        onPress={() => setOpen(true)}
+        onPress={openPicker}
         className={`h-14 flex-row items-center justify-between rounded-xl border bg-white px-4 ${
           error ? 'border-danger' : 'border-border'
         }`}>
         <Text className={value ? 'text-base text-slate-900' : 'text-base text-muted'}>
-          {value ? formatDisplayDate(value) : 'Select date'}
+          {value ? formatDisplayDate(value) : t('common.selectDate')}
         </Text>
         <Text className="text-muted">📅</Text>
       </Pressable>
 
-      {open ? (
+      {Platform.OS === 'ios' ? (
+        <Modal
+          visible={open}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setOpen(false)}>
+          <View className="flex-1 justify-end">
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              className="bg-black/40"
+              onPress={() => setOpen(false)}
+            />
+            <View className="rounded-t-3xl bg-white pb-6">
+              <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
+              <Pressable onPress={() => setOpen(false)} hitSlop={8}>
+                <Text className="text-base text-muted">{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  onChange(toISODate(draft));
+                  setOpen(false);
+                }}
+                hitSlop={8}>
+                <Text className="text-base font-semibold text-primary">
+                  {t('common.done')}
+                </Text>
+              </Pressable>
+            </View>
+              <DateTimePicker
+                value={draft}
+                mode="date"
+                maximumDate={maximumDate}
+                display="spinner"
+                onChange={(_event, selected) => {
+                  if (selected) setDraft(selected);
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : open ? (
         <DateTimePicker
-          value={current}
+          value={value ? new Date(`${value}T00:00:00`) : new Date()}
           mode="date"
           maximumDate={maximumDate}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          display="default"
           onChange={(event, selected) => {
-            // Android fires once and closes; iOS keeps the spinner mounted.
-            if (Platform.OS !== 'ios') setOpen(false);
+            // Android fires once then closes; dismiss either way.
+            setOpen(false);
             if (event.type === 'set' && selected) {
               onChange(toISODate(selected));
             }
