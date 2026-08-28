@@ -12,9 +12,10 @@ import {
 } from '@components/ui';
 import {isReportEmpty} from '@features/reports/domain/entities';
 import {
-  exportReportCsv,
   exportReportPdf,
+  exportReportXlsx,
 } from '@features/reports/domain/exportReport';
+import {getReportTransactions} from '@features/reports/data/reportTransactions';
 import {useReportSummary} from '@features/reports/presentation/hooks/useReportSummary';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
@@ -54,7 +55,7 @@ export function ReportsScreen(): React.JSX.Element {
   const initial = presetRange('month');
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
+  const [exporting, setExporting] = useState<null | 'pdf' | 'xlsx'>(null);
 
   const applyPreset = (p: Exclude<Preset, 'custom'>) => {
     setPreset(p);
@@ -66,12 +67,15 @@ export function ReportsScreen(): React.JSX.Element {
   const {data, isLoading, isError, error, refetch, isRefetching} =
     useReportSummary(from, to);
 
-  const onExport = async (kind: 'pdf' | 'csv') => {
+  const onExport = async (kind: 'pdf' | 'xlsx') => {
     if (!data) return;
     setExporting(kind);
     try {
-      if (kind === 'pdf') await exportReportPdf(data, businessName);
-      else await exportReportCsv(data);
+      // Both formats include the P&L summary + the full transaction list for
+      // the selected range (line items fetched here, with an offline fallback).
+      const {items} = await getReportTransactions(from, to);
+      if (kind === 'pdf') await exportReportPdf(data, businessName, items);
+      else await exportReportXlsx(data, items);
     } catch (e) {
       Alert.alert(
         'Could not export',
@@ -206,16 +210,17 @@ export function ReportsScreen(): React.JSX.Element {
                   onPress={() => onExport('pdf')}
                 />
                 <Button
-                  title="⬇ CSV (Excel)"
+                  title="⬇ Excel (.xlsx)"
                   variant="secondary"
                   className="flex-1"
                   fullWidth={false}
-                  loading={exporting === 'csv'}
-                  onPress={() => onExport('csv')}
+                  loading={exporting === 'xlsx'}
+                  onPress={() => onExport('xlsx')}
                 />
               </View>
               <Text variant="caption" className="mt-2 text-center">
-                Share to WhatsApp, email, or print.
+                P&amp;L summary + full transaction list. PDF to print/share; Excel
+                to open in a spreadsheet.
               </Text>
             </>
           ) : null}

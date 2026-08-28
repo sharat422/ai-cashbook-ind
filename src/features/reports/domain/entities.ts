@@ -25,3 +25,15 @@ export interface ReportSummary {
 export function isReportEmpty(r: ReportSummary): boolean {
   return r.incomeTotal === 0 && r.expenseTotal === 0;
 }
+
+/** A flat transaction line used by the full-history exports. */
+export interface ReportTxn {
+  type: 'income' | 'expense';
+  /** ISO date (YYYY-MM-DD). */
+  date: string;
+  category: string;
+  /** Vendor/payee for expenses; empty for income. */
+  party: string;
+  amount: number;
+  notes: string;
+}

@@ -482,17 +482,21 @@ deployed backend (`https://smart-cashbook-api.onrender.com`).
 - **Steps:** Choose a range with no entries.
 - **Expected:** "Nothing to report" empty state.
 
-### 18.6 Export PDF
-- **Steps:** Tap **⬇ PDF**.
-- **Expected:** OS share sheet opens; the shared file is a clean, branded P&L PDF (open it / print / send to WhatsApp).
+### 18.6 Export PDF (P&L + full transactions)
+- **Steps:** Pick a custom range → tap **⬇ PDF**.
+- **Expected:** Share sheet opens with a clean, branded PDF containing the **P&L summary + category breakdown _and_ a full transaction table** for the range (print / WhatsApp / email). File name encodes the range.
 
-### 18.7 Export CSV (Excel)
-- **Steps:** Tap **⬇ CSV (Excel)**.
-- **Expected:** Share sheet opens with a `.csv`; opening it in Excel/Sheets shows totals + category rows.
+### 18.7 Export Excel (.xlsx)
+- **Steps:** Tap **⬇ Excel (.xlsx)**.
+- **Expected:** Share sheet opens with a real **`.xlsx`** (not CSV). Opening it in Excel/Sheets shows **two sheets**: **P&L Summary** (income/expense/profit + category rows) and **Transactions** (a ledger with Date / Type / Category / Vendor-Payer / **Income** / **Expense** / Notes columns and a **Totals** row). Amounts are **numbers**, so accountants can sum/pivot/filter.
 
-### 18.8 Offline reports
-- **Steps:** Enable Airplane mode → open/refresh Reports.
-- **Expected:** Amber "Offline — figures computed on this device" banner; figures come from local entries; export still works.
+### 18.8 Export covers the selected custom range
+- **Steps:** Change the range (e.g. Month → custom) and re-export.
+- **Expected:** Both PDF and Excel reflect the new range's totals **and** only that range's transaction lines.
+
+### 18.9 Offline export
+- **Steps:** Airplane mode → open Reports → export either format.
+- **Expected:** Amber "Offline — figures computed on this device" banner; the export still works, built from **local entries** (including pending ones) — P&L and the transaction list both populate.
 
 ---
 
@@ -866,5 +870,5 @@ uploaded.** See [docs/SMS_IMPORT.md](docs/SMS_IMPORT.md).
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 113) and `cd backend && python -m pytest`
+release: `npm test` (frontend, 120) and `cd backend && python -m pytest`
 (backend, 97). See [TESTING.md](TESTING.md).
