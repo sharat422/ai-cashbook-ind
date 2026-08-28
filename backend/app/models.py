@@ -1,7 +1,15 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -24,6 +32,34 @@ class User(Base):
 
     businesses: Mapped[list["Business"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class BusinessMember(Base):
+    """Links a user to a business with a role — the basis of RBAC.
+
+    A business can have many members; a user can belong to many businesses
+    (v1 uses the first active membership as the active business). The original
+    creator is seeded as an 'owner' member.
+    """
+
+    __tablename__ = "business_members"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    role: Mapped[str] = mapped_column(String(20))  # owner | accountant | staff
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    # Mobile the owner invited (for display before that user first logs in).
+    invited_by_mobile: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "user_id", name="uq_member_business_user"),
     )
 
 

@@ -3,7 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW, ENTRY_CREATE
 from ..models import Business, Income
 from ..serializers import income_dto
 from ..storage import save_upload
@@ -13,7 +14,7 @@ router = APIRouter(tags=["incomes"])
 
 @router.get("/incomes")
 def list_incomes(
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> list[dict]:
     rows = db.scalars(
@@ -32,7 +33,7 @@ def create_income(
     client_id: str = Form(...),
     notes: str | None = Form(None),
     attachment: UploadFile | None = File(None),
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
     # Idempotency: a retried offline submission must not create a duplicate.

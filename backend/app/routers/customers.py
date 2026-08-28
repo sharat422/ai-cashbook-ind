@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 from ..calc import recompute_customer
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
 from ..models import Business, Customer, LedgerEntry, now_iso
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
@@ -38,7 +39,7 @@ def list_customers(
     limit: int = Query(20, ge=1, le=100),
     cursor: str | None = None,
     search: str | None = None,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     base = select(Customer).where(Customer.business_id == business.id)
@@ -73,7 +74,7 @@ def list_customers(
 @router.get("/customers/{customer_id}")
 def get_customer(
     customer_id: str,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     return customer_dto(_owned_customer(db, business, customer_id))
@@ -82,7 +83,7 @@ def get_customer(
 @router.post("/customers")
 def create_customer(
     body: CustomerBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
     row = Customer(business_id=business.id, **body.model_dump())
@@ -97,7 +98,7 @@ def update_customer(
     customer_id: str,
     body: CustomerBody,
     expected_version: int | None = None,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_EDIT)),
     db: Session = Depends(get_db),
 ) -> dict:
     customer = _owned_customer(db, business, customer_id)
@@ -127,7 +128,7 @@ def update_customer(
 @router.delete("/customers/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_customer(
     customer_id: str,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_DELETE)),
     db: Session = Depends(get_db),
 ) -> None:
     customer = _owned_customer(db, business, customer_id)
@@ -139,7 +140,7 @@ def delete_customer(
 @router.get("/customers/{customer_id}/ledger")
 def list_ledger(
     customer_id: str,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> list[dict]:
     _owned_customer(db, business, customer_id)
@@ -163,7 +164,7 @@ def add_ledger_entry(
     payment_method: str | None = Form(None),
     reference_number: str | None = Form(None),
     attachment: UploadFile | None = File(None),
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
     customer = _owned_customer(db, business, customer_id)

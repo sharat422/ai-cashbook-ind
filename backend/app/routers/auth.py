@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
-from ..deps import get_current_business
-from ..models import Business, User
+from ..deps import get_current_membership
+from ..models import Business, BusinessMember, User
 from ..security import create_access_token, get_current_user
 from ..serializers import business_dto
 
@@ -98,11 +98,22 @@ def create_business(
         gst_registered=body.gstRegistered,
     )
     db.add(business)
+    db.flush()  # assign business.id before creating the membership
+    # Seed the creator as the owner member — the basis of RBAC.
+    db.add(
+        BusinessMember(
+            business_id=business.id, user_id=user.id, role="owner", status="active"
+        )
+    )
     db.commit()
     db.refresh(business)
     return business_dto(business)
 
 
 @router.get("/businesses/me")
-def my_business(business: Business = Depends(get_current_business)) -> dict:
-    return business_dto(business)
+def my_business(
+    membership: tuple[Business, str] = Depends(get_current_membership),
+) -> dict:
+    business, role = membership
+    # The caller's role drives client-side UI gating (server still enforces).
+    return {**business_dto(business), "role": role}

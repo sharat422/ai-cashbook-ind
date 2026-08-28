@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 from ..calc import days_since, today_iso
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW
 from ..models import Business, Customer, LedgerEntry
 
 router = APIRouter(tags=["customer-insights"])
@@ -59,7 +60,7 @@ def _customer_aging(entries: list[LedgerEntry]) -> dict:
 
 @router.get("/customer-aging")
 def customers_aging(
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     customers = db.scalars(
@@ -90,7 +91,7 @@ def _risk_score(customer: Customer) -> int:
 
 @router.get("/customer-insights")
 def customers_insights(
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     customers = db.scalars(

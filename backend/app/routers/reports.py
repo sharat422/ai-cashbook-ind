@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import REPORTS_VIEW
 from ..models import Business, Expense, Income
 
 router = APIRouter(tags=["reports"])
@@ -25,7 +26,7 @@ def _by_category(rows: list, total: float) -> list[dict]:
 def report_summary(
     from_: str = Query(..., alias="from"),
     to: str = Query(...),
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(REPORTS_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     """Profit & Loss + category breakdowns for a date range [from, to].

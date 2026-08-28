@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from ..deps import get_current_business
+from ..deps import require
 from ..models import Business
+from ..rbac import DATA_VIEW
 from ..notifications import (
     WhatsAppNotConfigured,
     WhatsAppSendError,
@@ -19,7 +20,7 @@ class WhatsAppSendBody(BaseModel):
 
 
 @router.get("/notifications/whatsapp/status")
-def whatsapp_status(business: Business = Depends(get_current_business)) -> dict:
+def whatsapp_status(business: Business = Depends(require(DATA_VIEW))) -> dict:
     """Lets the app confirm whether the server can deliver via WhatsApp."""
     return {"configured": whatsapp_configured()}
 
@@ -27,7 +28,7 @@ def whatsapp_status(business: Business = Depends(get_current_business)) -> dict:
 @router.post("/notifications/whatsapp")
 def send_whatsapp(
     body: WhatsAppSendBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
 ) -> dict:
     """Forward a message to WhatsApp Business Cloud API using the server token.
 

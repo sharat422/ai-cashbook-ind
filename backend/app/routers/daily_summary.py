@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from ..calc import today_iso
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW
 from ..models import Business, Expense, Income
 
 router = APIRouter(tags=["daily-summary"])
@@ -15,7 +16,7 @@ router = APIRouter(tags=["daily-summary"])
 @router.get("/summary/daily")
 def daily_summary(
     date: str | None = Query(None),
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     day = date or today_iso()

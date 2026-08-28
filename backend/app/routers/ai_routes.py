@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 
 from ..ai import categorize_text, parse_transaction, scan_receipt
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import ENTRY_CREATE
 from ..models import AiDecision, Business
 
 router = APIRouter(tags=["ai"])
@@ -28,7 +29,7 @@ class ParseTransactionBody(BaseModel):
 @router.post("/parse-transaction")
 def parse_transaction_route(
     body: ParseTransactionBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
     """Turn a spoken/typed sentence (any of several Indian languages) into a
@@ -50,7 +51,7 @@ def parse_transaction_route(
 @router.post("/categorize")
 def categorize(
     body: CategorizeBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
     category, confidence = categorize_text(body.text)
@@ -70,7 +71,7 @@ def categorize(
 @router.post("/receipts/scan")
 def scan(
     receipt: UploadFile = File(...),
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
     raw = receipt.file.read()

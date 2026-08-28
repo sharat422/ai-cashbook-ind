@@ -3,7 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW
 from ..models import Business, Expense, Income
 
 router = APIRouter(tags=["transactions"])
@@ -20,7 +21,7 @@ def list_transactions(
     categories: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     """Unified income + expense feed with search, filters, sort and a cursor.

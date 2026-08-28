@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 from ..calc import today_iso
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW, SETTINGS_MANAGE
 from ..models import Business, Expense, RecurringExpense, gen_id
 from ..recurring import FREQUENCIES, catch_up, next_occurrence
 from ..serializers import expense_dto, recurring_expense_dto
@@ -62,7 +63,7 @@ def _anchor_day(body: RecurringBody) -> int | None:
 
 @router.get("/recurring-expenses")
 def list_recurring(
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     today = today_iso()
@@ -100,7 +101,7 @@ def _monthly_equivalent(rows: list[RecurringExpense]) -> float:
 @router.post("/recurring-expenses")
 def create_recurring(
     body: RecurringBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> dict:
     _validate(body)
@@ -127,7 +128,7 @@ def create_recurring(
 def update_recurring(
     rec_id: str,
     body: RecurringBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> dict:
     _validate(body)
@@ -150,7 +151,7 @@ def update_recurring(
 @router.delete("/recurring-expenses/{rec_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_recurring(
     rec_id: str,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> None:
     db.delete(_owned(db, business, rec_id))
@@ -160,7 +161,7 @@ def delete_recurring(
 @router.post("/recurring-expenses/{rec_id}/post")
 def post_occurrence(
     rec_id: str,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> dict:
     """Record the current due occurrence as a real Expense and roll the

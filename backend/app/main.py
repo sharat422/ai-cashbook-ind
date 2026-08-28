@@ -23,6 +23,7 @@ from .routers import (
     notifications,
     recurring,
     reports,
+    team,
     transactions,
 )
 from .storage import UPLOAD_DIR
@@ -61,6 +62,7 @@ for module in (
     business,
     assistant,
     recurring,
+    team,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

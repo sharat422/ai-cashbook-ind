@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from ..assistant import answer_question
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW
 from ..models import AiDecision, Business
 
 router = APIRouter(tags=["assistant"])
@@ -19,7 +20,7 @@ class AskBody(BaseModel):
 @router.post("/assistant/ask")
 def assistant_ask(
     body: AskBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     """Answer a natural-language question about the business. The LLM only

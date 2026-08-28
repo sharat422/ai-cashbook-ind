@@ -4,7 +4,8 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import get_current_business
+from ..deps import require
+from ..rbac import DATA_VIEW, SETTINGS_MANAGE
 from ..models import Business, Item
 from ..serializers import item_dto
 
@@ -37,7 +38,7 @@ def list_items(
     limit: int = Query(20, ge=1, le=100),
     cursor: str | None = None,
     search: str | None = None,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     base = select(Item).where(Item.business_id == business.id)
@@ -65,7 +66,7 @@ def list_items(
 @router.get("/items/{item_id}")
 def get_item(
     item_id: str,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
     return item_dto(_owned_item(db, business, item_id))
@@ -74,7 +75,7 @@ def get_item(
 @router.post("/items")
 def create_item(
     body: ItemBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> dict:
     row = Item(business_id=business.id, **body.model_dump())
@@ -88,7 +89,7 @@ def create_item(
 def update_item(
     item_id: str,
     body: ItemBody,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> dict:
     item = _owned_item(db, business, item_id)
@@ -102,7 +103,7 @@ def update_item(
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_item(
     item_id: str,
-    business: Business = Depends(get_current_business),
+    business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> None:
     db.delete(_owned_item(db, business, item_id))

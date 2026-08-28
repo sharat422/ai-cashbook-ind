@@ -19,6 +19,20 @@ CREATE TABLE IF NOT EXISTS businesses (
     created_at     VARCHAR(40) NOT NULL
 );
 
+-- RBAC: users ↔ businesses with a role (owner | accountant | staff).
+CREATE TABLE IF NOT EXISTS business_members (
+    id                VARCHAR(40) PRIMARY KEY,
+    business_id       VARCHAR(40) NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    user_id           VARCHAR(40) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role              VARCHAR(20) NOT NULL,
+    status            VARCHAR(20) NOT NULL DEFAULT 'active',
+    invited_by_mobile VARCHAR(20),
+    created_at        VARCHAR(40) NOT NULL,
+    CONSTRAINT uq_member_business_user UNIQUE (business_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_members_business ON business_members(business_id);
+CREATE INDEX IF NOT EXISTS idx_members_user ON business_members(user_id);
+
 CREATE TABLE IF NOT EXISTS incomes (
     id             VARCHAR(40) PRIMARY KEY,
     business_id    VARCHAR(40) NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
@@ -107,3 +121,13 @@ CREATE TABLE IF NOT EXISTS ai_decisions (
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at VARCHAR(40);
 UPDATE customers SET updated_at = created_at WHERE updated_at IS NULL;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
+
+-- 2026-08: RBAC. Backfill an 'owner' membership for every existing business so
+-- current owners keep full access after roles ship. Idempotent (skips any
+-- business that already has a member row).
+INSERT INTO business_members (id, business_id, user_id, role, status, created_at)
+SELECT md5(random()::text || b.id), b.id, b.user_id, 'owner', 'active', b.created_at
+FROM businesses b
+WHERE NOT EXISTS (
+    SELECT 1 FROM business_members m WHERE m.business_id = b.id
+);
