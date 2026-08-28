@@ -39,6 +39,7 @@ export type AppStackParamList = {
   ItemForm: {item?: Item} | undefined;
   Recurring: undefined;
   RecurringForm: {recurring?: RecurringExpense} | undefined;
+  SmsImport: undefined;
   AITransaction: undefined;
   AddIncome: undefined;
   AddExpense:

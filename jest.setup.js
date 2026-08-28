@@ -43,6 +43,13 @@ jest.mock('jail-monkey', () => ({
   default: {isJailBroken: jest.fn(() => false)},
 }));
 
+// react-native-get-sms-android is an Android-only native module; provide a
+// stub so the reader logic can be unit-tested. Tests override `list` per case.
+jest.mock('react-native-get-sms-android', () => ({
+  __esModule: true,
+  default: {list: jest.fn()},
+}));
+
 // Connectivity wrapper calls NetInfo.fetch()/addEventListener(). Default to
 // "online"; tests that exercise the offline path override fetch per-case.
 jest.mock('@react-native-community/netinfo', () => ({

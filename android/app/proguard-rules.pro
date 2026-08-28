@@ -56,6 +56,10 @@
 # --- jail-monkey (root/jailbreak detection) ---
 -keep class com.gantman.reactnative.** { *; }
 
+# --- react-native-get-sms-android (bank SMS import) ---
+-keep class com.centaurwarchief.smsandroid.** { *; }
+-keep class com.react.SmsModule.** { *; }
+
 # Keep JS-facing native module method annotations.
 -keepclassmembers class * { @com.facebook.react.bridge.ReactMethod <methods>; }
 -keepclassmembers class * { @com.facebook.react.uimanager.annotations.ReactProp <methods>; }

@@ -796,6 +796,42 @@ a real expense and rolls the schedule forward.
 
 ---
 
+## 30. Bank SMS import
+
+Open from the Dashboard **📩 Import from SMS**. Bank transaction messages become
+draft entries the user reviews before saving. **Nothing auto-saves; no SMS is
+uploaded.** See [docs/SMS_IMPORT.md](docs/SMS_IMPORT.md).
+
+### 30.1 Paste a bank SMS (all platforms)
+- **Steps:** Paste `Rs.2500.00 debited from a/c XX1234 on 05-08-26 to VPA ramesh@okhdfc` → **Detect transaction**.
+- **Expected:** A candidate card appears — type **Expense**, amount **₹2,500**, paid-to **ramesh@okhdfc**, date **05 Aug 2026**, with the raw SMS shown. Nothing is saved yet.
+
+### 30.2 Debit vs credit mapping
+- **Steps:** Paste a credit SMS, e.g. `Received Rs.1500 in your Kotak Bank AC X5 from PRIYA on 05-08-26`.
+- **Expected:** Candidate defaults to **Income**, ₹1,500, received-from **PRIYA**. The Type toggle can flip expense↔income (category switches accordingly).
+
+### 30.3 Balance amounts are ignored
+- **Steps:** Paste `Rs.1,299 spent on HDFC Card xx9012 at AMAZON on 2026-08-05. Avl bal Rs.45,000`.
+- **Expected:** Amount is **₹1,299**, not ₹45,000 (balance is skipped).
+
+### 30.4 Non-transactions rejected
+- **Steps:** Paste an OTP or promo SMS.
+- **Expected:** "Couldn't read that" alert; no candidate added.
+
+### 30.5 Review, edit & save (no auto-save)
+- **Steps:** Edit a candidate's amount/party/category/date → **Add transaction**.
+- **Expected:** Saved via the normal expense/income flow; card shows "✓ Saved" with a **View** link to Transaction History. Dashboard figures update. **Ignore** removes a candidate without saving.
+
+### 30.6 Android scan (needs READ_SMS + Play exception)
+- **Steps (Android device):** Tap **🔍 Scan bank SMS** → grant permission.
+- **Expected:** Recent inbox bank messages are parsed into review cards; chatty/OTP messages are skipped. Denying permission (or "Don't ask again") shows a settings prompt. *(Requires a native build; see the Play-restriction note in the doc.)*
+
+### 30.7 iOS limitation
+- **Steps (iOS):** Open the screen.
+- **Expected:** No scan button; an amber note explains SMS scanning isn't available on iOS — the paste path works.
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -822,5 +858,5 @@ a real expense and rolls the schedule forward.
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 89) and `cd backend && python -m pytest`
+release: `npm test` (frontend, 112) and `cd backend && python -m pytest`
 (backend, 93). See [TESTING.md](TESTING.md).

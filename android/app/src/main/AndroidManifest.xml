@@ -6,6 +6,12 @@
     <!-- Biometric app-unlock (BiometricPrompt) — react-native-keychain -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
+    <!-- Read bank transaction SMS to suggest entries (user-confirmed, on-device).
+         RESTRICTED by Google Play: shipping this needs a Permissions Declaration
+         exception (financial-SMS use case). Without it, keep the paste-only flow
+         and remove this line. See docs/SMS_IMPORT.md. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+
     <!-- Camera capture for the receipt scanner / attachment flows -->
     <uses-permission android:name="android.permission.CAMERA" />
 

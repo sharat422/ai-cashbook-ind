@@ -214,6 +214,12 @@ export function DashboardScreen({
           className="mt-3"
           onPress={() => navigation.navigate('AITransaction')}
         />
+        <Button
+          title={t('dashboard.importSms')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('SmsImport')}
+        />
         <View className="mt-3 flex-row" style={{gap: 12}}>
           <Button
             title={t('dashboard.income')}
