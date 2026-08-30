@@ -1,6 +1,8 @@
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import React, {useState} from 'react';
 
+import {retryDelayMs, shouldRetryRequest} from '@api/client';
+
 /**
  * Hosts a single QueryClient for the app. Created lazily inside state so it
  * survives Fast Refresh without being re-instantiated on every render.
@@ -15,7 +17,10 @@ export function QueryProvider({
       new QueryClient({
         defaultOptions: {
           queries: {
-            retry: 1,
+            // Ride out free-tier cold-start connection resets/timeouts; never
+            // retry deterministic API errors. See src/api/client.ts.
+            retry: shouldRetryRequest,
+            retryDelay: retryDelayMs,
             staleTime: 30_000,
             refetchOnWindowFocus: false,
           },

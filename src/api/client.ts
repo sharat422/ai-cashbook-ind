@@ -13,10 +13,28 @@ export class ApiError extends Error {
 
 /** Thrown when a request exceeds ENV.apiTimeoutMs or the device is offline. */
 export class NetworkError extends Error {
-  constructor(message = 'Network request failed') {
+  constructor(
+    message = 'Couldn’t reach the server — it may be waking up. Please try again in a moment.',
+  ) {
     super(message);
     this.name = 'NetworkError';
   }
+}
+
+/**
+ * React Query retry predicate. Retries transient network failures (offline
+ * blips and the free-tier cold-start connection resets, which can take a boot
+ * cycle to clear) a few times, but never retries deterministic API errors
+ * (401/403/404/422…) which won't fix themselves.
+ */
+export function shouldRetryRequest(failureCount: number, error: unknown): boolean {
+  if (error instanceof ApiError) return false;
+  return failureCount < 3;
+}
+
+/** Exponential backoff (ms), capped, so retries span a short cold-start window. */
+export function retryDelayMs(attemptIndex: number): number {
+  return Math.min(1500 * 2 ** attemptIndex, 8000);
 }
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -85,7 +103,9 @@ export async function apiRequest<T>(
   } catch (err) {
     if (err instanceof ApiError) throw err;
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new NetworkError('Request timed out');
+      throw new NetworkError(
+        'The server took too long to respond (it may be waking up). Please try again.',
+      );
     }
     throw new NetworkError();
   } finally {

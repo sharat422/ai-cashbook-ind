@@ -5,14 +5,17 @@ name: Keep backend awake
 # Runs on a schedule and can also be triggered manually from the Actions tab.
 #
 # Notes:
-# - GitHub cron is best-effort and can be delayed several minutes under load,
-#   so we ping every 10 min to stay comfortably under Render's 15 min timeout.
-# - A single always-on free web service uses ~730 of Render's 750 free
-#   instance-hours/month. Disable this workflow (or delete it) if you approach
-#   that limit or move to a paid plan.
+# - GitHub cron is best-effort and is often delayed 5-15 min under load, so at
+#   */10 a single delayed/skipped run can exceed Render's 15 min idle timeout and
+#   let the instance sleep. Pinging every 5 min gives enough attempts that at
+#   least one reliably lands inside the window.
+# - Keeping a free web service always awake uses ~750 of Render's 750 free
+#   instance-hours/month (i.e. the whole allowance for one service). Disable this
+#   workflow (or move to a paid plan) if you run other free services or approach
+#   the limit.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:

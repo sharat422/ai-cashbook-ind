@@ -27,7 +27,7 @@ export function useCustomers(search: string) {
     initialPageParam: null as string | null,
     getNextPageParam: lastPage => lastPage.nextCursor,
     staleTime: 30_000,
-    retry: 1,
+    // Inherit the global smart retry (rides out cold-start network failures).
   });
 
   const items = useMemo<Customer[]>(
