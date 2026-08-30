@@ -1,4 +1,5 @@
 import type {BusinessType, IndianState} from '@config/constants';
+import type {Role} from '@features/auth/rbac';
 
 /** Authenticated user identity returned by the backend. */
 export interface User {
@@ -6,7 +7,7 @@ export interface User {
   mobile: string;
 }
 
-/** A business profile owned by the authenticated user. */
+/** A business profile the authenticated user belongs to. */
 export interface Business {
   id: string;
   businessName: string;
@@ -14,6 +15,9 @@ export interface Business {
   businessType: BusinessType;
   state: IndianState;
   gstRegistered: boolean;
+  /** The caller's role in this business (from /businesses/me). Absent for the
+   *  local create response; defaults to owner (the creator). */
+  role?: Role;
 }
 
 /** Payload sent when creating a business. */

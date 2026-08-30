@@ -844,6 +844,41 @@ uploaded.** See [docs/SMS_IMPORT.md](docs/SMS_IMPORT.md).
 
 ---
 
+## 31. Roles & permissions (multi-user business)
+
+Multiple users can share one business with roles: **owner** (full), **accountant**
+(view + export + add/edit, no delete/settings/team), **staff** (add entries only).
+The **server enforces** every rule (403); the app also hides what a role can't do.
+
+### 31.1 Owner adds team members
+- **Steps:** As the owner → **Settings → 👥 Team & roles** → enter a mobile number, pick **Staff** or **Accountant** → **Add to business**.
+- **Expected:** The member appears in the list with their role. Adding an existing member's mobile again **updates their role** (no duplicate).
+
+### 31.2 Member gains access on login
+- **Steps:** Log out; log in with the invited **mobile** (OTP `123456`).
+- **Expected:** That user lands in the shared business with the assigned role (no onboarding, no new business).
+
+### 31.3 Staff — add-only home
+- **Steps:** Log in as a **staff** member.
+- **Expected:** A minimal home with **only add actions** (AI Entry, + Income, − Expense, Scan receipt, Import SMS) + Log out. **No** dashboard figures, transactions, customers, reports, or settings. (Attempting a blocked API returns 403.)
+
+### 31.4 Accountant — view/export, no delete/settings/team
+- **Steps:** Log in as an **accountant**.
+- **Expected:** Full dashboard, customers, khata, **reports + PDF/Excel export**, and can **add/edit** entries & customers. **Settings** hides the UPI, Item-catalog and **Team** entries; there's no delete/team access.
+
+### 31.5 Owner — full access
+- **Expected:** Everything, including **Settings → Team & roles**, UPI, item catalog, recurring, and delete.
+
+### 31.6 Manage & guardrails
+- **Steps:** Owner → Team → **Manage** a member → change role / remove. Try to demote or remove the **only owner**.
+- **Expected:** Role changes/removal work; the **last owner can't be demoted or removed** ("promote someone else first").
+
+### 31.7 Role change takes effect on next login
+- **Steps:** Owner changes a member's role; that member logs out and back in.
+- **Expected:** Their access reflects the new role (roles are resolved live server-side; the app refreshes the role on login).
+
+---
+
 ## Regression checklist (quick smoke)
 
 1. Login with `123456` → onboarding → Dashboard.
@@ -870,5 +905,5 @@ uploaded.** See [docs/SMS_IMPORT.md](docs/SMS_IMPORT.md).
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, 120) and `cd backend && python -m pytest`
-(backend, 97). See [TESTING.md](TESTING.md).
+release: `npm test` (frontend, 124) and `cd backend && python -m pytest`
+(backend, 106). See [TESTING.md](TESTING.md).

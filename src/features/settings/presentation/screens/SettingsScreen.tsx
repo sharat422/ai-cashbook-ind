@@ -15,6 +15,8 @@ import {
   APP_LANGUAGE_LABEL,
   SUPPORTED_APP_LANGUAGES,
 } from '@features/auth/utils/languagePreference';
+import {usePermissions} from '@features/auth/hooks';
+import {PERMISSIONS} from '@features/auth/rbac';
 import {
   getSupportedBiometry,
   PIN_LENGTH,
@@ -36,6 +38,8 @@ export function SettingsScreen({
   navigation,
 }: AppScreenProps<'Settings'>): React.JSX.Element {
   const t = useT();
+  const {can} = usePermissions();
+  const canManageSettings = can(PERMISSIONS.SETTINGS_MANAGE);
   const lockEnabled = useAppLockStore(s => s.enabled);
   const setPin = useAppLockStore(s => s.setPin);
   const disableLock = useAppLockStore(s => s.disableLock);
@@ -244,48 +248,62 @@ export function SettingsScreen({
           />
         </View>
 
-        {/* Payments / collections */}
-        <Text variant="label" className="mt-8 mb-3">
-          Payments
-        </Text>
-        <View className="rounded-2xl border border-border bg-white p-4" style={{gap: 14}}>
-          <View>
-            <Text className="mb-1.5 text-sm font-semibold text-slate-700">
-              Your UPI ID (for collecting payments)
+        {/* Payments / collections — owner-manages business config */}
+        {canManageSettings ? (
+          <>
+            <Text variant="label" className="mt-8 mb-3">
+              Payments
             </Text>
-            <TextField
-              value={upiId}
-              onChangeText={setUpiId}
-              placeholder="e.g. shop@okhdfcbank"
-              autoCapitalize="none"
-            />
-          </View>
-          <View>
-            <Text className="mb-1.5 text-sm font-semibold text-slate-700">
-              Payee name
-            </Text>
-            <TextField
-              value={payee}
-              onChangeText={setPayee}
-              placeholder={businessName ?? 'Your business name'}
-            />
-          </View>
-          <Button title="Save UPI details" variant="secondary" onPress={onSaveUpi} />
-        </View>
+            <View className="rounded-2xl border border-border bg-white p-4" style={{gap: 14}}>
+              <View>
+                <Text className="mb-1.5 text-sm font-semibold text-slate-700">
+                  Your UPI ID (for collecting payments)
+                </Text>
+                <TextField
+                  value={upiId}
+                  onChangeText={setUpiId}
+                  placeholder="e.g. shop@okhdfcbank"
+                  autoCapitalize="none"
+                />
+              </View>
+              <View>
+                <Text className="mb-1.5 text-sm font-semibold text-slate-700">
+                  Payee name
+                </Text>
+                <TextField
+                  value={payee}
+                  onChangeText={setPayee}
+                  placeholder={businessName ?? 'Your business name'}
+                />
+              </View>
+              <Button title="Save UPI details" variant="secondary" onPress={onSaveUpi} />
+            </View>
+          </>
+        ) : null}
 
         {/* Business */}
         <Text variant="label" className="mt-8 mb-3">
           {t('settings.business')}
         </Text>
-        <Button
-          title={t('settings.itemCatalog')}
-          variant="secondary"
-          onPress={() => navigation.navigate('Items')}
-        />
+        {can(PERMISSIONS.TEAM_MANAGE) ? (
+          <Button
+            title={t('settings.team')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('Team')}
+          />
+        ) : null}
+        {canManageSettings ? (
+          <Button
+            title={t('settings.itemCatalog')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('Items')}
+          />
+        ) : null}
         <Button
           title="🪙 Cash counter"
           variant="secondary"
-          className="mt-3"
           onPress={() => navigation.navigate('CashCounter')}
         />
         <Button

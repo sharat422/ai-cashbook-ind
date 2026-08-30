@@ -35,6 +35,7 @@ const en = {
   'dashboard.recurring': '🔁 Recurring',
   'dashboard.cashCounter': '🧮 Cash counter',
   'dashboard.importSms': '📩 Import from SMS',
+  'staff.subtitle': 'Record a transaction below.',
   'dashboard.recentActivity': 'Recent activity',
   'dashboard.viewAll': 'View all',
   'dashboard.noTransactions': 'No transactions recorded yet.',
@@ -58,6 +59,7 @@ const en = {
   'settings.contentLanguage': 'Content language',
   'settings.business': 'Business',
   'settings.itemCatalog': '🏷️ Item catalog',
+  'settings.team': '👥 Team & roles',
   'settings.notifications': '🔔 Notifications',
 
   // Auth & onboarding
@@ -204,6 +206,7 @@ const hi: Partial<Record<TKey, string>> = {
   'dashboard.recurring': '🔁 आवर्ती खर्च',
   'dashboard.cashCounter': '🧮 नकद गणना',
   'dashboard.importSms': '📩 एसएमएस से आयात',
+  'staff.subtitle': 'नीचे एक लेन-देन दर्ज करें।',
   'dashboard.recentActivity': 'हाल की गतिविधि',
   'dashboard.viewAll': 'सभी देखें',
   'dashboard.noTransactions': 'अभी तक कोई लेन-देन दर्ज नहीं हुआ।',
@@ -226,6 +229,7 @@ const hi: Partial<Record<TKey, string>> = {
   'settings.contentLanguage': 'सामग्री भाषा',
   'settings.business': 'व्यवसाय',
   'settings.itemCatalog': '🏷️ आइटम सूची',
+  'settings.team': '👥 टीम और भूमिकाएँ',
   'settings.notifications': '🔔 सूचनाएँ',
 
   'auth.login.title': 'स्वागत है',
@@ -364,6 +368,7 @@ const te: Partial<Record<TKey, string>> = {
   'dashboard.recurring': '🔁 పునరావృత ఖర్చులు',
   'dashboard.cashCounter': '🧮 నగదు లెక్కింపు',
   'dashboard.importSms': '📩 SMS నుండి దిగుమతి',
+  'staff.subtitle': 'కింద ఒక లావాదేవీని నమోదు చేయండి.',
   'dashboard.recentActivity': 'ఇటీవలి కార్యకలాపం',
   'dashboard.viewAll': 'అన్నీ చూడండి',
   'dashboard.noTransactions': 'ఇంకా ఎలాంటి లావాదేవీలు నమోదు కాలేదు.',
@@ -386,6 +391,7 @@ const te: Partial<Record<TKey, string>> = {
   'settings.contentLanguage': 'కంటెంట్ భాష',
   'settings.business': 'వ్యాపారం',
   'settings.itemCatalog': '🏷️ వస్తువుల జాబితా',
+  'settings.team': '👥 బృందం & పాత్రలు',
   'settings.notifications': '🔔 నోటిఫికేషన్‌లు',
 
   'auth.login.title': 'స్వాగతం',

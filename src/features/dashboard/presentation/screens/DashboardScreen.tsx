@@ -4,9 +4,11 @@ import {Alert, Pressable, RefreshControl, ScrollView, View} from 'react-native';
 import {Button, EmptyState, ErrorState, Screen, Text} from '@components/ui';
 import {isSummaryEmpty} from '@features/dashboard/domain/entities';
 import {
+  StaffHome,
   SummarySkeleton,
   SummaryWidgets,
 } from '@features/dashboard/presentation/components';
+import {usePermissions} from '@features/auth/hooks';
 import {useDashboardSummary} from '@features/dashboard/presentation/hooks/useDashboardSummary';
 import {DeviceIntegrityBanner} from '@features/security/presentation/DeviceIntegrityBanner';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
@@ -42,6 +44,7 @@ export function DashboardScreen({
   navigation,
 }: AppScreenProps<'Dashboard'>): React.JSX.Element {
   const t = useT();
+  const {role} = usePermissions();
   const business = useAuthStore(state => state.business);
   const logout = useAuthStore(state => state.logout);
   const incomes = useIncomeStore(state => state.entries);
@@ -96,6 +99,12 @@ export function DashboardScreen({
   const showError = isError && !data;
   const showEmpty =
     !!data && isSummaryEmpty(data) && activity.length === 0;
+
+  // Staff are add-only: no dashboard, lists, reports or settings. Render a
+  // focused home instead. (Hooks above still run — no conditional hooks.)
+  if (role === 'staff') {
+    return <StaffHome navigation={navigation} />;
+  }
 
   return (
     <Screen scroll={false}>
