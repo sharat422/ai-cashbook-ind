@@ -86,12 +86,23 @@ export async function apiRequest<T>(
     });
 
     const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    // Some error responses (e.g. a plain-text 500/502 from the host) aren't
+    // JSON — parse defensively so they surface as a proper ApiError with the
+    // right status, not a misleading "network" failure.
+    let data: any = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = null;
+      }
+    }
 
     if (!response.ok) {
       // FastAPI conventionally returns {"detail": "..."} on errors.
       const message =
         (data && (data.detail || data.message)) ||
+        (text && text.length < 200 ? text : null) ||
         'Something went wrong. Please try again.';
       throw new ApiError(
         response.status,

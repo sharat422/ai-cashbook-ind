@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .database import Base, engine
+from .migrations import run_startup_migrations
 from .routers import (
     ai_routes,
     assistant,
@@ -30,9 +31,11 @@ from .storage import UPLOAD_DIR
 
 logging.basicConfig(level=logging.INFO)
 
-# Create tables on startup. For schema migrations in production use Alembic;
-# the bundled schema.sql mirrors these models for PostgreSQL.
+# Create missing tables, then apply idempotent additive-column migrations that
+# create_all can't (it never alters existing tables). Keeps a live DB in sync
+# with the models on every deploy without manual psql. See app/migrations.py.
 Base.metadata.create_all(bind=engine)
+run_startup_migrations(engine)
 
 app = FastAPI(title="Smart CashBook API", version="1.0.0")
 
