@@ -1,13 +1,13 @@
 import base64
 import json
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from datetime import datetime, timezone
 
-from ..ai import categorize_text, parse_transaction, scan_receipt
+from ..ai import categorize_text, parse_transaction, scan_receipt, transcribe_audio
 from ..database import get_db
 from ..deps import require
 from ..rbac import ENTRY_CREATE
@@ -41,6 +41,53 @@ def parse_transaction_route(
         business_id=business.id,
         kind="voice_transaction",
         input_text=body.text,
+        output_json=json.dumps(result),
+        confidence=result.get("confidence"),
+    ))
+    db.commit()
+    return result
+
+
+@router.post("/voice/parse")
+def voice_parse_route(
+    audio: UploadFile = File(...),
+    today: str | None = Form(None),
+    language: str | None = Form(None),
+    business: Business = Depends(require(ENTRY_CREATE)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """The multilingual voice 'agent': transcribe spoken audio (Whisper
+    auto-detects the language) then parse it into a structured transaction.
+    Returns the parse result plus the raw `transcript` so the app can show what
+    was heard for confirmation/editing before saving."""
+    day = today or datetime.now(timezone.utc).date().isoformat()
+    audio_bytes = audio.file.read()
+    if not audio_bytes:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Empty audio.")
+
+    try:
+        transcript = transcribe_audio(
+            audio_bytes, audio.filename or "audio.m4a", language or None
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Couldn't transcribe the audio. Please try again, or type it instead.",
+        ) from exc
+
+    if not transcript:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Didn't catch any speech — please try again.",
+        )
+
+    result = parse_transaction(transcript, day)
+    result["transcript"] = transcript
+
+    db.add(AiDecision(
+        business_id=business.id,
+        kind="voice_parse",
+        input_text=transcript,
         output_json=json.dumps(result),
         confidence=result.get("confidence"),
     ))

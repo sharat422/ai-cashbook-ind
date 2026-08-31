@@ -22,6 +22,9 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    # Speech-to-text model for voice entry. whisper-1 auto-detects the spoken
+    # language (Hindi/Telugu/Tamil/…); swap for gpt-4o-transcribe when preferred.
+    openai_transcribe_model: str = "whisper-1"
 
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"

@@ -43,6 +43,17 @@ jest.mock('jail-monkey', () => ({
   default: {isJailBroken: jest.fn(() => false)},
 }));
 
+// react-native-audio-recorder-player is a native singleton; stub start/stop.
+jest.mock('react-native-audio-recorder-player', () => ({
+  __esModule: true,
+  default: {
+    startRecorder: jest.fn(async () => '/tmp/voice.m4a'),
+    stopRecorder: jest.fn(async () => '/tmp/voice.m4a'),
+    addRecordBackListener: jest.fn(),
+    removeRecordBackListener: jest.fn(),
+  },
+}));
+
 // react-native-get-sms-android is an Android-only native module; provide a
 // stub so the reader logic can be unit-tested. Tests override `list` per case.
 jest.mock('react-native-get-sms-android', () => ({

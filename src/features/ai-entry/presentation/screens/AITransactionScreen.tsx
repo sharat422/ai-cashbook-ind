@@ -14,7 +14,15 @@ import {
   exactMatch,
   findCustomerCandidates,
 } from '@features/ai-entry/domain/saveTransaction';
-import {useParseTransaction} from '@features/ai-entry/presentation/hooks/useParseTransaction';
+import {
+  useParseTransaction,
+  useVoiceParse,
+} from '@features/ai-entry/presentation/hooks/useParseTransaction';
+import {
+  ensureMicPermission,
+  startRecording,
+  stopRecording,
+} from '@features/ai-entry/data/voiceRecorder';
 import type {Customer} from '@features/customers/domain/entities';
 import {
   PAYMENT_METHODS,
@@ -32,6 +40,8 @@ export function AITransactionScreen({
 }: AppScreenProps<'AITransaction'>): React.JSX.Element {
   const t = useT();
   const parse = useParseTransaction();
+  const voice = useVoiceParse();
+  const [recording, setRecording] = useState(false);
 
   const EXAMPLES = [t('ai.example1'), t('ai.example2'), t('ai.example3')];
   const TYPE_OPTIONS: Array<{label: string; value: ParsedType}> = [
@@ -52,6 +62,56 @@ export function AITransactionScreen({
   // When set, the "Which <name>?" picker is shown (multiple matches).
   const [candidates, setCandidates] = useState<Customer[] | null>(null);
 
+  /** Seed the editable review fields from a parse result (text or voice). */
+  const applyParsed = (result: ParsedTransaction) => {
+    setParsed(result);
+    setName(result.customerName ?? '');
+    setType(result.type);
+    setAmount(result.amount ?? NaN);
+    setDate(result.date || toISODate(new Date()));
+  };
+
+  /** Mic: tap to record, tap again to stop → transcribe (any language) + parse. */
+  const onMic = async () => {
+    if (voice.isPending) return;
+    if (recording) {
+      let audio;
+      try {
+        audio = await stopRecording();
+      } catch {
+        setRecording(false);
+        return Alert.alert(t('ai.couldNotRead'), t('ai.tryAgain'));
+      }
+      setRecording(false);
+      setError(null);
+      setCandidates(null);
+      voice.mutate(
+        {audio, today: toISODate(new Date())},
+        {
+          onSuccess: result => {
+            setText(result.transcript); // show what was heard
+            applyParsed(result);
+          },
+          onError: err =>
+            Alert.alert(
+              t('ai.couldNotRead'),
+              err instanceof Error ? err.message : t('ai.tryAgain'),
+            ),
+        },
+      );
+      return;
+    }
+    if (!(await ensureMicPermission())) {
+      return Alert.alert(t('ai.micNeededTitle'), t('ai.micNeededMsg'));
+    }
+    try {
+      await startRecording();
+      setRecording(true);
+    } catch {
+      Alert.alert(t('ai.couldNotRead'), t('ai.tryAgain'));
+    }
+  };
+
   const onParse = () => {
     if (!text.trim()) return;
     setError(null);
@@ -59,13 +119,7 @@ export function AITransactionScreen({
     parse.mutate(
       {text: text.trim(), today: toISODate(new Date())},
       {
-        onSuccess: result => {
-          setParsed(result);
-          setName(result.customerName ?? '');
-          setType(result.type);
-          setAmount(result.amount ?? NaN);
-          setDate(result.date || toISODate(new Date()));
-        },
+        onSuccess: applyParsed,
         onError: err =>
           Alert.alert(
             t('ai.couldNotRead'),
@@ -153,8 +207,27 @@ export function AITransactionScreen({
             {t('ai.subtitle')}
           </Text>
 
+          {/* Mic — speak in any language; the server transcribes + parses */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={onMic}
+            disabled={voice.isPending}
+            className={`mt-5 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
+              recording ? 'bg-danger' : 'bg-primary'
+            }`}
+            style={{gap: 10, opacity: voice.isPending ? 0.6 : 1}}>
+            <Text className="text-2xl">{recording ? '⏹' : '🎤'}</Text>
+            <Text className="text-base font-semibold text-white">
+              {voice.isPending
+                ? t('ai.transcribing')
+                : recording
+                ? t('ai.listening')
+                : t('ai.speak')}
+            </Text>
+          </Pressable>
+
           {/* Input */}
-          <View className="mt-5 rounded-2xl border border-border bg-white px-4 py-3">
+          <View className="mt-3 rounded-2xl border border-border bg-white px-4 py-3">
             <TextInput
               className="min-h-[72px] p-0 text-base text-slate-900"
               value={text}

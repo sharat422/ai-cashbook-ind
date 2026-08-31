@@ -60,6 +60,10 @@
 -keep class com.centaurwarchief.smsandroid.** { *; }
 -keep class com.react.SmsModule.** { *; }
 
+# --- react-native-audio-recorder-player (voice entry) ---
+-keep class com.dooboolab.** { *; }
+-keep class com.margelo.nitro.** { *; }
+
 # Keep JS-facing native module method annotations.
 -keepclassmembers class * { @com.facebook.react.bridge.ReactMethod <methods>; }
 -keepclassmembers class * { @com.facebook.react.uimanager.annotations.ReactProp <methods>; }

@@ -15,6 +15,9 @@
     <!-- Camera capture for the receipt scanner / attachment flows -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Microphone for multilingual voice transaction entry -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Reading images from the gallery (image picker). Android 13+ uses the
          granular media permission; older versions fall back to storage read. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />

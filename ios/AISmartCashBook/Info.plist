@@ -36,6 +36,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Smart CashBook needs camera access to scan receipts and attach photos to your transactions.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Smart CashBook uses the microphone so you can speak a transaction in your language and we turn it into an entry.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Smart CashBook needs photo library access to attach receipts and images to your transactions.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

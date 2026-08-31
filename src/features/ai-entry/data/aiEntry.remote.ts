@@ -1,5 +1,6 @@
 import {apiRequest} from '@api/client';
 import type {ParsedTransaction} from '@features/ai-entry/domain/entities';
+import type {RecordedAudio} from './voiceRecorder';
 
 interface ParsedDto {
   customer_name: string | null;
@@ -10,6 +11,13 @@ interface ParsedDto {
   confidence: number;
   raw_text: string;
   source: string;
+  /** Present on the /voice/parse response: what Whisper heard. */
+  transcript?: string;
+}
+
+/** A voice parse also carries the transcript so the UI can show what was heard. */
+export interface VoiceParsed extends ParsedTransaction {
+  transcript: string;
 }
 
 function toParsed(dto: ParsedDto): ParsedTransaction {
@@ -36,5 +44,32 @@ export const aiEntryRemote = {
       body: {text, today},
     });
     return toParsed(dto);
+  },
+
+  /**
+   * Voice 'agent': upload the recorded clip; the server transcribes it (Whisper
+   * auto-detects Hindi/Telugu/…) and parses it into a transaction in one call.
+   */
+  async voiceParse(
+    audio: RecordedAudio,
+    today: string,
+    language?: string,
+  ): Promise<VoiceParsed> {
+    const form = new FormData();
+    form.append('audio', {
+      uri: audio.uri,
+      name: audio.name,
+      type: audio.type,
+    } as unknown as Blob);
+    form.append('today', today);
+    if (language) form.append('language', language);
+
+    // Transcription + LLM parse can take a few seconds — give it room.
+    const dto = await apiRequest<ParsedDto>('/voice/parse', {
+      method: 'POST',
+      body: form,
+      timeoutMs: 60_000,
+    });
+    return {...toParsed(dto), transcript: dto.transcript ?? ''};
   },
 };

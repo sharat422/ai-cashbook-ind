@@ -276,6 +276,40 @@ def parse_transaction(text: str, today: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# OpenAI — speech-to-text (multilingual voice entry)
+# ---------------------------------------------------------------------------
+def transcribe_audio(
+    audio_bytes: bytes,
+    filename: str = "audio.m4a",
+    language: str | None = None,
+) -> str:
+    """Transcribe spoken audio to text.
+
+    Uses OpenAI's speech-to-text (Whisper), which **auto-detects the spoken
+    language** — so a shopkeeper can speak Hindi, Telugu, Tamil, Kannada, etc.
+    and get an accurate transcript with no language toggle. Pass `language`
+    (ISO-639-1, e.g. 'hi') only as an optional hint; omit it for auto-detect.
+
+    Raises (no offline fallback for audio) so the caller can tell the user to
+    retry or type instead.
+    """
+    if not settings.openai_api_key:
+        raise RuntimeError("Voice transcription requires OPENAI_API_KEY on the server.")
+
+    from openai import OpenAI
+
+    client = OpenAI(api_key=settings.openai_api_key)
+    kwargs = {
+        "model": settings.openai_transcribe_model,
+        "file": (filename, audio_bytes),
+    }
+    if language:
+        kwargs["language"] = language
+    resp = client.audio.transcriptions.create(**kwargs)
+    return (getattr(resp, "text", "") or "").strip()
+
+
+# ---------------------------------------------------------------------------
 # Anthropic Claude — receipt extraction (vision)
 # ---------------------------------------------------------------------------
 _EMPTY_FIELD = {"value": None, "confidence": 0.0}
