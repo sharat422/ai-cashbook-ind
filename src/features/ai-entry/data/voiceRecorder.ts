@@ -1,6 +1,9 @@
 import {PermissionsAndroid, Platform} from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 
+/** Single shared recorder instance (v3 exports a class). */
+const recorder = new AudioRecorderPlayer();
+
 /** A recorded clip, shaped for a multipart upload. */
 export interface RecordedAudio {
   uri: string;
@@ -29,12 +32,12 @@ export async function ensureMicPermission(): Promise<boolean> {
 }
 
 export async function startRecording(): Promise<void> {
-  await AudioRecorderPlayer.startRecorder();
+  await recorder.startRecorder();
 }
 
 /** Stop and return the clip as an uploadable file part. */
 export async function stopRecording(): Promise<RecordedAudio> {
-  const path = await AudioRecorderPlayer.stopRecorder();
+  const path = await recorder.stopRecorder();
   const uri = path.startsWith('file://') ? path : `file://${path}`;
   // Whisper infers the format from the filename extension, so keep it accurate.
   const ext = (path.split('.').pop() || 'm4a').toLowerCase();

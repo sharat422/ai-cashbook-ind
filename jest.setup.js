@@ -43,16 +43,23 @@ jest.mock('jail-monkey', () => ({
   default: {isJailBroken: jest.fn(() => false)},
 }));
 
-// react-native-audio-recorder-player is a native singleton; stub start/stop.
-jest.mock('react-native-audio-recorder-player', () => ({
-  __esModule: true,
-  default: {
-    startRecorder: jest.fn(async () => '/tmp/voice.m4a'),
-    stopRecorder: jest.fn(async () => '/tmp/voice.m4a'),
-    addRecordBackListener: jest.fn(),
-    removeRecordBackListener: jest.fn(),
-  },
-}));
+// react-native-audio-recorder-player v3 exports a class; stub it so every
+// instance shares the same jest.fn recorders (tests read them off the class).
+jest.mock('react-native-audio-recorder-player', () => {
+  const startRecorder = jest.fn(async () => '/tmp/voice.m4a');
+  const stopRecorder = jest.fn(async () => '/tmp/voice.m4a');
+  function AudioRecorderPlayer() {
+    return {
+      startRecorder,
+      stopRecorder,
+      addRecordBackListener: jest.fn(),
+      removeRecordBackListener: jest.fn(),
+    };
+  }
+  AudioRecorderPlayer.__startRecorder = startRecorder;
+  AudioRecorderPlayer.__stopRecorder = stopRecorder;
+  return {__esModule: true, default: AudioRecorderPlayer};
+});
 
 // react-native-get-sms-android is an Android-only native module; provide a
 // stub so the reader logic can be unit-tested. Tests override `list` per case.
