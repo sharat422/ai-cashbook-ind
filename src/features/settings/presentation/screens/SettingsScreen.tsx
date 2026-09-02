@@ -6,8 +6,15 @@ import {
   OtpInput,
   Screen,
   SegmentedControl,
+  Select,
   Text,
 } from '@components/ui';
+import {
+  VOICE_LANGUAGES,
+  voiceLanguageByLabel,
+  voiceLanguageLabel,
+  useVoiceSettingsStore,
+} from '@features/settings/store/voiceSettings.store';
 import {TextField} from '@components/form';
 import {isValidUpiId} from '@features/collections/domain/upi';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
@@ -40,6 +47,8 @@ export function SettingsScreen({
   const t = useT();
   const {can} = usePermissions();
   const canManageSettings = can(PERMISSIONS.SETTINGS_MANAGE);
+  const voiceLanguage = useVoiceSettingsStore(s => s.language);
+  const setVoiceLanguage = useVoiceSettingsStore(s => s.setLanguage);
   const lockEnabled = useAppLockStore(s => s.enabled);
   const setPin = useAppLockStore(s => s.setPin);
   const disableLock = useAppLockStore(s => s.disableLock);
@@ -246,6 +255,19 @@ export function SettingsScreen({
             }))}
             onChange={setLanguage}
           />
+          <View className="mt-4 border-t border-border pt-4">
+            <Text className="mb-2 text-base font-semibold text-slate-900">
+              {t('settings.voiceLanguage')}
+            </Text>
+            <Text variant="caption" className="mb-2">
+              {t('settings.voiceLanguageDesc')}
+            </Text>
+            <Select
+              value={voiceLanguageLabel(voiceLanguage)}
+              options={VOICE_LANGUAGES.map(l => l.label)}
+              onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
+            />
+          </View>
         </View>
 
         {/* Payments / collections — owner-manages business config */}

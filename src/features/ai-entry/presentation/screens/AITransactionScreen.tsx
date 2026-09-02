@@ -1,9 +1,16 @@
 import React, {useState} from 'react';
 import {Alert, Pressable, ScrollView, TextInput, View} from 'react-native';
 
+import {ApiError} from '@api/client';
 import {FilterChip} from '@components/filters';
 import {AmountInput, DateField, FormField, TextField} from '@components/form';
-import {Button, Screen, SegmentedControl, Text} from '@components/ui';
+import {Button, Screen, SegmentedControl, Select, Text} from '@components/ui';
+import {
+  VOICE_LANGUAGES,
+  voiceLanguageByLabel,
+  voiceLanguageLabel,
+  useVoiceSettingsStore,
+} from '@features/settings/store/voiceSettings.store';
 import type {
   ParsedTransaction,
   ParsedType,
@@ -42,6 +49,17 @@ export function AITransactionScreen({
   const parse = useParseTransaction();
   const voice = useVoiceParse();
   const [recording, setRecording] = useState(false);
+  const voiceLanguage = useVoiceSettingsStore(s => s.language);
+  const setVoiceLanguage = useVoiceSettingsStore(s => s.setLanguage);
+
+  /** A voice/transcription error → friendly message + always allow typing. */
+  const onVoiceError = (err: unknown) => {
+    const emptyOrBadAudio = err instanceof ApiError && err.status === 422;
+    Alert.alert(
+      emptyOrBadAudio ? t('ai.didntCatch') : t('ai.voiceUnavailable'),
+      emptyOrBadAudio ? t('ai.didntCatchMsg') : t('ai.voiceUnavailableMsg'),
+    );
+  };
 
   const EXAMPLES = [t('ai.example1'), t('ai.example2'), t('ai.example3')];
   const TYPE_OPTIONS: Array<{label: string; value: ParsedType}> = [
@@ -86,17 +104,17 @@ export function AITransactionScreen({
       setError(null);
       setCandidates(null);
       voice.mutate(
-        {audio, today: toISODate(new Date())},
+        {
+          audio,
+          today: toISODate(new Date()),
+          language: voiceLanguage ?? undefined, // explicit code, or auto-detect
+        },
         {
           onSuccess: result => {
-            setText(result.transcript); // show what was heard
+            setText(result.transcript); // show what was heard — editable
             applyParsed(result);
           },
-          onError: err =>
-            Alert.alert(
-              t('ai.couldNotRead'),
-              err instanceof Error ? err.message : t('ai.tryAgain'),
-            ),
+          onError: onVoiceError,
         },
       );
       return;
@@ -207,12 +225,22 @@ export function AITransactionScreen({
             {t('ai.subtitle')}
           </Text>
 
-          {/* Mic — speak in any language; the server transcribes + parses */}
+          {/* Voice language — pass the customer's language for best accuracy */}
+          <View className="mt-5">
+            <Select
+              label={t('ai.voiceLanguage')}
+              value={voiceLanguageLabel(voiceLanguage)}
+              options={VOICE_LANGUAGES.map(l => l.label)}
+              onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
+            />
+          </View>
+
+          {/* Mic — speak in your language; the server transcribes + parses */}
           <Pressable
             accessibilityRole="button"
             onPress={onMic}
             disabled={voice.isPending}
-            className={`mt-5 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
+            className={`mt-3 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
               recording ? 'bg-danger' : 'bg-primary'
             }`}
             style={{gap: 10, opacity: voice.isPending ? 0.6 : 1}}>

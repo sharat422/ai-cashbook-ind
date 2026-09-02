@@ -58,7 +58,16 @@ jest.mock('react-native-audio-recorder-player', () => {
   }
   AudioRecorderPlayer.__startRecorder = startRecorder;
   AudioRecorderPlayer.__stopRecorder = stopRecorder;
-  return {__esModule: true, default: AudioRecorderPlayer};
+  return {
+    __esModule: true,
+    default: AudioRecorderPlayer,
+    // Named enums used to build the AudioSet (16 kHz mono AAC + noise source).
+    AudioSourceAndroidType: {VOICE_RECOGNITION: 6},
+    OutputFormatAndroidType: {MPEG_4: 2},
+    AudioEncoderAndroidType: {AAC: 3},
+    AVEncoderAudioQualityIOSType: {high: 96},
+    AVEncodingOption: {aac: 'aac'},
+  };
 });
 
 // react-native-get-sms-android is an Android-only native module; provide a

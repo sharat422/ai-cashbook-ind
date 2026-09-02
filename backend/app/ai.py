@@ -278,20 +278,32 @@ def parse_transaction(text: str, today: str) -> dict:
 # ---------------------------------------------------------------------------
 # OpenAI — speech-to-text (multilingual voice entry)
 # ---------------------------------------------------------------------------
+
+# Whisper's `prompt` biases the decoder toward the vocabulary it expects. For a
+# cashbook the errors that hurt most are on amounts, so we prime it with rupees,
+# number words (English + Hinglish), and common khata verbs.
+CASHBOOK_TRANSCRIBE_PROMPT = (
+    "A shopkeeper's cashbook entry: a customer or shop name and an amount of "
+    "money in rupees (₹). Numbers are important, e.g. 250, 2,500, 45,000, "
+    "1 lakh, teen hazaar, do sau, paanch sau, dedh hazaar. Common words: paid, "
+    "received, sale, udhaar, diya, mila, jama, baaki, rupees."
+)
+
+
 def transcribe_audio(
     audio_bytes: bytes,
     filename: str = "audio.m4a",
     language: str | None = None,
+    prompt: str | None = None,
 ) -> str:
-    """Transcribe spoken audio to text.
+    """Transcribe spoken audio to text via OpenAI Whisper.
 
-    Uses OpenAI's speech-to-text (Whisper), which **auto-detects the spoken
-    language** — so a shopkeeper can speak Hindi, Telugu, Tamil, Kannada, etc.
-    and get an accurate transcript with no language toggle. Pass `language`
-    (ISO-639-1, e.g. 'hi') only as an optional hint; omit it for auto-detect.
+    - `language`: ISO-639-1 (e.g. 'hi', 'te'). Passing the language the customer
+      actually speaks is more accurate than auto-detect; omit it to auto-detect.
+    - `prompt`: a vocabulary hint that biases the transcript (see
+      CASHBOOK_TRANSCRIBE_PROMPT) — most useful for getting amounts right.
 
-    Raises (no offline fallback for audio) so the caller can tell the user to
-    retry or type instead.
+    Raises (no offline fallback for audio) so the caller can fall back to typing.
     """
     if not settings.openai_api_key:
         raise RuntimeError("Voice transcription requires OPENAI_API_KEY on the server.")
@@ -305,6 +317,8 @@ def transcribe_audio(
     }
     if language:
         kwargs["language"] = language
+    if prompt:
+        kwargs["prompt"] = prompt
     resp = client.audio.transcriptions.create(**kwargs)
     return (getattr(resp, "text", "") or "").strip()
 

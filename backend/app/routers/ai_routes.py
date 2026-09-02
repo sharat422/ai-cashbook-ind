@@ -7,7 +7,13 @@ from sqlalchemy.orm import Session
 
 from datetime import datetime, timezone
 
-from ..ai import categorize_text, parse_transaction, scan_receipt, transcribe_audio
+from ..ai import (
+    CASHBOOK_TRANSCRIBE_PROMPT,
+    categorize_text,
+    parse_transaction,
+    scan_receipt,
+    transcribe_audio,
+)
 from ..database import get_db
 from ..deps import require
 from ..rbac import ENTRY_CREATE
@@ -67,7 +73,10 @@ def voice_parse_route(
 
     try:
         transcript = transcribe_audio(
-            audio_bytes, audio.filename or "audio.m4a", language or None
+            audio_bytes,
+            audio.filename or "audio.m4a",
+            language=language or None,  # explicit customer language, or auto
+            prompt=CASHBOOK_TRANSCRIBE_PROMPT,  # bias toward amounts/currency
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(

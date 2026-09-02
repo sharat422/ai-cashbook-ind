@@ -57,6 +57,9 @@ const en = {
   'settings.turnOff': 'Turn off',
   'settings.preferences': 'Preferences',
   'settings.contentLanguage': 'Content language',
+  'settings.voiceLanguage': 'Voice entry language',
+  'settings.voiceLanguageDesc':
+    'The language your customers speak, for the most accurate voice entry.',
   'settings.business': 'Business',
   'settings.itemCatalog': '🏷️ Item catalog',
   'settings.team': '👥 Team & roles',
@@ -139,6 +142,13 @@ const en = {
   'ai.transcribing': 'Transcribing…',
   'ai.micNeededTitle': 'Microphone needed',
   'ai.micNeededMsg': 'Allow microphone access to speak your transaction.',
+  'ai.voiceLanguage': 'Voice language',
+  'ai.didntCatch': 'Didn’t catch that',
+  'ai.didntCatchMsg':
+    'We couldn’t hear a clear entry. Please try again, or type it below.',
+  'ai.voiceUnavailable': 'Voice is unavailable right now',
+  'ai.voiceUnavailableMsg':
+    'Couldn’t reach the transcription service (check your internet). You can type the entry below instead.',
   'ai.hint':
     '💡 Tap the mic and just speak — Hindi, Telugu, Tamil, Kannada, Marathi, Hinglish or English — or type below.',
   'ai.example1': 'Ramesh ko 2500 ka maal diya',
@@ -232,6 +242,9 @@ const hi: Partial<Record<TKey, string>> = {
   'settings.turnOff': 'बंद करें',
   'settings.preferences': 'प्राथमिकताएँ',
   'settings.contentLanguage': 'सामग्री भाषा',
+  'settings.voiceLanguage': 'आवाज़ प्रविष्टि की भाषा',
+  'settings.voiceLanguageDesc':
+    'सबसे सटीक आवाज़ प्रविष्टि के लिए, वह भाषा जो आपके ग्राहक बोलते हैं।',
   'settings.business': 'व्यवसाय',
   'settings.itemCatalog': '🏷️ आइटम सूची',
   'settings.team': '👥 टीम और भूमिकाएँ',
@@ -309,6 +322,13 @@ const hi: Partial<Record<TKey, string>> = {
   'ai.transcribing': 'लिखा जा रहा है…',
   'ai.micNeededTitle': 'माइक्रोफ़ोन आवश्यक',
   'ai.micNeededMsg': 'अपना लेन-देन बोलने के लिए माइक्रोफ़ोन एक्सेस दें।',
+  'ai.voiceLanguage': 'आवाज़ की भाषा',
+  'ai.didntCatch': 'समझ नहीं आया',
+  'ai.didntCatchMsg':
+    'हम स्पष्ट प्रविष्टि नहीं सुन सके। कृपया फिर से प्रयास करें, या नीचे लिखें।',
+  'ai.voiceUnavailable': 'आवाज़ अभी उपलब्ध नहीं है',
+  'ai.voiceUnavailableMsg':
+    'ट्रांसक्रिप्शन सेवा तक नहीं पहुँच सके (अपना इंटरनेट जांचें)। आप नीचे लेन-देन लिख सकते हैं।',
   'ai.hint':
     '💡 माइक दबाएं और बस बोलें — हिंदी, तेलुगु, तमिल, कन्नड़, मराठी, हिंग्लिश या अंग्रेज़ी — या नीचे लिखें।',
   'ai.example1': 'रमेश को 2500 का माल दिया',
@@ -399,6 +419,9 @@ const te: Partial<Record<TKey, string>> = {
   'settings.turnOff': 'ఆపివేయండి',
   'settings.preferences': 'ప్రాధాన్యతలు',
   'settings.contentLanguage': 'కంటెంట్ భాష',
+  'settings.voiceLanguage': 'వాయిస్ నమోదు భాష',
+  'settings.voiceLanguageDesc':
+    'అత్యంత ఖచ్చితమైన వాయిస్ నమోదు కోసం, మీ వినియోగదారులు మాట్లాడే భాష.',
   'settings.business': 'వ్యాపారం',
   'settings.itemCatalog': '🏷️ వస్తువుల జాబితా',
   'settings.team': '👥 బృందం & పాత్రలు',
@@ -477,6 +500,13 @@ const te: Partial<Record<TKey, string>> = {
   'ai.transcribing': 'లిప్యంతరీకరిస్తోంది…',
   'ai.micNeededTitle': 'మైక్రోఫోన్ అవసరం',
   'ai.micNeededMsg': 'మీ లావాదేవీని మాట్లాడటానికి మైక్రోఫోన్ యాక్సెస్ ఇవ్వండి.',
+  'ai.voiceLanguage': 'వాయిస్ భాష',
+  'ai.didntCatch': 'అర్థం కాలేదు',
+  'ai.didntCatchMsg':
+    'స్పష్టమైన నమోదు వినిపించలేదు. దయచేసి మళ్లీ ప్రయత్నించండి, లేదా కింద టైప్ చేయండి.',
+  'ai.voiceUnavailable': 'వాయిస్ ప్రస్తుతం అందుబాటులో లేదు',
+  'ai.voiceUnavailableMsg':
+    'ట్రాన్స్‌క్రిప్షన్ సేవను చేరుకోలేకపోయాము (మీ ఇంటర్నెట్ తనిఖీ చేయండి). మీరు కింద లావాదేవీని టైప్ చేయవచ్చు.',
   'ai.hint':
     '💡 మైక్ నొక్కి మాట్లాడండి — హిందీ, తెలుగు, తమిళం, కన్నడ, మరాఠీ, హింగ్లిష్ లేదా ఇంగ్లీష్ — లేదా కింద టైప్ చేయండి.',
   'ai.example1': 'రమేష్‌కు 2500 సరుకు ఇచ్చాను',

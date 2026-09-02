@@ -28,11 +28,32 @@ def test_transcribe_audio_calls_openai_and_trims(monkeypatch):
 
     monkeypatch.setattr(openai, "OpenAI", FakeClient)
 
-    out = ai.transcribe_audio(b"fake-audio", "clip.m4a")
+    out = ai.transcribe_audio(
+        b"fake-audio", "clip.m4a", language="te", prompt="hint about rupees"
+    )
     assert out == "రమేష్‌కు 2500 ఇచ్చాను"  # trimmed
     assert captured["file"] == ("clip.m4a", b"fake-audio")
     assert captured["model"] == ai.settings.openai_transcribe_model
-    assert "language" not in captured  # auto-detect when no hint
+    assert captured["language"] == "te"  # explicit language forwarded
+    assert captured["prompt"] == "hint about rupees"  # vocabulary bias forwarded
+
+
+def test_transcribe_audio_omits_language_and_prompt_when_absent(monkeypatch):
+    monkeypatch.setattr(ai.settings, "openai_api_key", "test-key")
+    captured = {}
+
+    class FakeClient:
+        def __init__(self, **_):
+            self.audio = type(
+                "A", (), {"transcriptions": type("T", (), {
+                    "create": lambda _self, **kw: (captured.update(kw), type("R", (), {"text": "ok"})())[1]
+                })()}
+            )()
+
+    monkeypatch.setattr(openai, "OpenAI", FakeClient)
+    ai.transcribe_audio(b"x", "c.m4a")
+    assert "language" not in captured  # auto-detect
+    assert "prompt" not in captured
 
 
 def test_transcribe_audio_requires_key(monkeypatch):
@@ -63,6 +84,21 @@ def test_voice_parse_transcribes_then_parses(user, client, monkeypatch):
     assert body["transcript"] == "ramesh ko 2500 ka maal diya"
     assert body["amount"] == 2500
     assert body["type"] == "credit"  # "diya" = gave on credit
+
+
+def test_voice_parse_forwards_language_and_cashbook_prompt(user, client, monkeypatch):
+    captured = {}
+
+    def fake(audio_bytes, filename, language=None, prompt=None):
+        captured["language"] = language
+        captured["prompt"] = prompt
+        return "ramesh ko 500 diya"
+
+    monkeypatch.setattr(ai_routes, "transcribe_audio", fake)
+    r = _post_audio(client, user.headers, language="hi", today="2026-06-01")
+    assert r.status_code == 200, r.text
+    assert captured["language"] == "hi"  # user's configured language
+    assert "rupees" in captured["prompt"].lower()  # the cashbook bias prompt
 
 
 def test_voice_parse_502_when_transcription_fails(user, client, monkeypatch):

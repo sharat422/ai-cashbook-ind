@@ -1,8 +1,35 @@
 import {PermissionsAndroid, Platform} from 'react-native';
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import AudioRecorderPlayer, {
+  AudioEncoderAndroidType,
+  AudioSourceAndroidType,
+  AVEncoderAudioQualityIOSType,
+  AVEncodingOption,
+  OutputFormatAndroidType,
+  type AudioSet,
+} from 'react-native-audio-recorder-player';
 
 /** Single shared recorder instance (v3 exports a class). */
 const recorder = new AudioRecorderPlayer();
+
+/**
+ * 16 kHz mono AAC — the sweet spot for Whisper (it resamples to 16 kHz anyway),
+ * and small to upload. On Android the VOICE_RECOGNITION source engages the
+ * platform's noise suppression + auto-gain, our on-device "cleanup" for speech.
+ */
+const AUDIO_SET: AudioSet = {
+  // Android
+  AudioSourceAndroid: AudioSourceAndroidType.VOICE_RECOGNITION,
+  OutputFormatAndroid: OutputFormatAndroidType.MPEG_4,
+  AudioEncoderAndroid: AudioEncoderAndroidType.AAC,
+  AudioSamplingRateAndroid: 16000,
+  AudioChannelsAndroid: 1,
+  AudioEncodingBitRateAndroid: 32000,
+  // iOS
+  AVSampleRateKeyIOS: 16000,
+  AVNumberOfChannelsKeyIOS: 1,
+  AVFormatIDKeyIOS: AVEncodingOption.aac,
+  AVEncoderAudioQualityKeyIOS: AVEncoderAudioQualityIOSType.high,
+};
 
 /** A recorded clip, shaped for a multipart upload. */
 export interface RecordedAudio {
@@ -32,7 +59,7 @@ export async function ensureMicPermission(): Promise<boolean> {
 }
 
 export async function startRecording(): Promise<void> {
-  await recorder.startRecorder();
+  await recorder.startRecorder(undefined, AUDIO_SET);
 }
 
 /** Stop and return the clip as an uploadable file part. */
