@@ -29,6 +29,7 @@ import {RecurringListScreen} from '@features/recurring/presentation/screens/Recu
 import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
 import {SmsImportScreen} from '@features/sms-import/presentation/screens/SmsImportScreen';
 import {TeamScreen} from '@features/team/presentation/screens/TeamScreen';
+import {DiagnosticsScreen} from '@features/diagnostics/presentation/screens/DiagnosticsScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
@@ -66,6 +67,7 @@ export function AppNavigator(): React.JSX.Element {
       />
       <Stack.Screen name="SmsImport" component={SmsImportScreen} />
       <Stack.Screen name="Team" component={TeamScreen} />
+      <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
       <Stack.Screen
         name="AddIncome"
         component={AddIncomeScreen}

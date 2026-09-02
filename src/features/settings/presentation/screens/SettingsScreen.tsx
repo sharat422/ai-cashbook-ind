@@ -334,6 +334,12 @@ export function SettingsScreen({
           className="mt-3"
           onPress={() => navigation.navigate('Notifications')}
         />
+        <Button
+          title={t('settings.diagnostics')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('Diagnostics')}
+        />
 
         <Button
           title={t('common.logout')}

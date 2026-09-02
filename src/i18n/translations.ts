@@ -64,6 +64,15 @@ const en = {
   'settings.itemCatalog': '🏷️ Item catalog',
   'settings.team': '👥 Team & roles',
   'settings.notifications': '🔔 Notifications',
+  'settings.diagnostics': '🩺 Error log',
+  'diagnostics.title': 'Error log',
+  'diagnostics.subtitle': 'Recent problems on this device — share them if you need help.',
+  'diagnostics.share': 'Share log',
+  'diagnostics.clear': 'Clear',
+  'diagnostics.clearTitle': 'Clear the error log?',
+  'diagnostics.clearMsg': 'This removes all recorded errors from this device.',
+  'diagnostics.emptyTitle': 'No errors logged',
+  'diagnostics.emptyMsg': 'When something fails, it’s recorded here so you can report it.',
 
   // Auth & onboarding
   'auth.login.title': 'Welcome',
@@ -249,6 +258,15 @@ const hi: Partial<Record<TKey, string>> = {
   'settings.itemCatalog': '🏷️ आइटम सूची',
   'settings.team': '👥 टीम और भूमिकाएँ',
   'settings.notifications': '🔔 सूचनाएँ',
+  'settings.diagnostics': '🩺 त्रुटि लॉग',
+  'diagnostics.title': 'त्रुटि लॉग',
+  'diagnostics.subtitle': 'इस डिवाइस पर हाल की समस्याएँ — मदद चाहिए तो इन्हें साझा करें।',
+  'diagnostics.share': 'लॉग साझा करें',
+  'diagnostics.clear': 'साफ़ करें',
+  'diagnostics.clearTitle': 'त्रुटि लॉग साफ़ करें?',
+  'diagnostics.clearMsg': 'यह इस डिवाइस से सभी दर्ज त्रुटियाँ हटा देगा।',
+  'diagnostics.emptyTitle': 'कोई त्रुटि दर्ज नहीं',
+  'diagnostics.emptyMsg': 'जब कुछ विफल होता है, तो वह यहाँ दर्ज होता है ताकि आप रिपोर्ट कर सकें।',
 
   'auth.login.title': 'स्वागत है',
   'auth.login.subtitle':
@@ -426,6 +444,15 @@ const te: Partial<Record<TKey, string>> = {
   'settings.itemCatalog': '🏷️ వస్తువుల జాబితా',
   'settings.team': '👥 బృందం & పాత్రలు',
   'settings.notifications': '🔔 నోటిఫికేషన్‌లు',
+  'settings.diagnostics': '🩺 ఎర్రర్ లాగ్',
+  'diagnostics.title': 'ఎర్రర్ లాగ్',
+  'diagnostics.subtitle': 'ఈ పరికరంలో ఇటీవలి సమస్యలు — సహాయం కావాలంటే వీటిని షేర్ చేయండి.',
+  'diagnostics.share': 'లాగ్ షేర్ చేయండి',
+  'diagnostics.clear': 'క్లియర్ చేయండి',
+  'diagnostics.clearTitle': 'ఎర్రర్ లాగ్‌ను క్లియర్ చేయాలా?',
+  'diagnostics.clearMsg': 'ఇది ఈ పరికరం నుండి నమోదైన అన్ని ఎర్రర్‌లను తొలగిస్తుంది.',
+  'diagnostics.emptyTitle': 'ఎర్రర్‌లు ఏవీ నమోదు కాలేదు',
+  'diagnostics.emptyMsg': 'ఏదైనా విఫలమైనప్పుడు, మీరు నివేదించడానికి అది ఇక్కడ నమోదవుతుంది.',
 
   'auth.login.title': 'స్వాగతం',
   'auth.login.subtitle':

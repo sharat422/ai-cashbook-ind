@@ -41,6 +41,7 @@ export type AppStackParamList = {
   RecurringForm: {recurring?: RecurringExpense} | undefined;
   SmsImport: undefined;
   Team: undefined;
+  Diagnostics: undefined;
   AITransaction: undefined;
   AddIncome: undefined;
   AddExpense:

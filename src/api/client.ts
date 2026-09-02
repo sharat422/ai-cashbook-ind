@@ -1,4 +1,5 @@
 import {API_ROOT, ENV} from '@config/env';
+import {logError} from '@/services/diagnostics/errorLog.store';
 import {useAuthStore} from '@store/auth.store';
 
 /** Normalized error thrown by the API client so the UI can show `.message`. */
@@ -104,21 +105,31 @@ export async function apiRequest<T>(
         (data && (data.detail || data.message)) ||
         (text && text.length < 200 ? text : null) ||
         'Something went wrong. Please try again.';
-      throw new ApiError(
+      const apiError = new ApiError(
         response.status,
         typeof message === 'string' ? message : 'Request failed',
       );
+      // Log server-side failures (5xx); 4xx are expected and handled by callers.
+      if (response.status >= 500) {
+        logError(`api ${options.method ?? 'GET'} ${path}`, apiError);
+      }
+      throw apiError;
     }
 
     return data as T;
   } catch (err) {
     if (err instanceof ApiError) throw err;
+    const ctx = `api ${options.method ?? 'GET'} ${path}`;
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new NetworkError(
+      const timedOut = new NetworkError(
         'The server took too long to respond (it may be waking up). Please try again.',
       );
+      logError(ctx, timedOut);
+      throw timedOut;
     }
-    throw new NetworkError();
+    const netError = new NetworkError();
+    logError(ctx, netError, err instanceof Error ? err.message : undefined);
+    throw netError;
   } finally {
     clearTimeout(timeout);
   }

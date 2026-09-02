@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .database import Base, engine
+from .errors import install_error_handlers
 from .migrations import run_startup_migrations
 from .routers import (
     ai_routes,
@@ -38,6 +39,9 @@ Base.metadata.create_all(bind=engine)
 run_startup_migrations(engine)
 
 app = FastAPI(title="Smart CashBook API", version="1.0.0")
+
+# Log every unhandled failure with its traceback + request context.
+install_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,

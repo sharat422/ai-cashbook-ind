@@ -2,6 +2,7 @@ import React from 'react';
 import {Pressable, ScrollView, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
+import {logError} from '@/services/diagnostics/errorLog.store';
 import {Text} from './Text';
 
 interface Props {
@@ -27,7 +28,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: {componentStack: string}): void {
-    // Surface in the dev console / crash logs.
+    // Persist to the in-app error log (viewable/shareable in Settings) and echo
+    // to the dev console.
+    logError('render', error, info.componentStack?.trim().split('\n')[0]);
     // eslint-disable-next-line no-console
     console.error('[ErrorBoundary]', error, info.componentStack);
   }
