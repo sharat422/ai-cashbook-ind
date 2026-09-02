@@ -97,6 +97,18 @@ const en = {
   'auth.otp.sentMsg': 'A new OTP was sent to +91 {mobile}.',
   'auth.otp.resendError': 'Could not resend OTP',
   'auth.splash.tagline': 'Smart books for growing businesses',
+  'onboarding.skip': 'Skip',
+  'onboarding.next': 'Next',
+  'onboarding.getStarted': 'Get started',
+  'onboarding.s1Title': 'Your shop’s khata, digital',
+  'onboarding.s1Body':
+    'Track udhaar and payments for every customer — no more paper bahi.',
+  'onboarding.s2Title': 'Just speak or scan',
+  'onboarding.s2Body':
+    'Add a sale by speaking in your language, or snap a bill — we fill in the rest.',
+  'onboarding.s3Title': 'Know your profit',
+  'onboarding.s3Body':
+    'Daily summaries, reports and reminders — see who owes you and how the shop is doing.',
   'auth.business.title': 'Set up your business',
   'auth.business.subtitle':
     'Tell us a bit about your business to finish setting up your account.',
@@ -290,6 +302,18 @@ const hi: Partial<Record<TKey, string>> = {
   'auth.otp.sentMsg': '+91 {mobile} पर नया ओटीपी भेजा गया।',
   'auth.otp.resendError': 'ओटीपी पुनः नहीं भेज सके',
   'auth.splash.tagline': 'बढ़ते व्यवसायों के लिए स्मार्ट बहीखाता',
+  'onboarding.skip': 'छोड़ें',
+  'onboarding.next': 'आगे',
+  'onboarding.getStarted': 'शुरू करें',
+  'onboarding.s1Title': 'आपकी दुकान का खाता, डिजिटल',
+  'onboarding.s1Body':
+    'हर ग्राहक के उधार और भुगतान का हिसाब रखें — अब कागज़ी बही नहीं।',
+  'onboarding.s2Title': 'बस बोलें या स्कैन करें',
+  'onboarding.s2Body':
+    'अपनी भाषा में बोलकर बिक्री जोड़ें, या बिल स्कैन करें — बाकी हम भर देंगे।',
+  'onboarding.s3Title': 'अपना मुनाफ़ा जानें',
+  'onboarding.s3Body':
+    'दैनिक सारांश, रिपोर्ट और रिमाइंडर — देखें किसका उधार बाकी है और दुकान कैसी चल रही है।',
   'auth.business.title': 'अपना व्यवसाय सेट करें',
   'auth.business.subtitle':
     'अपना खाता पूरा करने के लिए हमें अपने व्यवसाय के बारे में थोड़ा बताएं।',
@@ -476,6 +500,18 @@ const te: Partial<Record<TKey, string>> = {
   'auth.otp.sentMsg': '+91 {mobile} కు కొత్త ఓటీపీ పంపబడింది.',
   'auth.otp.resendError': 'ఓటీపీ మళ్లీ పంపలేకపోయాము',
   'auth.splash.tagline': 'అభివృద్ధి చెందుతున్న వ్యాపారాలకు స్మార్ట్ ఖాతా',
+  'onboarding.skip': 'దాటవేయి',
+  'onboarding.next': 'తదుపరి',
+  'onboarding.getStarted': 'ప్రారంభించండి',
+  'onboarding.s1Title': 'మీ దుకాణం ఖాతా, డిజిటల్',
+  'onboarding.s1Body':
+    'ప్రతి వినియోగదారు ఉధార్ మరియు చెల్లింపులను ట్రాక్ చేయండి — ఇక కాగితం బహీ అవసరం లేదు.',
+  'onboarding.s2Title': 'మాట్లాడండి లేదా స్కాన్ చేయండి',
+  'onboarding.s2Body':
+    'మీ భాషలో మాట్లాడి అమ్మకాన్ని జోడించండి, లేదా బిల్లును స్కాన్ చేయండి — మిగతాది మేము నింపుతాము.',
+  'onboarding.s3Title': 'మీ లాభాన్ని తెలుసుకోండి',
+  'onboarding.s3Body':
+    'రోజువారీ సారాంశాలు, నివేదికలు మరియు రిమైండర్‌లు — ఎవరు మీకు బాకీ ఉన్నారో, దుకాణం ఎలా నడుస్తోందో చూడండి.',
   'auth.business.title': 'మీ వ్యాపారాన్ని సెటప్ చేయండి',
   'auth.business.subtitle':
     'మీ ఖాతాను పూర్తి చేయడానికి మీ వ్యాపారం గురించి కొంచెం చెప్పండి.',
