@@ -209,6 +209,20 @@ class Item(Base):
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
 
+class Feedback(Base):
+    """User-submitted feedback / bug reports, with device diagnostics attached."""
+
+    __tablename__ = "feedback"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    user_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    business_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    kind: Mapped[str] = mapped_column(String(20), default="feedback")  # feedback | bug
+    message: Mapped[str] = mapped_column(Text)
+    diagnostics: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
 class AiDecision(Base):
     """Audit log of AI outputs (categorization / receipt scan / insights)."""
 

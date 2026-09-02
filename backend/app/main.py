@@ -21,6 +21,7 @@ from .routers import (
     customer_insights,
     incomes,
     items,
+    feedback,
     khata,
     notifications,
     recurring,
@@ -70,6 +71,7 @@ for module in (
     assistant,
     recurring,
     team,
+    feedback,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

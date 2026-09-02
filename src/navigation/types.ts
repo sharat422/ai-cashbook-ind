@@ -42,6 +42,8 @@ export type AppStackParamList = {
   SmsImport: undefined;
   Team: undefined;
   Diagnostics: undefined;
+  Help: undefined;
+  Feedback: {kind?: 'bug' | 'feedback'} | undefined;
   AITransaction: undefined;
   AddIncome: undefined;
   AddExpense:

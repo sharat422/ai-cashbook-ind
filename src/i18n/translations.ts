@@ -73,6 +73,51 @@ const en = {
   'diagnostics.clearMsg': 'This removes all recorded errors from this device.',
   'diagnostics.emptyTitle': 'No errors logged',
   'diagnostics.emptyMsg': 'When something fails, it’s recorded here so you can report it.',
+  'settings.help': '💬 Help & support',
+
+  // Help / FAQ
+  'help.title': 'Help & support',
+  'help.subtitle': 'Quick answers, or reach us directly.',
+  'help.q1': 'How do I record udhaar (credit) for a customer?',
+  'help.a1':
+    'Open the customer, tap Add credit, enter the amount and date. Their outstanding balance updates automatically. Receiving money later? Record a payment instead.',
+  'help.q2': 'Can I add an entry by speaking?',
+  'help.a2':
+    'Yes — on AI Entry tap the mic and say it in your language (e.g. “Ramesh ko 2500 diya”). We transcribe it, fill in the details, and you confirm before saving.',
+  'help.q3': 'Does the app work without internet?',
+  'help.a3':
+    'Yes. You can add income, expenses and khata entries offline — they’re saved on your phone and sync automatically when you’re back online.',
+  'help.q4': 'How do I see reports or share them?',
+  'help.a4':
+    'Open Reports, pick a date range, and export a PDF (to print or WhatsApp) or an Excel file (for your accountant). Both include the summary and the full transaction list.',
+  'help.q5': 'How do I give my staff or accountant access?',
+  'help.a5':
+    'As the owner, go to Settings → Team & roles, add their mobile number and pick a role. They get access the next time they log in with that number.',
+  'help.contact': 'Still need help?',
+  'help.chatWhatsApp': '💬 Chat on WhatsApp',
+  'help.reportProblem': '🐞 Report a problem',
+  'help.emailUs': '✉️ Email us',
+  'help.waPrefill': 'Hi, I need help with Smart CashBook.',
+
+  // Feedback / bug report
+  'feedback.title': 'Report a problem',
+  'feedback.subtitle': 'Tell us what happened — a little detail helps us fix it faster.',
+  'feedback.bug': '🐞 Bug',
+  'feedback.idea': '💡 Feedback',
+  'feedback.bugPlaceholder':
+    'What went wrong? What were you doing when it happened?',
+  'feedback.ideaPlaceholder': 'What would make Smart CashBook better for you?',
+  'feedback.diagToggle': 'What info is shared',
+  'feedback.diagNote':
+    'We attach basic app + device info (no personal data) to help diagnose the issue.',
+  'feedback.send': 'Send',
+  'feedback.thanksTitle': 'Thank you',
+  'feedback.thanksMsg': 'We’ve received your message and will look into it.',
+  'feedback.failedTitle': 'Couldn’t send',
+  'feedback.failedMsg': 'Something went wrong sending your report.',
+  'feedback.failedOffline':
+    'You seem to be offline. Send it by email instead?',
+  'feedback.emailInstead': 'Email instead',
 
   // Auth & onboarding
   'auth.login.title': 'Welcome',
@@ -279,6 +324,47 @@ const hi: Partial<Record<TKey, string>> = {
   'diagnostics.clearMsg': 'यह इस डिवाइस से सभी दर्ज त्रुटियाँ हटा देगा।',
   'diagnostics.emptyTitle': 'कोई त्रुटि दर्ज नहीं',
   'diagnostics.emptyMsg': 'जब कुछ विफल होता है, तो वह यहाँ दर्ज होता है ताकि आप रिपोर्ट कर सकें।',
+  'settings.help': '💬 सहायता और समर्थन',
+
+  'help.title': 'सहायता और समर्थन',
+  'help.subtitle': 'त्वरित उत्तर, या सीधे हमसे संपर्क करें।',
+  'help.q1': 'ग्राहक का उधार कैसे दर्ज करें?',
+  'help.a1':
+    'ग्राहक खोलें, उधार जोड़ें पर टैप करें, राशि और तारीख डालें। उनका बकाया अपने-आप अपडेट हो जाता है। बाद में पैसा मिले? तब भुगतान दर्ज करें।',
+  'help.q2': 'क्या मैं बोलकर प्रविष्टि जोड़ सकता हूँ?',
+  'help.a2':
+    'हाँ — एआई एंट्री पर माइक दबाएं और अपनी भाषा में बोलें (जैसे “रमेश को 2500 दिया”)। हम उसे लिखते हैं, विवरण भरते हैं, और सहेजने से पहले आप पुष्टि करते हैं।',
+  'help.q3': 'क्या ऐप बिना इंटरनेट के काम करता है?',
+  'help.a3':
+    'हाँ। आप आय, व्यय और खाता प्रविष्टियाँ ऑफ़लाइन जोड़ सकते हैं — वे आपके फ़ोन पर सहेजी जाती हैं और ऑनलाइन होते ही अपने-आप सिंक हो जाती हैं।',
+  'help.q4': 'रिपोर्ट कैसे देखें या साझा करें?',
+  'help.a4':
+    'रिपोर्ट खोलें, तारीख सीमा चुनें, और पीडीएफ (प्रिंट/व्हाट्सएप) या एक्सेल (अपने अकाउंटेंट के लिए) निर्यात करें। दोनों में सारांश और पूरी लेन-देन सूची होती है।',
+  'help.q5': 'अपने स्टाफ या अकाउंटेंट को एक्सेस कैसे दें?',
+  'help.a5':
+    'मालिक के रूप में, सेटिंग्स → टीम और भूमिकाएँ पर जाएं, उनका मोबाइल नंबर जोड़ें और भूमिका चुनें। वे उस नंबर से अगली बार लॉग इन करने पर एक्सेस पा जाते हैं।',
+  'help.contact': 'अभी भी मदद चाहिए?',
+  'help.chatWhatsApp': '💬 व्हाट्सएप पर चैट करें',
+  'help.reportProblem': '🐞 समस्या की रिपोर्ट करें',
+  'help.emailUs': '✉️ हमें ईमेल करें',
+  'help.waPrefill': 'नमस्ते, मुझे Smart CashBook में मदद चाहिए।',
+
+  'feedback.title': 'समस्या की रिपोर्ट करें',
+  'feedback.subtitle': 'हमें बताएं क्या हुआ — थोड़ा विवरण जल्दी ठीक करने में मदद करता है।',
+  'feedback.bug': '🐞 बग',
+  'feedback.idea': '💡 सुझाव',
+  'feedback.bugPlaceholder': 'क्या गड़बड़ हुई? उस समय आप क्या कर रहे थे?',
+  'feedback.ideaPlaceholder': 'Smart CashBook को आपके लिए बेहतर कैसे बनाएं?',
+  'feedback.diagToggle': 'कौन-सी जानकारी साझा होती है',
+  'feedback.diagNote':
+    'समस्या पहचानने में मदद के लिए हम बुनियादी ऐप + डिवाइस जानकारी जोड़ते हैं (कोई निजी डेटा नहीं)।',
+  'feedback.send': 'भेजें',
+  'feedback.thanksTitle': 'धन्यवाद',
+  'feedback.thanksMsg': 'हमें आपका संदेश मिल गया है और हम इसे देखेंगे।',
+  'feedback.failedTitle': 'भेज नहीं सके',
+  'feedback.failedMsg': 'आपकी रिपोर्ट भेजने में कुछ गड़बड़ हुई।',
+  'feedback.failedOffline': 'ऐसा लगता है आप ऑफ़लाइन हैं। इसके बजाय ईमेल से भेजें?',
+  'feedback.emailInstead': 'ईमेल से भेजें',
 
   'auth.login.title': 'स्वागत है',
   'auth.login.subtitle':
@@ -477,6 +563,47 @@ const te: Partial<Record<TKey, string>> = {
   'diagnostics.clearMsg': 'ఇది ఈ పరికరం నుండి నమోదైన అన్ని ఎర్రర్‌లను తొలగిస్తుంది.',
   'diagnostics.emptyTitle': 'ఎర్రర్‌లు ఏవీ నమోదు కాలేదు',
   'diagnostics.emptyMsg': 'ఏదైనా విఫలమైనప్పుడు, మీరు నివేదించడానికి అది ఇక్కడ నమోదవుతుంది.',
+  'settings.help': '💬 సహాయం & మద్దతు',
+
+  'help.title': 'సహాయం & మద్దతు',
+  'help.subtitle': 'త్వరిత సమాధానాలు, లేదా నేరుగా మమ్మల్ని సంప్రదించండి.',
+  'help.q1': 'వినియోగదారు ఉధార్ (అప్పు) ఎలా నమోదు చేయాలి?',
+  'help.a1':
+    'వినియోగదారుని తెరిచి, అప్పు జోడించు నొక్కి, మొత్తం మరియు తేదీని నమోదు చేయండి. వారి బాకీ స్వయంచాలకంగా అప్‌డేట్ అవుతుంది. తర్వాత డబ్బు వస్తే? అప్పుడు చెల్లింపు నమోదు చేయండి.',
+  'help.q2': 'నేను మాట్లాడి నమోదు జోడించవచ్చా?',
+  'help.a2':
+    'అవును — AI ఎంట్రీలో మైక్ నొక్కి మీ భాషలో చెప్పండి (ఉదా. “రమేష్‌కు 2500 ఇచ్చాను”). మేము దాన్ని లిప్యంతరీకరించి, వివరాలు నింపుతాము, సేవ్ చేయడానికి ముందు మీరు నిర్ధారిస్తారు.',
+  'help.q3': 'ఇంటర్నెట్ లేకుండా యాప్ పనిచేస్తుందా?',
+  'help.a3':
+    'అవును. మీరు ఆదాయం, ఖర్చులు మరియు ఖాతా నమోదులను ఆఫ్‌లైన్‌లో జోడించవచ్చు — అవి మీ ఫోన్‌లో సేవ్ అయి, ఆన్‌లైన్‌కి వచ్చాక స్వయంచాలకంగా సింక్ అవుతాయి.',
+  'help.q4': 'నివేదికలను ఎలా చూడాలి లేదా షేర్ చేయాలి?',
+  'help.a4':
+    'నివేదికలు తెరిచి, తేదీ పరిధిని ఎంచుకుని, PDF (ప్రింట్/వాట్సాప్) లేదా ఎక్సెల్ (మీ అకౌంటెంట్ కోసం) ఎగుమతి చేయండి. రెండింటిలో సారాంశం మరియు పూర్తి లావాదేవీ జాబితా ఉంటాయి.',
+  'help.q5': 'నా సిబ్బంది లేదా అకౌంటెంట్‌కు యాక్సెస్ ఎలా ఇవ్వాలి?',
+  'help.a5':
+    'యజమానిగా, సెట్టింగ్‌లు → బృందం & పాత్రలుకు వెళ్లి, వారి మొబైల్ నంబర్ జోడించి పాత్రను ఎంచుకోండి. వారు ఆ నంబర్‌తో తదుపరిసారి లాగిన్ అయినప్పుడు యాక్సెస్ పొందుతారు.',
+  'help.contact': 'ఇంకా సహాయం కావాలా?',
+  'help.chatWhatsApp': '💬 వాట్సాప్‌లో చాట్ చేయండి',
+  'help.reportProblem': '🐞 సమస్యను నివేదించండి',
+  'help.emailUs': '✉️ మాకు ఇమెయిల్ చేయండి',
+  'help.waPrefill': 'నమస్తే, నాకు Smart CashBook లో సహాయం కావాలి.',
+
+  'feedback.title': 'సమస్యను నివేదించండి',
+  'feedback.subtitle': 'ఏమి జరిగిందో చెప్పండి — కొంచెం వివరం త్వరగా పరిష్కరించడంలో సహాయపడుతుంది.',
+  'feedback.bug': '🐞 బగ్',
+  'feedback.idea': '💡 అభిప్రాయం',
+  'feedback.bugPlaceholder': 'ఏమి తప్పు జరిగింది? అప్పుడు మీరు ఏమి చేస్తున్నారు?',
+  'feedback.ideaPlaceholder': 'Smart CashBook‌ను మీ కోసం మెరుగ్గా ఎలా చేయాలి?',
+  'feedback.diagToggle': 'ఏ సమాచారం షేర్ అవుతుంది',
+  'feedback.diagNote':
+    'సమస్యను గుర్తించడంలో సహాయపడటానికి మేము ప్రాథమిక యాప్ + పరికర సమాచారాన్ని జోడిస్తాము (వ్యక్తిగత డేటా కాదు).',
+  'feedback.send': 'పంపండి',
+  'feedback.thanksTitle': 'ధన్యవాదాలు',
+  'feedback.thanksMsg': 'మీ సందేశం మాకు అందింది, మేము దీన్ని పరిశీలిస్తాము.',
+  'feedback.failedTitle': 'పంపలేకపోయాము',
+  'feedback.failedMsg': 'మీ నివేదికను పంపడంలో ఏదో తప్పు జరిగింది.',
+  'feedback.failedOffline': 'మీరు ఆఫ్‌లైన్‌లో ఉన్నట్లు ఉంది. బదులుగా ఇమెయిల్ ద్వారా పంపాలా?',
+  'feedback.emailInstead': 'ఇమెయిల్ ద్వారా పంపండి',
 
   'auth.login.title': 'స్వాగతం',
   'auth.login.subtitle':

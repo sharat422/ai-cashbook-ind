@@ -30,6 +30,8 @@ import {RecurringFormScreen} from '@features/recurring/presentation/screens/Recu
 import {SmsImportScreen} from '@features/sms-import/presentation/screens/SmsImportScreen';
 import {TeamScreen} from '@features/team/presentation/screens/TeamScreen';
 import {DiagnosticsScreen} from '@features/diagnostics/presentation/screens/DiagnosticsScreen';
+import {HelpScreen} from '@features/support/presentation/screens/HelpScreen';
+import {FeedbackScreen} from '@features/support/presentation/screens/FeedbackScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
@@ -68,6 +70,12 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="SmsImport" component={SmsImportScreen} />
       <Stack.Screen name="Team" component={TeamScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
+      <Stack.Screen
+        name="Feedback"
+        component={FeedbackScreen}
+        options={{presentation: 'modal'}}
+      />
       <Stack.Screen
         name="AddIncome"
         component={AddIncomeScreen}

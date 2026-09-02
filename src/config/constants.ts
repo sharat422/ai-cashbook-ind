@@ -5,6 +5,8 @@
 
 export const APP_CONFIG = {
   name: 'Smart CashBook',
+  /** User-facing app version (keep in step with the iOS/Android build number). */
+  version: '1.0.0',
   /**
    * TEMPORARY: skip phone/OTP login and open the app straight to the
    * landing (Dashboard) screen. Set back to `false` to re-enable auth.
@@ -18,6 +20,17 @@ export const APP_CONFIG = {
   otpLength: 6,
   /** Resend OTP cooldown window (seconds). */
   otpResendSeconds: 30,
+} as const;
+
+/**
+ * Customer-support channels. Set these to your real support number/email before
+ * release — the Help screen deep-links WhatsApp and email to them, and the bug
+ * report falls back to them if the in-app submit fails.
+ */
+export const SUPPORT = {
+  /** WhatsApp support number in international format, no +/spaces (e.g. 9198…). */
+  whatsapp: '919000000000',
+  email: 'support@smartcashbook.example.com',
 } as const;
 
 /** Business types selectable on the Create Business screen. */

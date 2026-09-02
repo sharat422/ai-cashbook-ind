@@ -335,6 +335,12 @@ export function SettingsScreen({
           onPress={() => navigation.navigate('Notifications')}
         />
         <Button
+          title={t('settings.help')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('Help')}
+        />
+        <Button
           title={t('settings.diagnostics')}
           variant="secondary"
           className="mt-3"

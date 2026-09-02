@@ -99,6 +99,17 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
 CREATE INDEX IF NOT EXISTS idx_ledger_customer_date ON ledger_entries(customer_id, date);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ledger_client ON ledger_entries(customer_id, client_id);
 
+CREATE TABLE IF NOT EXISTS feedback (
+    id          VARCHAR(40) PRIMARY KEY,
+    user_id     VARCHAR(40),
+    business_id VARCHAR(40),
+    kind        VARCHAR(20) NOT NULL DEFAULT 'feedback',
+    message     TEXT NOT NULL,
+    diagnostics TEXT,
+    created_at  VARCHAR(40) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_user ON feedback(user_id);
+
 CREATE TABLE IF NOT EXISTS ai_decisions (
     id          VARCHAR(40) PRIMARY KEY,
     business_id VARCHAR(40),
