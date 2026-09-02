@@ -1,4 +1,4 @@
-import {PermissionsAndroid, Platform} from 'react-native';
+import {NativeModules, PermissionsAndroid, Platform} from 'react-native';
 import AudioRecorderPlayer, {
   AudioEncoderAndroidType,
   AudioSourceAndroidType,
@@ -8,8 +8,25 @@ import AudioRecorderPlayer, {
   type AudioSet,
 } from 'react-native-audio-recorder-player';
 
-/** Single shared recorder instance (v3 exports a class). */
-const recorder = new AudioRecorderPlayer();
+/**
+ * True only when the native audio module is actually linked into this build.
+ * Guards against a build that predates the voice feature (or one where the
+ * native module didn't link) — the app must still open AI Entry and let the
+ * user TYPE, so voice degrades instead of crashing the screen.
+ */
+export function isVoiceAvailable(): boolean {
+  return !!NativeModules.RNAudioRecorderPlayer;
+}
+
+// Lazily constructed — instantiating without the native module throws, so we
+// never do it at import time (that would take down the whole AI Entry screen).
+let recorderInstance: AudioRecorderPlayer | null = null;
+function recorder(): AudioRecorderPlayer {
+  if (!recorderInstance) {
+    recorderInstance = new AudioRecorderPlayer();
+  }
+  return recorderInstance;
+}
 
 /**
  * 16 kHz mono AAC — the sweet spot for Whisper (it resamples to 16 kHz anyway),
@@ -59,12 +76,15 @@ export async function ensureMicPermission(): Promise<boolean> {
 }
 
 export async function startRecording(): Promise<void> {
-  await recorder.startRecorder(undefined, AUDIO_SET);
+  if (!isVoiceAvailable()) {
+    throw new Error('Voice recording is unavailable in this build.');
+  }
+  await recorder().startRecorder(undefined, AUDIO_SET);
 }
 
 /** Stop and return the clip as an uploadable file part. */
 export async function stopRecording(): Promise<RecordedAudio> {
-  const path = await recorder.stopRecorder();
+  const path = await recorder().stopRecorder();
   const uri = path.startsWith('file://') ? path : `file://${path}`;
   // Whisper infers the format from the filename extension, so keep it accurate.
   const ext = (path.split('.').pop() || 'm4a').toLowerCase();

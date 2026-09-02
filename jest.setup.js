@@ -37,6 +37,15 @@ jest.mock('react-native-keychain', () => {
   };
 });
 
+// Mark the audio native module as "linked" so isVoiceAvailable() is true in tests
+// (the recorder methods themselves are stubbed via the module mock below).
+try {
+  const {NativeModules} = require('react-native');
+  NativeModules.RNAudioRecorderPlayer = NativeModules.RNAudioRecorderPlayer || {};
+} catch (e) {
+  // ignore
+}
+
 // jail-monkey (root/jailbreak detection) is native; default to a clean device.
 jest.mock('jail-monkey', () => ({
   __esModule: true,

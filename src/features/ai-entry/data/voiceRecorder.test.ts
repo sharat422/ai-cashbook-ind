@@ -1,6 +1,7 @@
+import {NativeModules} from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 
-import {startRecording, stopRecording} from './voiceRecorder';
+import {isVoiceAvailable, startRecording, stopRecording} from './voiceRecorder';
 
 const rec = AudioRecorderPlayer as unknown as {
   __startRecorder: jest.Mock;
@@ -8,6 +9,22 @@ const rec = AudioRecorderPlayer as unknown as {
 };
 
 describe('voiceRecorder', () => {
+  it('reports voice available when the native module is linked', () => {
+    expect(isVoiceAvailable()).toBe(true); // stubbed present in jest.setup
+  });
+
+  it('degrades safely when the native module is absent (no crash, guarded)', async () => {
+    const saved = NativeModules.RNAudioRecorderPlayer;
+    // Simulate a build without the audio module linked.
+    (NativeModules as {RNAudioRecorderPlayer?: unknown}).RNAudioRecorderPlayer = undefined;
+    try {
+      expect(isVoiceAvailable()).toBe(false);
+      await expect(startRecording()).rejects.toThrow(/unavailable/i);
+    } finally {
+      (NativeModules as {RNAudioRecorderPlayer?: unknown}).RNAudioRecorderPlayer = saved;
+    }
+  });
+
   it('startRecording starts the native recorder', async () => {
     await startRecording();
     expect(rec.__startRecorder).toHaveBeenCalled();

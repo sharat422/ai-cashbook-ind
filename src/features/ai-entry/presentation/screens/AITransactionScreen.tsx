@@ -27,6 +27,7 @@ import {
 } from '@features/ai-entry/presentation/hooks/useParseTransaction';
 import {
   ensureMicPermission,
+  isVoiceAvailable,
   startRecording,
   stopRecording,
 } from '@features/ai-entry/data/voiceRecorder';
@@ -51,6 +52,8 @@ export function AITransactionScreen({
   const [recording, setRecording] = useState(false);
   const voiceLanguage = useVoiceSettingsStore(s => s.language);
   const setVoiceLanguage = useVoiceSettingsStore(s => s.setLanguage);
+  // Voice needs the native audio module in the build; if absent, show type-only.
+  const voiceAvailable = isVoiceAvailable();
 
   /** A voice/transcription error → friendly message + always allow typing. */
   const onVoiceError = (err: unknown) => {
@@ -225,37 +228,42 @@ export function AITransactionScreen({
             {t('ai.subtitle')}
           </Text>
 
-          {/* Voice language — pass the customer's language for best accuracy */}
-          <View className="mt-5">
-            <Select
-              label={t('ai.voiceLanguage')}
-              value={voiceLanguageLabel(voiceLanguage)}
-              options={VOICE_LANGUAGES.map(l => l.label)}
-              onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
-            />
-          </View>
+          {/* Voice (only when the native audio module is in the build) */}
+          {voiceAvailable ? (
+            <>
+              {/* Voice language — pass the customer's language for best accuracy */}
+              <View className="mt-5">
+                <Select
+                  label={t('ai.voiceLanguage')}
+                  value={voiceLanguageLabel(voiceLanguage)}
+                  options={VOICE_LANGUAGES.map(l => l.label)}
+                  onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
+                />
+              </View>
 
-          {/* Mic — speak in your language; the server transcribes + parses */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={onMic}
-            disabled={voice.isPending}
-            className={`mt-3 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
-              recording ? 'bg-danger' : 'bg-primary'
-            }`}
-            style={{gap: 10, opacity: voice.isPending ? 0.6 : 1}}>
-            <Text className="text-2xl">{recording ? '⏹' : '🎤'}</Text>
-            <Text className="text-base font-semibold text-white">
-              {voice.isPending
-                ? t('ai.transcribing')
-                : recording
-                ? t('ai.listening')
-                : t('ai.speak')}
-            </Text>
-          </Pressable>
+              {/* Mic — speak in your language; the server transcribes + parses */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={onMic}
+                disabled={voice.isPending}
+                className={`mt-3 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
+                  recording ? 'bg-danger' : 'bg-primary'
+                }`}
+                style={{gap: 10, opacity: voice.isPending ? 0.6 : 1}}>
+                <Text className="text-2xl">{recording ? '⏹' : '🎤'}</Text>
+                <Text className="text-base font-semibold text-white">
+                  {voice.isPending
+                    ? t('ai.transcribing')
+                    : recording
+                    ? t('ai.listening')
+                    : t('ai.speak')}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
 
           {/* Input */}
-          <View className="mt-3 rounded-2xl border border-border bg-white px-4 py-3">
+          <View className="mt-5 rounded-2xl border border-border bg-white px-4 py-3">
             <TextInput
               className="min-h-[72px] p-0 text-base text-slate-900"
               value={text}
@@ -267,7 +275,7 @@ export function AITransactionScreen({
             />
           </View>
           <Text variant="caption" className="mt-2">
-            {t('ai.hint')}
+            {voiceAvailable ? t('ai.hint') : t('ai.hintTypeOnly')}
           </Text>
 
           {/* Examples */}

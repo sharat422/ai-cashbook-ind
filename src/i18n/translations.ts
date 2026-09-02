@@ -204,6 +204,8 @@ const en = {
     'Speak or type a transaction in your language — we’ll fill it in.',
   'ai.inputPlaceholder': 'e.g. Ramesh ko 2500 ka maal diya',
   'ai.speak': '🎤 Speak (any language)',
+  'ai.hintTypeOnly':
+    '💡 Type a transaction in your language, e.g. “Ramesh ko 2500 diya”. (Voice needs the latest app update.)',
   'ai.listening': 'Listening… tap to stop',
   'ai.transcribing': 'Transcribing…',
   'ai.micNeededTitle': 'Microphone needed',
@@ -446,6 +448,8 @@ const hi: Partial<Record<TKey, string>> = {
   'ai.subtitle': 'अपनी भाषा में लेन-देन बोलें या लिखें — हम इसे भर देंगे।',
   'ai.inputPlaceholder': 'उदा. रमेश को 2500 का माल दिया',
   'ai.speak': '🎤 बोलें (कोई भी भाषा)',
+  'ai.hintTypeOnly':
+    '💡 अपनी भाषा में लेन-देन लिखें, जैसे “रमेश को 2500 दिया”। (आवाज़ के लिए ऐप अपडेट करें।)',
   'ai.listening': 'सुन रहे हैं… रोकने के लिए टैप करें',
   'ai.transcribing': 'लिखा जा रहा है…',
   'ai.micNeededTitle': 'माइक्रोफ़ोन आवश्यक',
@@ -686,6 +690,8 @@ const te: Partial<Record<TKey, string>> = {
     'మీ భాషలో లావాదేవీని మాట్లాడండి లేదా టైప్ చేయండి — మేము దాన్ని నింపుతాము.',
   'ai.inputPlaceholder': 'ఉదా. రమేష్‌కు 2500 సరుకు ఇచ్చాను',
   'ai.speak': '🎤 మాట్లాడండి (ఏ భాషలోనైనా)',
+  'ai.hintTypeOnly':
+    '💡 మీ భాషలో లావాదేవీని టైప్ చేయండి, ఉదా. “రమేష్‌కు 2500 ఇచ్చాను”. (వాయిస్ కోసం యాప్‌ను అప్‌డేట్ చేయండి.)',
   'ai.listening': 'వింటున్నాము… ఆపడానికి నొక్కండి',
   'ai.transcribing': 'లిప్యంతరీకరిస్తోంది…',
   'ai.micNeededTitle': 'మైక్రోఫోన్ అవసరం',
