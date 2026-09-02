@@ -61,3 +61,8 @@ coverage/
 
 # typescript
 *.tsbuildinfo
+
+# impeccable (AI coding-agent skills/commands — local tooling, not app code)
+.github/skills/
+.github/agents/
+.github/hooks/
