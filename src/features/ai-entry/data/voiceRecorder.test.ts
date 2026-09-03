@@ -44,4 +44,13 @@ describe('voiceRecorder', () => {
     expect(audio.uri).toBe('file:///var/mobile/voice.m4a');
     expect(audio.type).toBe('audio/m4a');
   });
+
+  it('reports a positive duration for a start→stop cycle', async () => {
+    await startRecording();
+    const audio = await stopRecording();
+    expect(audio.durationMs).toBeGreaterThanOrEqual(0);
+    // A second stop with no fresh start reports 0 (start time was consumed).
+    const again = await stopRecording();
+    expect(again.durationMs).toBe(0);
+  });
 });

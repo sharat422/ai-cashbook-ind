@@ -217,6 +217,9 @@ const en = {
   'ai.voiceUnavailable': 'Voice is unavailable right now',
   'ai.voiceUnavailableMsg':
     'Couldn’t reach the transcription service (check your internet). You can type the entry below instead.',
+  'ai.tooShortTitle': 'That was too quick',
+  'ai.tooShortMsg':
+    'Tap the mic, speak your entry, then tap again to stop. Or type it below.',
   'ai.hint':
     '💡 Tap the mic and just speak — Hindi, Telugu, Tamil, Kannada, Marathi, Hinglish or English — or type below.',
   'ai.example1': 'Ramesh ko 2500 ka maal diya',
@@ -461,6 +464,9 @@ const hi: Partial<Record<TKey, string>> = {
   'ai.voiceUnavailable': 'आवाज़ अभी उपलब्ध नहीं है',
   'ai.voiceUnavailableMsg':
     'ट्रांसक्रिप्शन सेवा तक नहीं पहुँच सके (अपना इंटरनेट जांचें)। आप नीचे लेन-देन लिख सकते हैं।',
+  'ai.tooShortTitle': 'वह बहुत जल्दी हो गया',
+  'ai.tooShortMsg':
+    'माइक दबाएं, अपना लेन-देन बोलें, फिर रोकने के लिए दोबारा दबाएं। या नीचे लिखें।',
   'ai.hint':
     '💡 माइक दबाएं और बस बोलें — हिंदी, तेलुगु, तमिल, कन्नड़, मराठी, हिंग्लिश या अंग्रेज़ी — या नीचे लिखें।',
   'ai.example1': 'रमेश को 2500 का माल दिया',
@@ -703,6 +709,9 @@ const te: Partial<Record<TKey, string>> = {
   'ai.voiceUnavailable': 'వాయిస్ ప్రస్తుతం అందుబాటులో లేదు',
   'ai.voiceUnavailableMsg':
     'ట్రాన్స్‌క్రిప్షన్ సేవను చేరుకోలేకపోయాము (మీ ఇంటర్నెట్ తనిఖీ చేయండి). మీరు కింద లావాదేవీని టైప్ చేయవచ్చు.',
+  'ai.tooShortTitle': 'అది చాలా త్వరగా అయిపోయింది',
+  'ai.tooShortMsg':
+    'మైక్ నొక్కి, మీ లావాదేవీని మాట్లాడి, ఆపడానికి మళ్లీ నొక్కండి. లేదా కింద టైప్ చేయండి.',
   'ai.hint':
     '💡 మైక్ నొక్కి మాట్లాడండి — హిందీ, తెలుగు, తమిళం, కన్నడ, మరాఠీ, హింగ్లిష్ లేదా ఇంగ్లీష్ — లేదా కింద టైప్ చేయండి.',
   'ai.example1': 'రమేష్‌కు 2500 సరుకు ఇచ్చాను',

@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
@@ -14,11 +15,13 @@ from ..ai import (
     scan_receipt,
     transcribe_audio,
 )
+from ..config import settings
 from ..database import get_db
 from ..deps import require
 from ..rbac import ENTRY_CREATE
 from ..models import AiDecision, Business
 
+log = logging.getLogger("cashbook.ai")
 router = APIRouter(tags=["ai"])
 
 
@@ -79,10 +82,33 @@ def voice_parse_route(
             prompt=CASHBOOK_TRANSCRIBE_PROMPT,  # bias toward amounts/currency
         )
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY,
-            "Couldn't transcribe the audio. Please try again, or type it instead.",
-        ) from exc
+        # Always record WHY on the server — without this the real Whisper error
+        # (undecodable audio vs. auth vs. upstream outage) is invisible.
+        log.exception(
+            "voice transcribe failed: filename=%s bytes=%d content_type=%s language=%s",
+            audio.filename, len(audio_bytes), audio.content_type, language,
+        )
+        reason = f"{type(exc).__name__}: {exc}"
+
+        # OpenAI rejects undecodable / too-short / too-large audio with a 4xx.
+        # That's a client audio problem the user fixes by re-recording, so map it
+        # to 422 (the app treats 422 as "didn't catch that — try again or type"),
+        # and keep 502 only for genuine upstream/transport failures.
+        upstream_status = getattr(exc, "status_code", None)
+        is_bad_audio = isinstance(upstream_status, int) and 400 <= upstream_status < 500
+
+        if is_bad_audio:
+            detail = "Didn't catch clear audio — please try again, or type it instead."
+            code = status.HTTP_422_UNPROCESSABLE_ENTITY
+        else:
+            detail = "Couldn't transcribe the audio. Please try again, or type it instead."
+            code = status.HTTP_502_BAD_GATEWAY
+
+        # On staging (debug) append the technical reason so it also lands in the
+        # app's shareable error log; production keeps the friendly message only.
+        if settings.debug:
+            detail = f"{detail} [{reason[:300]}]"
+        raise HTTPException(code, detail) from exc
 
     if not transcript:
         raise HTTPException(

@@ -28,6 +28,7 @@ import {
 import {
   ensureMicPermission,
   isVoiceAvailable,
+  MIN_RECORDING_MS,
   startRecording,
   stopRecording,
 } from '@features/ai-entry/data/voiceRecorder';
@@ -104,6 +105,11 @@ export function AITransactionScreen({
         return Alert.alert(t('ai.couldNotRead'), t('ai.tryAgain'));
       }
       setRecording(false);
+      // Guard accidental short taps: too brief to hold real speech, so skip the
+      // round-trip and nudge the user to hold the mic and speak.
+      if (audio.durationMs > 0 && audio.durationMs < MIN_RECORDING_MS) {
+        return Alert.alert(t('ai.tooShortTitle'), t('ai.tooShortMsg'));
+      }
       setError(null);
       setCandidates(null);
       voice.mutate(

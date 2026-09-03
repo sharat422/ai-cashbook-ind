@@ -117,6 +117,22 @@ def test_voice_parse_422_on_silence(user, client, monkeypatch):
     assert r.status_code == 422
 
 
+def test_voice_parse_maps_openai_4xx_to_422(user, client, monkeypatch):
+    """OpenAI rejects undecodable/too-short audio with a 4xx (it carries a
+    .status_code). That's a client audio problem, so we return 422 (the app
+    treats it as 'try again or type'), not a 502 upstream failure."""
+
+    class FakeBadRequest(Exception):
+        status_code = 400
+
+    def bad_audio(*a, **k):
+        raise FakeBadRequest("audio file could not be decoded")
+
+    monkeypatch.setattr(ai_routes, "transcribe_audio", bad_audio)
+    r = _post_audio(client, user.headers)
+    assert r.status_code == 422
+
+
 def test_voice_parse_requires_auth(client):
     r = client.post(
         "/api/v1/voice/parse",

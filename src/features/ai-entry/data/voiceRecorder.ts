@@ -53,7 +53,16 @@ export interface RecordedAudio {
   uri: string;
   name: string;
   type: string;
+  /** How long the clip ran (ms) — lets callers reject accidental short taps. */
+  durationMs: number;
 }
+
+/** Below this, a tap is almost certainly accidental: too short for Whisper to
+ * decode into speech, and it would just come back as a failed transcription. */
+export const MIN_RECORDING_MS = 700;
+
+// Wall-clock start of the current recording, used to derive the clip duration.
+let startedAtMs = 0;
 
 /**
  * Ask for the microphone at runtime (Android). iOS prompts automatically on the
@@ -80,14 +89,17 @@ export async function startRecording(): Promise<void> {
     throw new Error('Voice recording is unavailable in this build.');
   }
   await recorder().startRecorder(undefined, AUDIO_SET);
+  startedAtMs = Date.now();
 }
 
 /** Stop and return the clip as an uploadable file part. */
 export async function stopRecording(): Promise<RecordedAudio> {
   const path = await recorder().stopRecorder();
+  const durationMs = startedAtMs ? Date.now() - startedAtMs : 0;
+  startedAtMs = 0;
   const uri = path.startsWith('file://') ? path : `file://${path}`;
   // Whisper infers the format from the filename extension, so keep it accurate.
   const ext = (path.split('.').pop() || 'm4a').toLowerCase();
   const type = ext === 'mp4' ? 'audio/mp4' : ext === 'wav' ? 'audio/wav' : 'audio/m4a';
-  return {uri, name: `voice.${ext}`, type};
+  return {uri, name: `voice.${ext}`, type, durationMs};
 }
