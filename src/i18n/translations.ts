@@ -53,6 +53,17 @@ const en = {
   'settings.biometricUnlock': 'Biometric unlock',
   'settings.biometricUnlockDesc': 'Use fingerprint or face unlock instead of the PIN.',
   'settings.pinMismatch': 'PINs did not match. Start again.',
+  'settings.securityInfoTitle': 'How we protect your data',
+  'settings.securityInfoTransit':
+    'Encrypted connection — data travels between the app and our servers over secure HTTPS. Plain, unencrypted connections are blocked.',
+  'settings.securityInfoLock':
+    'Lock kept in secure hardware — if you set a PIN or fingerprint/Face ID, that secret is stored in your device’s secure area (Android Keystore / iOS Keychain), not ordinary app storage.',
+  'settings.securityInfoIsolation':
+    'Your books stay yours — each account’s data is kept separate on the server and reachable only after you sign in.',
+  'settings.securityInfoDevice':
+    'Device safety check — we warn you if your phone looks rooted or jailbroken, which can put your data at risk.',
+  'settings.securityInfoNote':
+    'This describes what the app does today. We don’t sell your data, and we make no security-certification claims we haven’t earned.',
   'settings.turnOffLock': 'Turn off app lock?',
   'settings.turnOffLockMsg': 'Your PIN will be removed.',
   'settings.turnOff': 'Turn off',
@@ -322,6 +333,17 @@ const hi: Partial<Record<TKey, string>> = {
   'settings.biometricUnlock': 'बायोमेट्रिक अनलॉक',
   'settings.biometricUnlockDesc': 'पिन के बजाय फिंगरप्रिंट या फेस अनलॉक का उपयोग करें।',
   'settings.pinMismatch': 'पिन मेल नहीं खाए। फिर से शुरू करें।',
+  'settings.securityInfoTitle': 'हम आपके डेटा की सुरक्षा कैसे करते हैं',
+  'settings.securityInfoTransit':
+    'एन्क्रिप्टेड कनेक्शन — ऐप और हमारे सर्वर के बीच डेटा सुरक्षित HTTPS पर जाता है। सादे, बिना-एन्क्रिप्ट कनेक्शन अवरुद्ध हैं।',
+  'settings.securityInfoLock':
+    'लॉक सुरक्षित हार्डवेयर में — यदि आप पिन या फिंगरप्रिंट/फेस आईडी सेट करते हैं, तो वह गुप्त जानकारी आपके डिवाइस के सुरक्षित क्षेत्र (Android Keystore / iOS Keychain) में रहती है, सामान्य ऐप स्टोरेज में नहीं।',
+  'settings.securityInfoIsolation':
+    'आपका खाता आपका ही रहता है — हर खाते का डेटा सर्वर पर अलग रखा जाता है और साइन इन करने के बाद ही पहुँचा जा सकता है।',
+  'settings.securityInfoDevice':
+    'डिवाइस सुरक्षा जाँच — यदि आपका फ़ोन रूटेड या जेलब्रोकन दिखता है तो हम आपको चेतावनी देते हैं, जो आपके डेटा को जोखिम में डाल सकता है।',
+  'settings.securityInfoNote':
+    'यह वही बताता है जो ऐप आज करता है। हम आपका डेटा नहीं बेचते, और कोई भी ऐसा सुरक्षा-प्रमाणन दावा नहीं करते जो हमने प्राप्त नहीं किया है।',
   'settings.turnOffLock': 'ऐप लॉक बंद करें?',
   'settings.turnOffLockMsg': 'आपका पिन हटा दिया जाएगा।',
   'settings.turnOff': 'बंद करें',
@@ -579,6 +601,17 @@ const te: Partial<Record<TKey, string>> = {
   'settings.biometricUnlock': 'బయోమెట్రిక్ అన్‌లాక్',
   'settings.biometricUnlockDesc': 'పిన్‌కు బదులుగా వేలిముద్ర లేదా ఫేస్ అన్‌లాక్ ఉపయోగించండి.',
   'settings.pinMismatch': 'పిన్‌లు సరిపోలలేదు. మళ్లీ ప్రారంభించండి.',
+  'settings.securityInfoTitle': 'మేము మీ డేటాను ఎలా కాపాడతాము',
+  'settings.securityInfoTransit':
+    'ఎన్‌క్రిప్టెడ్ కనెక్షన్ — యాప్‌కు, మా సర్వర్‌లకు మధ్య డేటా సురక్షిత HTTPS ద్వారా ప్రయాణిస్తుంది. సాదా, ఎన్‌క్రిప్ట్ కాని కనెక్షన్‌లు నిరోధించబడ్డాయి.',
+  'settings.securityInfoLock':
+    'లాక్ సురక్షిత హార్డ్‌వేర్‌లో — మీరు పిన్ లేదా వేలిముద్ర/ఫేస్ ఐడీ సెట్ చేస్తే, ఆ రహస్యం మీ పరికరం సురక్షిత ప్రాంతంలో (Android Keystore / iOS Keychain) ఉంటుంది, సాధారణ యాప్ నిల్వలో కాదు.',
+  'settings.securityInfoIsolation':
+    'మీ ఖాతా మీదే — ప్రతి ఖాతా డేటా సర్వర్‌లో విడిగా ఉంచబడుతుంది, మీరు సైన్ ఇన్ అయిన తర్వాతే అందుబాటులో ఉంటుంది.',
+  'settings.securityInfoDevice':
+    'పరికర భద్రతా తనిఖీ — మీ ఫోన్ రూట్ లేదా జైల్‌బ్రేక్ అయినట్లు కనిపిస్తే మేము మిమ్మల్ని హెచ్చరిస్తాము, ఇది మీ డేటాను ప్రమాదంలో పడేయవచ్చు.',
+  'settings.securityInfoNote':
+    'ఇది యాప్ ఈ రోజు ఏమి చేస్తుందో వివరిస్తుంది. మేము మీ డేటాను అమ్మము, మరియు మేము పొందని ఎటువంటి భద్రతా-ధృవీకరణ దావాలను చేయము.',
   'settings.turnOffLock': 'యాప్ లాక్ ఆపివేయాలా?',
   'settings.turnOffLockMsg': 'మీ పిన్ తొలగించబడుతుంది.',
   'settings.turnOff': 'ఆపివేయండి',

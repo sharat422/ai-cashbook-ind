@@ -239,6 +239,32 @@ export function SettingsScreen({
           ) : null}
         </View>
 
+        {/* Plain-language explanation of what's actually in place. Every line
+            below reflects a real, verified practice — no certification claims. */}
+        <View className="mt-3 rounded-2xl border border-border bg-white p-4">
+          <Text className="text-base font-semibold text-slate-900">
+            {t('settings.securityInfoTitle')}
+          </Text>
+          <View className="mt-3" style={{gap: 12}}>
+            {[
+              {icon: '🔒', text: t('settings.securityInfoTransit')},
+              {icon: '📱', text: t('settings.securityInfoLock')},
+              {icon: '👤', text: t('settings.securityInfoIsolation')},
+              {icon: '⚠️', text: t('settings.securityInfoDevice')},
+            ].map(row => (
+              <View key={row.icon} className="flex-row">
+                <Text className="mr-2 text-base">{row.icon}</Text>
+                <Text variant="caption" className="flex-1 leading-5">
+                  {row.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <Text variant="caption" className="mt-4 border-t border-border pt-3 italic">
+            {t('settings.securityInfoNote')}
+          </Text>
+        </View>
+
         {/* Preferences */}
         <Text variant="label" className="mt-8 mb-3">
           {t('settings.preferences')}
