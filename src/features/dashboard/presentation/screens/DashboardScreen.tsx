@@ -185,8 +185,8 @@ export function DashboardScreen({
               icon="📊"
               title="No activity yet"
               message="Record your first income or expense to see your numbers here."
-              actionLabel="+ Add Income"
-              onAction={() => navigation.navigate('AddIncome')}
+              actionLabel="+ Add transaction"
+              onAction={() => navigation.navigate('QuickAdd', {type: 'income'})}
             />
           ) : data ? (
             <>
@@ -229,21 +229,11 @@ export function DashboardScreen({
           className="mt-3"
           onPress={() => navigation.navigate('SmsImport')}
         />
-        <View className="mt-3 flex-row" style={{gap: 12}}>
-          <Button
-            title={t('dashboard.income')}
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('AddIncome')}
-          />
-          <Button
-            title={t('dashboard.expense')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('AddExpense')}
-          />
-        </View>
+        <Button
+          title={t('dashboard.addTransaction')}
+          className="mt-3"
+          onPress={() => navigation.navigate('QuickAdd')}
+        />
         <View className="mt-3 flex-row" style={{gap: 12}}>
           <Button
             title={t('dashboard.scanReceipt')}

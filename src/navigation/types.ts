@@ -45,6 +45,7 @@ export type AppStackParamList = {
   Help: undefined;
   Feedback: {kind?: 'bug' | 'feedback'} | undefined;
   AITransaction: undefined;
+  QuickAdd: {type?: 'income' | 'expense'} | undefined;
   AddIncome: undefined;
   AddExpense:
     | {initialValues?: ExpensePrefill; initialAttachment?: Attachment | null}

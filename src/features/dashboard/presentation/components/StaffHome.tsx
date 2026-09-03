@@ -43,21 +43,10 @@ export function StaffHome({
             title={t('dashboard.aiEntry')}
             onPress={() => navigation.navigate('AITransaction')}
           />
-          <View className="flex-row" style={{gap: 12}}>
-            <Button
-              title={t('dashboard.income')}
-              className="flex-1"
-              fullWidth={false}
-              onPress={() => navigation.navigate('AddIncome')}
-            />
-            <Button
-              title={t('dashboard.expense')}
-              variant="secondary"
-              className="flex-1"
-              fullWidth={false}
-              onPress={() => navigation.navigate('AddExpense')}
-            />
-          </View>
+          <Button
+            title={t('dashboard.addTransaction')}
+            onPress={() => navigation.navigate('QuickAdd')}
+          />
           <Button
             title={t('dashboard.scanReceipt')}
             variant="secondary"

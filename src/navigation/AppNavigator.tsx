@@ -35,6 +35,7 @@ import {FeedbackScreen} from '@features/support/presentation/screens/FeedbackScr
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
+import {QuickAddScreen} from '@features/transactions/presentation/screens/QuickAddScreen';
 import type {AppStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -74,6 +75,11 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen
         name="Feedback"
         component={FeedbackScreen}
+        options={{presentation: 'modal'}}
+      />
+      <Stack.Screen
+        name="QuickAdd"
+        component={QuickAddScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen

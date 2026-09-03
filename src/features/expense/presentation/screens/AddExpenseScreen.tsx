@@ -104,7 +104,7 @@ export function AddExpenseScreen({
             />
           </FormField>
 
-          <FormField label={t('expense.vendorLabel')} required error={form.errors.vendor}>
+          <FormField label={t('expense.vendorLabel')} error={form.errors.vendor}>
             <TextField
               placeholder={t('expense.vendorPlaceholder')}
               value={form.values.vendor}

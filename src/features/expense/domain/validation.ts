@@ -33,9 +33,9 @@ export function validateExpenseDraft(draft: ExpenseDraft): ExpenseFieldErrors {
     errors.date = 'Date cannot be in the future';
   }
 
-  if (!draft.vendor || !draft.vendor.trim()) {
-    errors.vendor = 'Enter a vendor / payee';
-  } else if (draft.vendor.trim().length > 80) {
+  // Vendor is optional (quick-add lets you save with just an amount); only the
+  // length cap is enforced when one is provided.
+  if (draft.vendor && draft.vendor.trim().length > 80) {
     errors.vendor = 'Vendor must be 80 characters or fewer';
   }
 
