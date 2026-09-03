@@ -29,6 +29,7 @@ import {
   PIN_LENGTH,
   useAppLockStore,
 } from '@features/security/store/appLock.store';
+import {useRestoreStore} from '@features/restore/store/restore.store';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
@@ -151,6 +152,24 @@ export function SettingsScreen({
         {text: t('settings.turnOff'), style: 'destructive', onPress: disableLock},
       ]);
     }
+  };
+
+  const businessId = useAuthStore(s => s.business?.id ?? null);
+  const resetRestore = useRestoreStore(s => s.reset);
+  const onRestoreData = () => {
+    if (!businessId) return;
+    Alert.alert(
+      t('settings.restoreDataConfirmTitle'),
+      t('settings.restoreDataConfirmMsg'),
+      [
+        {text: t('common.cancel'), style: 'cancel'},
+        {
+          text: t('common.ok'),
+          // Clearing the decision makes RootNavigator show the restore flow again.
+          onPress: () => resetRestore(businessId),
+        },
+      ],
+    );
   };
 
   const onLogout = () => {
@@ -372,6 +391,14 @@ export function SettingsScreen({
           className="mt-3"
           onPress={() => navigation.navigate('Diagnostics')}
         />
+        {canManageSettings ? (
+          <Button
+            title={t('settings.restoreData')}
+            variant="secondary"
+            className="mt-3"
+            onPress={onRestoreData}
+          />
+        ) : null}
 
         <Button
           title={t('common.logout')}

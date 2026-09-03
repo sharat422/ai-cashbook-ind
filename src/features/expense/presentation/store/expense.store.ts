@@ -19,6 +19,11 @@ interface ExpenseState {
   addEntry: (entry: Expense) => void;
   replaceEntry: (id: string, entry: Expense) => void;
   setEntryStatus: (id: string, syncStatus: Expense['syncStatus']) => void;
+  /**
+   * Replace the synced history with what the server returned (restore-on-new-
+   * device). Any local entry still pending/failed to sync is preserved.
+   */
+  restoreEntries: (serverEntries: Expense[]) => void;
 
   // Queue actions
   enqueue: (pending: PendingExpense) => void;
@@ -58,6 +63,18 @@ export const useExpenseStore = create<ExpenseState>()(
             e.id === id ? {...e, syncStatus} : e,
           ),
         })),
+
+      restoreEntries: serverEntries =>
+        set(state => {
+          const serverIds = new Set(serverEntries.map(e => e.id));
+          const localPending = state.entries.filter(
+            e => e.syncStatus !== 'synced' && !serverIds.has(e.id),
+          );
+          const merged = [...localPending, ...serverEntries].sort((a, b) =>
+            b.createdAt.localeCompare(a.createdAt),
+          );
+          return {entries: merged, lastSyncedAt: new Date().toISOString()};
+        }),
 
       enqueue: pending => set(state => ({queue: [...state.queue, pending]})),
 

@@ -6,7 +6,9 @@ import {useSyncBusiness} from '@features/auth/hooks';
 import {SplashScreen} from '@features/auth/screens/SplashScreen';
 import {WelcomeScreen} from '@features/onboarding/presentation/screens/WelcomeScreen';
 import {useOnboardingStore} from '@features/onboarding/store/onboarding.store';
-import {useAuthStatus, useIsHydrated} from '@store/auth.store';
+import {RestoreScreen} from '@features/restore/presentation/screens/RestoreScreen';
+import {useRestoreStore} from '@features/restore/store/restore.store';
+import {useAuthStatus, useAuthStore, useIsHydrated} from '@store/auth.store';
 import {useSessionDataReset} from '@store/sessionReset';
 import {AppNavigator} from './AppNavigator';
 import {AuthNavigator} from './AuthNavigator';
@@ -27,6 +29,12 @@ export function RootNavigator(): React.JSX.Element {
   const onboardingHydrated = useOnboardingStore(s => s.hydrated);
   const seenOnboarding = useOnboardingStore(s => s.seen);
   const markOnboardingSeen = useOnboardingStore(s => s.markSeen);
+  const businessId = useAuthStore(s => s.business?.id ?? null);
+  const restoreHydrated = useRestoreStore(s => s.hydrated);
+  // Subscribe to this business's decision so completing restore re-renders us.
+  const restoreDecision = useRestoreStore(s =>
+    businessId ? s.decided[businessId] : 'skipped',
+  );
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
   // Reconcile the business for a returning user (token but no cached business).
@@ -42,14 +50,26 @@ export function RootNavigator(): React.JSX.Element {
     return () => clearTimeout(timer);
   }, []);
 
-  // Wait for both persisted stores so returning users don't flash the welcome.
-  if (!hydrated || !onboardingHydrated || !minTimeElapsed) {
+  // Wait for all persisted stores so returning users don't flash the welcome
+  // or miss the restore offer.
+  if (!hydrated || !onboardingHydrated || !restoreHydrated || !minTimeElapsed) {
     return <SplashScreen />;
   }
 
   // First-time, signed-out users see the welcome carousel once, before Login.
   if (status === 'unauthenticated' && !seenOnboarding) {
     return <WelcomeScreen onDone={markOnboardingSeen} />;
+  }
+
+  // Returning user on a fresh device: offer an explicit restore once per account
+  // before landing on the app. RestoreScreen records the decision (which flips
+  // restoreDecision here), so this renders exactly once per business per device.
+  if (
+    status === 'authenticated' &&
+    businessId &&
+    restoreDecision === undefined
+  ) {
+    return <RestoreScreen onDone={() => undefined} />;
   }
 
   return (

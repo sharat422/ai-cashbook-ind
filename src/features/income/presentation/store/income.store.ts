@@ -19,6 +19,12 @@ interface IncomeState {
   addEntry: (entry: Income) => void;
   /** Replace an entry by id (e.g. swap an optimistic entry for the synced one). */
   replaceEntry: (id: string, entry: Income) => void;
+  /**
+   * Replace the synced history with what the server returned (used by the
+   * restore-on-new-device flow). Any local entry still pending/failed to sync is
+   * preserved so an in-flight draft isn't lost when restoring.
+   */
+  restoreEntries: (serverEntries: Income[]) => void;
 
   // Queue actions
   enqueue: (pending: PendingIncome) => void;
@@ -52,6 +58,19 @@ export const useIncomeStore = create<IncomeState>()(
         set(state => ({
           entries: state.entries.map(e => (e.id === id ? entry : e)),
         })),
+
+      restoreEntries: serverEntries =>
+        set(state => {
+          const serverIds = new Set(serverEntries.map(e => e.id));
+          // Keep only local drafts the server doesn't know about yet.
+          const localPending = state.entries.filter(
+            e => e.syncStatus !== 'synced' && !serverIds.has(e.id),
+          );
+          const merged = [...localPending, ...serverEntries].sort((a, b) =>
+            b.createdAt.localeCompare(a.createdAt),
+          );
+          return {entries: merged, lastSyncedAt: new Date().toISOString()};
+        }),
 
       enqueue: pending =>
         set(state => ({queue: [...state.queue, pending]})),

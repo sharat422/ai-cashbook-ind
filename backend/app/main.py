@@ -26,6 +26,7 @@ from .routers import (
     notifications,
     recurring,
     reports,
+    restore,
     team,
     transactions,
 )
@@ -70,6 +71,7 @@ for module in (
     business,
     assistant,
     recurring,
+    restore,
     team,
     feedback,
 ):
