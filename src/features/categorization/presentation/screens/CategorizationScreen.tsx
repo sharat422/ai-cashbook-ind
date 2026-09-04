@@ -15,6 +15,7 @@ import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
 } from '@features/expense/domain/entities';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 
@@ -36,6 +37,7 @@ function toExpenseCategory(category: AiCategory): ExpenseCategory {
 export function CategorizationScreen({
   navigation,
 }: AppScreenProps<'Categorize'>): React.JSX.Element {
+  const t = useT();
   const [text, setText] = useState('');
   const [correction, setCorrection] = useState<AiCategory | null>(null);
   const {
@@ -69,10 +71,9 @@ export function CategorizationScreen({
   return (
     <Screen>
       <View className="py-8">
-        <Text variant="title">AI Categorization</Text>
+        <Text variant="title">{t('categorize.title')}</Text>
         <Text variant="subtitle" className="mt-2">
-          Paste a receipt or transaction description and we'll predict its
-          expense category.
+          {t('categorize.subtitle')}
         </Text>
 
         {/* Input */}
@@ -81,7 +82,7 @@ export function CategorizationScreen({
             className="min-h-[110px] p-0 text-base text-slate-900"
             value={text}
             onChangeText={setText}
-            placeholder="e.g. Swiggy order — lunch for staff ₹640"
+            placeholder={t('categorize.placeholder')}
             placeholderTextColor={colors.muted}
             multiline
             textAlignVertical="top"
@@ -90,18 +91,18 @@ export function CategorizationScreen({
         <View className="mt-2 flex-row justify-between">
           <Pressable onPress={() => setText(SAMPLE)}>
             <Text className="text-sm font-semibold text-primary">
-              Try an example
+              {t('categorize.tryExample')}
             </Text>
           </Pressable>
           {text.length > 0 ? (
             <Pressable onPress={onReset}>
-              <Text className="text-sm font-semibold text-muted">Clear</Text>
+              <Text className="text-sm font-semibold text-muted">{t('common.clear')}</Text>
             </Pressable>
           ) : null}
         </View>
 
         <Button
-          title="Categorize"
+          title={t('categorize.cta')}
           className="mt-4"
           loading={isCategorizing}
           disabled={!text.trim()}
@@ -115,7 +116,7 @@ export function CategorizationScreen({
 
             {/* Correction */}
             <Text variant="label" className="mt-5 mb-2">
-              Not right? Pick the correct category
+              {t('categorize.notRight')}
             </Text>
             <View className="flex-row flex-wrap" style={{gap: 8}}>
               {AI_CATEGORIES.map(category => {
@@ -141,12 +142,12 @@ export function CategorizationScreen({
             </View>
             {correction ? (
               <Text className="mt-2 text-xs font-medium text-success">
-                Saved for future learning.
+                {t('categorize.saved')}
               </Text>
             ) : null}
 
             <Button
-              title="Use in new expense"
+              title={t('categorize.useInExpense')}
               variant="secondary"
               className="mt-5"
               onPress={() =>
@@ -164,10 +165,10 @@ export function CategorizationScreen({
 
         {/* Learning log */}
         <View className="mt-8 mb-2 flex-row items-center justify-between">
-          <Text variant="label">Learning log</Text>
+          <Text variant="label">{t('categorize.learningLog')}</Text>
           {decisions.length > 0 ? (
             <Pressable onPress={clearHistory}>
-              <Text className="text-sm font-semibold text-danger">Clear</Text>
+              <Text className="text-sm font-semibold text-danger">{t('common.clear')}</Text>
             </Pressable>
           ) : null}
         </View>

@@ -11,6 +11,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {Text} from '@components/ui';
 import {useAsk} from '@features/assistant/presentation/hooks';
+import {useT, type TKey} from '@/i18n';
 import {colors} from '@theme/colors';
 
 interface Msg {
@@ -18,16 +19,17 @@ interface Msg {
   text: string;
 }
 
-const SUGGESTIONS = [
-  'Who owes me the most?',
-  'How much did I collect this month?',
-  'Which customers are late?',
-  'What were my biggest expenses?',
-  'How much did I sell last week?',
-  'Compare this month with last month.',
+const SUGGESTION_KEYS: TKey[] = [
+  'assistant.s1',
+  'assistant.s2',
+  'assistant.s3',
+  'assistant.s4',
+  'assistant.s5',
+  'assistant.s6',
 ];
 
 export function AssistantScreen(): React.JSX.Element {
+  const t = useT();
   const ask = useAsk();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -50,8 +52,8 @@ export function AssistantScreen(): React.JSX.Element {
             role: 'ai',
             text:
               err instanceof Error
-                ? `Sorry — ${err.message}`
-                : "Sorry, I couldn't answer that.",
+                ? t('assistant.errorPrefix', {message: err.message})
+                : t('assistant.errorGeneric'),
           },
         ]),
       onSettled: () =>
@@ -67,9 +69,9 @@ export function AssistantScreen(): React.JSX.Element {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View className="px-5 pb-2 pt-4">
-          <Text variant="title">🤖 Ask AI</Text>
+          <Text variant="title">{t('assistant.title')}</Text>
           <Text variant="subtitle" className="mt-0.5">
-            Ask anything about your business
+            {t('assistant.subtitle')}
           </Text>
         </View>
 
@@ -81,21 +83,24 @@ export function AssistantScreen(): React.JSX.Element {
           contentContainerStyle={{paddingVertical: 12, gap: 10}}>
           {messages.length === 0 ? (
             <View style={{gap: 10}}>
-              <Text variant="caption">Try asking:</Text>
-              {SUGGESTIONS.map(s => (
-                <Pressable
-                  key={s}
-                  onPress={() => send(s)}
-                  className="rounded-2xl border border-border bg-white px-4 py-3">
-                  <Text className="text-sm text-slate-800">{s}</Text>
-                </Pressable>
-              ))}
+              <Text variant="caption">{t('assistant.tryAsking')}</Text>
+              {SUGGESTION_KEYS.map(k => {
+                const s = t(k);
+                return (
+                  <Pressable
+                    key={k}
+                    onPress={() => send(s)}
+                    className="rounded-2xl border border-border bg-white px-4 py-3">
+                    <Text className="text-sm text-slate-800">{s}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           ) : (
             messages.map((m, i) => <Bubble key={i} msg={m} />)
           )}
           {ask.isPending ? (
-            <Bubble msg={{role: 'ai', text: 'Thinking…'}} />
+            <Bubble msg={{role: 'ai', text: t('assistant.thinking')}} />
           ) : null}
         </ScrollView>
 
@@ -105,7 +110,7 @@ export function AssistantScreen(): React.JSX.Element {
             className="h-11 flex-1 rounded-full border border-border bg-white px-4 text-base text-slate-900"
             value={input}
             onChangeText={setInput}
-            placeholder="Ask anything…"
+            placeholder={t('assistant.placeholder')}
             placeholderTextColor={colors.muted}
             returnKeyType="send"
             onSubmitEditing={() => send(input)}
