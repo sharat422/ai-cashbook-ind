@@ -8,6 +8,7 @@ from ..rbac import DATA_VIEW, ENTRY_CREATE
 from ..models import Business, Expense
 from ..serializers import expense_dto
 from ..storage import save_upload
+from ..validation import validate_amount
 
 router = APIRouter(tags=["expenses"])
 
@@ -37,6 +38,7 @@ def create_expense(
     business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
+    amount = validate_amount(amount)
     existing = db.scalars(
         select(Expense).where(
             Expense.business_id == business.id, Expense.client_id == client_id

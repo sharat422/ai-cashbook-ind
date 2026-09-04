@@ -8,6 +8,7 @@ from ..rbac import DATA_VIEW, ENTRY_CREATE
 from ..models import Business, Income
 from ..serializers import income_dto
 from ..storage import save_upload
+from ..validation import validate_amount
 
 router = APIRouter(tags=["incomes"])
 
@@ -36,6 +37,7 @@ def create_income(
     business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
+    amount = validate_amount(amount)
     # Idempotency: a retried offline submission must not create a duplicate.
     existing = db.scalars(
         select(Income).where(

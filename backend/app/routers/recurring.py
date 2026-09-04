@@ -10,6 +10,7 @@ from ..rbac import DATA_VIEW, SETTINGS_MANAGE
 from ..models import Business, Expense, RecurringExpense, gen_id
 from ..recurring import FREQUENCIES, catch_up, next_occurrence
 from ..serializers import expense_dto, recurring_expense_dto
+from ..validation import validate_amount
 
 router = APIRouter(tags=["recurring"])
 
@@ -30,8 +31,7 @@ class RecurringBody(BaseModel):
 def _validate(body: RecurringBody) -> None:
     if not body.name.strip():
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Name is required")
-    if body.amount <= 0:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Amount must be positive")
+    validate_amount(body.amount)  # positive, finite, and within the sane cap
     if body.frequency not in FREQUENCIES:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,

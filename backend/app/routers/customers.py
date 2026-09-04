@@ -10,6 +10,7 @@ from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
 from ..models import Business, Customer, LedgerEntry, now_iso
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
+from ..validation import validate_amount, validate_mobile
 
 router = APIRouter(tags=["customers"])
 
@@ -86,7 +87,11 @@ def create_customer(
     business: Business = Depends(require(ENTRY_CREATE)),
     db: Session = Depends(get_db),
 ) -> dict:
-    row = Customer(business_id=business.id, **body.model_dump())
+    # Server-side gate: mobile is optional (party-by-name), but must be valid if
+    # given. Store the normalized digits so downstream (WhatsApp/UPI) is clean.
+    data = body.model_dump()
+    data["mobile"] = validate_mobile(body.mobile, required=False)
+    row = Customer(business_id=business.id, **data)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -116,7 +121,9 @@ def update_customer(
             ),
         )
 
-    for key, value in body.model_dump().items():
+    data = body.model_dump()
+    data["mobile"] = validate_mobile(body.mobile, required=False)
+    for key, value in data.items():
         setattr(customer, key, value)
     customer.version = (customer.version or 1) + 1
     customer.updated_at = now_iso()
@@ -168,6 +175,12 @@ def add_ledger_entry(
     db: Session = Depends(get_db),
 ) -> dict:
     customer = _owned_customer(db, business, customer_id)
+    amount = validate_amount(amount)
+    if type not in ("credit", "payment"):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Entry type must be 'credit' or 'payment'.",
+        )
 
     existing = db.scalars(
         select(LedgerEntry).where(

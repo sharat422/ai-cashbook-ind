@@ -13,6 +13,7 @@ from ..deps import get_current_membership
 from ..models import Business, BusinessMember, User
 from ..security import create_access_token, get_current_user
 from ..serializers import business_dto
+from ..validation import validate_mobile
 
 log = logging.getLogger("cashbook.auth")
 router = APIRouter(tags=["auth"])
@@ -41,30 +42,32 @@ class CreateBusinessInput(BaseModel):
 
 @router.post("/auth/otp/request")
 def request_otp(body: RequestOtpInput) -> dict:
+    mobile = validate_mobile(body.mobile)  # reject malformed numbers up front
     verification_id = f"otp-{uuid.uuid4().hex}"
     otp = f"{random.randint(0, 999999):06d}"
-    _OTP_STORE[verification_id] = {"mobile": body.mobile, "otp": otp}
+    _OTP_STORE[verification_id] = {"mobile": mobile, "otp": otp}
     if settings.debug:
-        log.info("OTP for %s -> %s (verificationId=%s)", body.mobile, otp, verification_id)
+        log.info("OTP for %s -> %s (verificationId=%s)", mobile, otp, verification_id)
     # TODO: send `otp` via SMS provider here.
-    return {"verificationId": verification_id, "mobile": body.mobile}
+    return {"verificationId": verification_id, "mobile": mobile}
 
 
 @router.post("/auth/otp/verify")
 def verify_otp(body: VerifyOtpInput, db: Session = Depends(get_db)) -> dict:
+    mobile = validate_mobile(body.mobile)  # normalize + validate before lookup
     record = _OTP_STORE.get(body.verificationId)
     master_ok = settings.debug and body.otp == settings.master_otp
     if not master_ok:
-        if record is None or record["otp"] != body.otp or record["mobile"] != body.mobile:
+        if record is None or record["otp"] != body.otp or record["mobile"] != mobile:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid OTP. Please try again.",
             )
     _OTP_STORE.pop(body.verificationId, None)
 
-    user = db.scalars(select(User).where(User.mobile == body.mobile)).first()
+    user = db.scalars(select(User).where(User.mobile == mobile)).first()
     if user is None:
-        user = User(mobile=body.mobile)
+        user = User(mobile=mobile)
         db.add(user)
         db.commit()
         db.refresh(user)

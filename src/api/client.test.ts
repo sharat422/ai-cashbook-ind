@@ -1,4 +1,41 @@
-import {ApiError, NetworkError, retryDelayMs, shouldRetryRequest} from './client';
+import {
+  ApiError,
+  humanizeApiError,
+  NetworkError,
+  retryDelayMs,
+  shouldRetryRequest,
+} from './client';
+
+describe('humanizeApiError', () => {
+  it('uses a string detail (our raised HTTPExceptions)', () => {
+    expect(humanizeApiError({detail: 'Amount must be greater than ₹0.'})).toBe(
+      'Amount must be greater than ₹0.',
+    );
+  });
+
+  it('flattens FastAPI default 422 array detail into readable text', () => {
+    const body = {
+      detail: [
+        {msg: 'field required', loc: ['body', 'amount']},
+        {msg: 'value is not a valid float', loc: ['body', 'amount']},
+      ],
+    };
+    expect(humanizeApiError(body)).toBe(
+      'field required\nvalue is not a valid float',
+    );
+  });
+
+  it('falls back to a short raw body, then a generic message', () => {
+    expect(humanizeApiError(null, 'Bad Gateway')).toBe('Bad Gateway');
+    expect(humanizeApiError(null, null)).toBe(
+      'Something went wrong. Please try again.',
+    );
+    // A huge HTML error page is ignored in favour of the generic message.
+    expect(humanizeApiError(null, 'x'.repeat(500))).toBe(
+      'Something went wrong. Please try again.',
+    );
+  });
+});
 
 describe('shouldRetryRequest', () => {
   it('retries transient network failures a few times, then gives up', () => {

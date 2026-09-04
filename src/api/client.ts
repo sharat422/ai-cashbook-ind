@@ -50,6 +50,37 @@ function isFormData(value: unknown): value is FormData {
 }
 
 /**
+ * Turn a parsed error body into one human sentence.
+ *
+ * FastAPI uses `{"detail": "..."}` for our raised errors, but its *default*
+ * validation 422 uses `{"detail": [{"msg": "...", "loc": [...]}, ...]}`. We
+ * convert that array to readable text too, so a validation error never surfaces
+ * as the opaque "Request failed". Falls back to a short raw body, then a generic
+ * message — the caller always gets a non-empty string.
+ */
+export function humanizeApiError(
+  data: unknown,
+  rawText?: string | null,
+): string {
+  const generic = 'Something went wrong. Please try again.';
+  const record = data as {detail?: unknown; message?: unknown} | null;
+  const detail = record?.detail;
+
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map(d => (typeof d === 'string' ? d : (d as {msg?: string})?.msg))
+      .filter((m): m is string => !!m);
+    if (msgs.length) return msgs.join('\n');
+  }
+  if (typeof record?.message === 'string' && record.message.trim()) {
+    return record.message;
+  }
+  if (rawText && rawText.trim() && rawText.length < 200) return rawText;
+  return generic;
+}
+
+/**
  * Thin fetch wrapper for the FastAPI backend: prefixes the API root, injects
  * the auth token, serializes JSON (or passes FormData through untouched for
  * file uploads), applies a timeout, and normalizes errors.
@@ -100,14 +131,11 @@ export async function apiRequest<T>(
     }
 
     if (!response.ok) {
-      // FastAPI conventionally returns {"detail": "..."} on errors.
-      const message =
-        (data && (data.detail || data.message)) ||
-        (text && text.length < 200 ? text : null) ||
-        'Something went wrong. Please try again.';
+      // FastAPI returns {"detail": ...} on errors (a string for ours, an array
+      // for default validation 422) — normalize either into one human sentence.
       const apiError = new ApiError(
         response.status,
-        typeof message === 'string' ? message : 'Request failed',
+        humanizeApiError(data, text),
       );
       // Log server-side failures (5xx); 4xx are expected and handled by callers.
       if (response.status >= 500) {
