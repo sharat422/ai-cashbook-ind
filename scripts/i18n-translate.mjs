@@ -261,10 +261,30 @@ async function translate(en, allHashes, locales, dryRun) {
   console.log('\nWrote updated locale files + hash manifest.');
 }
 
+/**
+ * Load ANTHROPIC_API_KEY from a gitignored .env at the repo root if it isn't
+ * already in the environment — so `npm run i18n:translate` works without pasting
+ * the key on the command line (keeps it out of shell history). Tiny hand-rolled
+ * parser; the script stays dependency-free.
+ */
+function loadDotEnvKey() {
+  if (process.env.ANTHROPIC_API_KEY) return;
+  const envPath = join(ROOT, '.env');
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const m = line.match(/^\s*ANTHROPIC_API_KEY\s*=\s*(.+?)\s*$/);
+    if (m) {
+      process.env.ANTHROPIC_API_KEY = m[1].replace(/^["']|["']$/g, '');
+      break;
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 async function main() {
+  loadDotEnvKey();
   const args = process.argv.slice(2);
   const isCheck = args.includes('--check');
   const isDry = args.includes('--dry-run');
