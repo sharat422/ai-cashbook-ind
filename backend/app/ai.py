@@ -276,6 +276,194 @@ def parse_transaction(text: str, today: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# OpenAI — voice EXPENSE extraction (multilingual, uncertainty-aware)
+# ---------------------------------------------------------------------------
+# A distinct parser from parse_transaction: this one feeds the *personal/business
+# expense* flow (amount + category + vendor + date), not the customer khata. It
+# follows an "extraction engine" contract — detect the language, extract only
+# what was said, and FLAG anything uncertain rather than guessing — so the app
+# can ask the user to confirm before saving.
+
+# The app's fixed expense categories (must match EXPENSE_CATEGORIES on the client).
+EXPENSE_AI_CATEGORIES = [
+    "Rent", "Salary", "Fuel", "Food", "Travel", "Utilities", "Miscellaneous",
+]
+
+# Map the common "personal expense" vocabulary a model might emit onto our set.
+_EXPENSE_CATEGORY_ALIASES = {
+    "food": "Food", "groceries": "Food", "restaurant": "Food", "dining": "Food",
+    "transport": "Travel", "transportation": "Travel", "travel": "Travel",
+    "cab": "Travel", "taxi": "Travel", "bus": "Travel", "train": "Travel",
+    "fuel": "Fuel", "petrol": "Fuel", "diesel": "Fuel", "gas": "Fuel",
+    "bills": "Utilities", "utilities": "Utilities", "electricity": "Utilities",
+    "water": "Utilities", "internet": "Utilities", "phone": "Utilities",
+    "rent": "Rent", "lease": "Rent",
+    "salary": "Salary", "wages": "Salary", "payroll": "Salary",
+    "shopping": "Miscellaneous", "health": "Miscellaneous",
+    "entertainment": "Miscellaneous", "other": "Miscellaneous",
+}
+
+
+def _to_expense_category(value) -> str | None:
+    """Coerce a model/heuristic category into one of EXPENSE_AI_CATEGORIES."""
+    if not value:
+        return None
+    s = str(value).strip()
+    if s in EXPENSE_AI_CATEGORIES:
+        return s
+    return _EXPENSE_CATEGORY_ALIASES.get(s.lower())
+
+
+_CONFIDENCE = {"high", "medium", "low"}
+_EXPENSE_FIELDS = {"amount", "currency", "category", "vendor", "date"}
+
+
+def _empty_expense(text: str, today: str, language: str | None) -> dict:
+    """A 'couldn't parse' result — everything null/flagged for confirmation."""
+    return {
+        "detected_language": language or "und",
+        "amount": None,
+        "currency": None,
+        "category": None,
+        "vendor": None,
+        "date": today,
+        "note": (text or "").strip(),
+        "raw_transcript": text,
+        "confidence": "low",
+        "needs_confirmation": True,
+        "ambiguous_fields": ["amount", "category"],
+        "source": "rule",
+    }
+
+
+def _heuristic_parse_expense(text: str, today: str, language: str | None) -> dict:
+    """Offline fallback: reuse the amount/category heuristics, flag uncertainty."""
+    amount = _heuristic_amount(text)
+    category, _conf = _heuristic_category(text)
+    category = _to_expense_category(category) or "Miscellaneous"
+    ambiguous = ["currency"]  # currency is always a guess without a key
+    if amount is None:
+        ambiguous.append("amount")
+    ambiguous.append("category")  # heuristic categories are weak
+    return {
+        "detected_language": language or "und",
+        "amount": amount,
+        "currency": "INR",
+        "category": category if amount is not None else None,
+        "vendor": None,
+        "date": today,
+        "note": (text or "").strip(),
+        "raw_transcript": text,
+        "confidence": "low",
+        "needs_confirmation": True,
+        "ambiguous_fields": ambiguous,
+        "source": "rule",
+    }
+
+
+def _normalize_expense(data: dict, text: str, today: str, language: str | None) -> dict:
+    """Validate/clamp the model's JSON to the contract the app depends on."""
+    amount = data.get("amount")
+    try:
+        amount = float(amount) if amount is not None else None
+    except (TypeError, ValueError):
+        amount = None
+    if amount is not None and amount <= 0:
+        amount = None
+
+    confidence = str(data.get("confidence", "low")).lower()
+    if confidence not in _CONFIDENCE:
+        confidence = "low"
+
+    ambiguous = data.get("ambiguous_fields") or []
+    if not isinstance(ambiguous, list):
+        ambiguous = []
+    ambiguous = [f for f in (str(x) for x in ambiguous) if f in _EXPENSE_FIELDS]
+
+    vendor = data.get("vendor") or data.get("merchant")
+    vendor = str(vendor).strip() if vendor else None
+
+    category = _to_expense_category(data.get("category"))
+    if data.get("category") and category is None:
+        # Model returned a category outside our set — keep the entry but flag it.
+        if "category" not in ambiguous:
+            ambiguous.append("category")
+
+    date = str(data.get("date") or today)[:10]
+
+    needs = bool(data.get("needs_confirmation")) or len(ambiguous) > 0 or amount is None
+    return {
+        "detected_language": str(data.get("detected_language") or language or "und"),
+        "amount": amount,
+        "currency": (str(data.get("currency")).upper() if data.get("currency") else None),
+        "category": category,
+        "vendor": vendor,
+        "date": date,
+        "note": str(data.get("note") or text or "").strip(),
+        "raw_transcript": text,
+        "confidence": confidence,
+        "needs_confirmation": needs,
+        "ambiguous_fields": ambiguous,
+        "source": "ai",
+    }
+
+
+def parse_expense(text: str, today: str, language: str | None = None) -> dict:
+    """Extract a structured expense from a (possibly noisy, any-language) speech
+    transcript. Flags uncertain fields instead of guessing. Falls back to a
+    heuristic without an API key."""
+    if not (text or "").strip():
+        return _empty_expense(text, today, language)
+    if not settings.openai_api_key:
+        return _heuristic_parse_expense(text, today, language)
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.openai_api_key)
+        prompt = (
+            "You are an expense-extraction engine for a voice expense tracker used "
+            "by Indian shopkeepers and small businesses. You receive a raw "
+            "speech-to-text transcript in ANY language, possibly with transcription "
+            "errors, and extract ONE expense.\n\n"
+            "Return ONLY JSON with keys: detected_language (ISO code like 'hi','en'), "
+            "amount (number or null), currency (ISO 4217 like 'INR','USD' or null), "
+            f"category (one of: {', '.join(EXPENSE_AI_CATEGORIES)}; or null), "
+            "vendor (merchant/payee name as said, or null), date (YYYY-MM-DD), "
+            "note (short cleaned description), confidence ('high'|'medium'|'low'), "
+            "needs_confirmation (boolean), ambiguous_fields (array of any of "
+            "amount/currency/category/vendor/date that need user review).\n\n"
+            "Rules:\n"
+            "- Do NOT guess. If a field is unclear or missing, leave it null and add "
+            "its name to ambiguous_fields.\n"
+            "- Resolve number words in any language (e.g. 'paanch sau'=500, 'do "
+            "hazaar'=2000, 'cinq cents'=500) to numerals.\n"
+            "- If currency isn't stated, default to INR but add 'currency' to "
+            "ambiguous_fields (it's an inference).\n"
+            "- If a non-INR currency is clearly stated, keep it and add 'currency' "
+            "to ambiguous_fields (this app records INR).\n"
+            "- If the amount is spoken ambiguously (e.g. 'two fifty' = 250 or 2.50), "
+            "pick the most likely for a typical expense, set confidence 'low', add "
+            "'amount' to ambiguous_fields.\n"
+            "- If the transcript isn't clearly an expense, set amount and category "
+            "null, confidence 'low', needs_confirmation true.\n"
+            "- Never fabricate a vendor, amount or date that wasn't stated.\n"
+            f"- Today is {today}; resolve 'today','yesterday','last Monday', etc.\n\n"
+            f'Transcript: "{text}"'
+        )
+        resp = client.chat.completions.create(
+            model=settings.openai_model,
+            response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        data = json.loads(resp.choices[0].message.content or "{}")
+        return _normalize_expense(data, text, today, language)
+    except Exception as exc:  # noqa: BLE001 — degrade gracefully
+        log.warning("OpenAI parse_expense failed, using heuristic: %s", exc)
+        return _heuristic_parse_expense(text, today, language)
+
+
+# ---------------------------------------------------------------------------
 # OpenAI — speech-to-text (multilingual voice entry)
 # ---------------------------------------------------------------------------
 
