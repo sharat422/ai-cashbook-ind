@@ -6,6 +6,7 @@ import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import type {Item} from '@features/items/domain/entities';
 import {useItems} from '@features/items/presentation/hooks/useItems';
 import {useDebouncedValue} from '@/shared/hooks/useDebouncedValue';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
@@ -13,6 +14,7 @@ import {formatINR} from '@utils/currency';
 export function ItemListScreen({
   navigation,
 }: AppScreenProps<'Items'>): React.JSX.Element {
+  const t = useT();
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, 350);
   const {data, isLoading, isError, error, refetch, isRefetching} =
@@ -28,25 +30,30 @@ export function ItemListScreen({
     <Screen scroll={false} edges={['top']}>
       <View className="pb-3 pt-4">
         <View className="flex-row items-center justify-between">
-          <Text variant="title">Items</Text>
+          <Text variant="title">{t('items.title')}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => navigation.navigate('ItemForm')}
             className="rounded-full bg-primary px-4 py-2">
-            <Text className="text-sm font-semibold text-white">+ Add</Text>
+            <Text className="text-sm font-semibold text-white">
+              {t('items.add')}
+            </Text>
           </Pressable>
         </View>
         <View className="mt-4">
           <SearchBar
             value={search}
             onChangeText={setSearch}
-            placeholder="Search by name or HSN/SAC"
+            placeholder={t('items.searchPlaceholder')}
           />
         </View>
         {!showSkeleton && !showError ? (
           <Text variant="caption" className="mt-3">
-            {(data?.total ?? 0).toLocaleString('en-IN')} item
-            {(data?.total ?? 0) === 1 ? '' : 's'}
+            {(data?.total ?? 0) === 1
+              ? t('items.countOne')
+              : t('items.count', {
+                  count: (data?.total ?? 0).toLocaleString('en-IN'),
+                })}
           </Text>
         ) : null}
       </View>
@@ -61,7 +68,7 @@ export function ItemListScreen({
         ) : showError ? (
           <View className="flex-1 justify-center">
             <ErrorState
-              message={error?.message ?? 'Could not load items.'}
+              message={error?.message ?? t('items.loadError')}
               onRetry={refetch}
               retrying={isRefetching}
             />
@@ -70,13 +77,13 @@ export function ItemListScreen({
           <View className="flex-1 justify-center">
             <EmptyState
               icon={hasSearch ? '🔎' : '🏷️'}
-              title={hasSearch ? 'No items found' : 'No items yet'}
-              message={
-                hasSearch
-                  ? 'Try a different name or code.'
-                  : 'Add products or services to build invoices faster.'
+              title={
+                hasSearch ? t('items.emptySearchTitle') : t('items.emptyTitle')
               }
-              actionLabel={hasSearch ? undefined : '+ Add item'}
+              message={
+                hasSearch ? t('items.emptySearchMsg') : t('items.emptyMsg')
+              }
+              actionLabel={hasSearch ? undefined : t('items.addFirst')}
               onAction={hasSearch ? undefined : () => navigation.navigate('ItemForm')}
             />
           </View>
@@ -114,6 +121,7 @@ function ItemRow({
   item: Item;
   onPress: () => void;
 }): React.JSX.Element {
+  const t = useT();
   return (
     <Pressable
       onPress={onPress}
@@ -123,9 +131,9 @@ function ItemRow({
           {item.name}
         </Text>
         <Text variant="caption" className="mt-0.5">
-          {item.type === 'service' ? 'Service' : 'Product'}
+          {item.type === 'service' ? t('items.service') : t('items.product')}
           {item.hsnSac ? ` · HSN ${item.hsnSac}` : ''} · GST {item.gstRate}%
-          {item.trackStock ? ` · Stock ${item.stockQty}` : ''}
+          {item.trackStock ? ` · ${t('items.stock')} ${item.stockQty}` : ''}
         </Text>
       </View>
       <Text className="text-base font-semibold text-slate-900">
