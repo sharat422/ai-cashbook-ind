@@ -192,7 +192,9 @@ async function translate(en, allHashes, locales, dryRun) {
     }
     console.log(`  ${l}: ${stale.length} key(s) to translate`);
     chunk(stale, CHUNK_SIZE).forEach((keys, i) => {
-      const id = `${l}#${i}`;
+      // custom_id must match ^[a-zA-Z0-9_-]{1,64}$ — use '-' (locale codes are
+      // lowercase letters, so e.g. "hi-0", "te-3").
+      const id = `${l}-${i}`;
       plan[id] = {locale: l, keys};
       requests.push({
         custom_id: id,
