@@ -1,0 +1,65 @@
+name: i18n translations
+
+# Keeps the generated locale files (hi, te, …) in sync with the English source
+# of truth, src/i18n/locales/en.json.
+#
+# - check:     runs on every PR that touches i18n. Fails if any target locale is
+#              missing keys or has stale translations (English source changed).
+#              No API key needed — it only compares the hash manifest.
+# - translate: runs on push to main (when en.json changes) or manually. Uses the
+#              Anthropic Batch API to translate ONLY the changed/new keys, then
+#              commits the updated locale files back. Needs the ANTHROPIC_API_KEY
+#              repo secret; skips gracefully if it isn't set.
+
+on:
+  pull_request:
+    paths:
+      - 'src/i18n/**'
+      - 'scripts/i18n-translate.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'src/i18n/locales/en.json'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # The script uses only Node built-ins + global fetch, so no install needed.
+      - name: Check locales are in sync with en.json
+        run: node scripts/i18n-translate.mjs --check
+
+  translate:
+    # Never on PRs (avoids exposing the secret to forked-PR runners).
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Translate changed keys and commit
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY not configured — skipping auto-translation."
+            exit 0
+          fi
+          node scripts/i18n-translate.mjs
+          if git diff --quiet -- src/i18n/locales; then
+            echo "No translation changes."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/i18n/locales
+            git commit -m "chore(i18n): auto-translate updated strings"
+            git push
+          fi

@@ -8,7 +8,10 @@
     "start": "react-native start",
     "lint": "eslint .",
     "test": "jest",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "i18n:check": "node scripts/i18n-translate.mjs --check",
+    "i18n:translate": "node scripts/i18n-translate.mjs",
+    "i18n:dry": "node scripts/i18n-translate.mjs --dry-run"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.0",
