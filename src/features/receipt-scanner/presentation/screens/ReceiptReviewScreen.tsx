@@ -12,6 +12,7 @@ import {
   ScanProgress,
 } from '@features/receipt-scanner/presentation/components';
 import {useScanReceipt} from '@features/receipt-scanner/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {toISODate} from '@utils/date';
 
@@ -45,6 +46,7 @@ export function ReceiptReviewScreen({
   navigation,
   route,
 }: AppScreenProps<'ReceiptReview'>): React.JSX.Element {
+  const t = useT();
   const {image} = route.params;
   const {scan, stage, extraction, isError, error, reset} = useScanReceipt();
   const [fields, setFields] = useState<CorrectedFields | null>(null);
@@ -99,12 +101,12 @@ export function ReceiptReviewScreen({
       <Screen>
         <View className="flex-1 justify-center py-8">
           <ErrorState
-            title="Couldn't read the receipt"
-            message={error?.message ?? 'Please try again with a clearer photo.'}
+            title={t('receipt.errorTitle')}
+            message={error?.message ?? t('receipt.errorMsg')}
             onRetry={retry}
           />
           <Button
-            title="Enter manually"
+            title={t('receipt.enterManually')}
             variant="ghost"
             className="mt-3"
             onPress={() =>
@@ -121,9 +123,9 @@ export function ReceiptReviewScreen({
     return (
       <Screen>
         <View className="py-8">
-          <Text variant="title">Scanning receipt…</Text>
+          <Text variant="title">{t('receipt.scanningTitle')}</Text>
           <Text variant="subtitle" className="mt-2">
-            Hang tight while we read and categorize your receipt.
+            {t('receipt.scanningSubtitle')}
           </Text>
           <View className="mt-6 items-center">
             <Image
@@ -144,10 +146,9 @@ export function ReceiptReviewScreen({
   return (
     <Screen>
       <View className="py-8">
-        <Text variant="title">Review details</Text>
+        <Text variant="title">{t('receipt.reviewTitle')}</Text>
         <Text variant="subtitle" className="mt-2">
-          We pre-filled these from your receipt. Check the highlighted fields and
-          fix anything that looks off.
+          {t('receipt.reviewSubtitle')}
         </Text>
 
         <View className="mt-6 flex-row items-center rounded-2xl border border-border bg-white p-3">
@@ -157,23 +158,23 @@ export function ReceiptReviewScreen({
             resizeMode="cover"
           />
           <Text variant="caption" className="ml-3 flex-1">
-            Tap any field to edit. Confidence is shown per field.
+            {t('receipt.tapToEdit')}
           </Text>
         </View>
 
         <View className="mt-6" style={{gap: 18}}>
           <ExtractedFieldRow
-            label="Vendor name"
+            label={t('receipt.vendorName')}
             confidence={extraction.vendorName.confidence}>
             <TextField
               value={fields.vendor}
               onChangeText={v => update('vendor', v)}
-              placeholder="Vendor / payee"
+              placeholder={t('receipt.vendorPlaceholder')}
             />
           </ExtractedFieldRow>
 
           <ExtractedFieldRow
-            label="Amount"
+            label={t('form.amount')}
             confidence={extraction.amount.confidence}>
             <AmountInput
               value={fields.amount}
@@ -182,7 +183,7 @@ export function ReceiptReviewScreen({
           </ExtractedFieldRow>
 
           <ExtractedFieldRow
-            label="Tax amount"
+            label={t('receipt.taxAmount')}
             confidence={extraction.taxAmount.confidence}>
             <AmountInput
               value={fields.taxAmount}
@@ -191,7 +192,7 @@ export function ReceiptReviewScreen({
           </ExtractedFieldRow>
 
           <ExtractedFieldRow
-            label="Date"
+            label={t('form.date')}
             confidence={extraction.date.confidence}>
             <DateField
               value={fields.date}
@@ -200,29 +201,29 @@ export function ReceiptReviewScreen({
           </ExtractedFieldRow>
 
           <ExtractedFieldRow
-            label="Invoice number"
+            label={t('receipt.invoiceNumber')}
             confidence={extraction.invoiceNumber.confidence}>
             <TextField
               value={fields.invoiceNumber}
               onChangeText={v => update('invoiceNumber', v)}
-              placeholder="Invoice / bill no."
+              placeholder={t('receipt.invoicePlaceholder')}
               autoCapitalize="characters"
             />
           </ExtractedFieldRow>
 
           <ExtractedFieldRow
-            label="GST number"
+            label={t('customers.gst')}
             confidence={extraction.gstNumber.confidence}>
             <TextField
               value={fields.gstNumber}
               onChangeText={v => update('gstNumber', v)}
-              placeholder="GSTIN"
+              placeholder={t('receipt.gstPlaceholder')}
               autoCapitalize="characters"
             />
           </ExtractedFieldRow>
 
           <ExtractedFieldRow
-            label="Category (AI suggested)"
+            label={t('receipt.categoryAi')}
             confidence={extraction.category.confidence}>
             <ChipSelect
               options={EXPENSE_CATEGORIES}
@@ -233,12 +234,12 @@ export function ReceiptReviewScreen({
         </View>
 
         <Button
-          title="Create expense draft"
+          title={t('receipt.createDraft')}
           className="mt-8"
           onPress={onCreateDraft}
         />
         <Button
-          title="Retake / choose another"
+          title={t('receipt.retake')}
           variant="ghost"
           className="mt-2"
           onPress={() => navigation.replace('ReceiptCapture')}

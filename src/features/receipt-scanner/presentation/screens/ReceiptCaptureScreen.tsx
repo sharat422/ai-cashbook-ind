@@ -9,6 +9,7 @@ import {
 
 import {Button, Screen, Text} from '@components/ui';
 import type {Attachment} from '@features/receipt-scanner/domain/entities';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
 function assetToAttachment(asset: Asset): Attachment | null {
@@ -27,10 +28,11 @@ function assetToAttachment(asset: Asset): Attachment | null {
 export function ReceiptCaptureScreen({
   navigation,
 }: AppScreenProps<'ReceiptCapture'>): React.JSX.Element {
+  const t = useT();
   const onResponse = (res: ImagePickerResponse) => {
     if (res.didCancel) return;
     if (res.errorCode) {
-      Alert.alert('Could not get image', res.errorMessage ?? res.errorCode);
+      Alert.alert(t('receipt.couldNotGetImage'), res.errorMessage ?? res.errorCode);
       return;
     }
     const asset = res.assets?.[0];
@@ -53,10 +55,9 @@ export function ReceiptCaptureScreen({
   return (
     <Screen>
       <View className="flex-1 py-8">
-        <Text variant="title">Scan a receipt</Text>
+        <Text variant="title">{t('receipt.captureTitle')}</Text>
         <Text variant="subtitle" className="mt-2">
-          Take a clear photo of your bill or receipt. We'll read the details and
-          fill in the expense for you.
+          {t('receipt.captureSubtitle')}
         </Text>
 
         {/* Framing hint */}
@@ -64,15 +65,14 @@ export function ReceiptCaptureScreen({
           <View className="aspect-[3/4] w-3/4 items-center justify-center rounded-3xl border-2 border-dashed border-border bg-white">
             <Text className="text-5xl">🧾</Text>
             <Text variant="caption" className="mt-3 px-6 text-center">
-              Place the receipt on a flat surface with good lighting and capture
-              the whole bill.
+              {t('receipt.frameHint')}
             </Text>
           </View>
         </View>
 
-        <Button title="📷 Take photo" className="mt-6" onPress={capture} />
+        <Button title={t('receipt.takePhoto')} className="mt-6" onPress={capture} />
         <Button
-          title="Choose from gallery"
+          title={t('receipt.chooseGallery')}
           variant="secondary"
           className="mt-2"
           onPress={pickFromGallery}

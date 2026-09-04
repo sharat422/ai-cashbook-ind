@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {OtpInput, Text} from '@components/ui';
 import {PIN_LENGTH, useAppLockStore} from '@features/security/store/appLock.store';
+import {useT} from '@/i18n';
 
 /**
  * Full-screen lock overlay. Rendered on top of the app when the lock is active;
@@ -11,6 +12,7 @@ import {PIN_LENGTH, useAppLockStore} from '@features/security/store/appLock.stor
  * correct PIN — or a biometric check — succeeds.
  */
 export function UnlockScreen(): React.JSX.Element {
+  const t = useT();
   const verifyPin = useAppLockStore(s => s.verifyPin);
   const biometricEnabled = useAppLockStore(s => s.biometricEnabled);
   const unlockWithBiometrics = useAppLockStore(s => s.unlockWithBiometrics);
@@ -58,11 +60,10 @@ export function UnlockScreen(): React.JSX.Element {
             <Text className="text-3xl">🔒</Text>
           </View>
           <Text className="mt-6 text-2xl font-extrabold tracking-tight text-slate-900">
-            Enter your PIN
+            {t('unlock.title')}
           </Text>
           <Text className="mt-2 text-center text-base text-muted">
-            Smart CashBook is locked. Enter your {PIN_LENGTH}-digit PIN to
-            continue.
+            {t('unlock.subtitle', {n: PIN_LENGTH})}
           </Text>
 
           <View className="mt-8 w-56">
@@ -77,7 +78,7 @@ export function UnlockScreen(): React.JSX.Element {
           </View>
           {error ? (
             <Text className="mt-4 text-sm font-medium text-danger">
-              Incorrect PIN. Try again.
+              {t('unlock.incorrect')}
             </Text>
           ) : null}
 
@@ -89,7 +90,7 @@ export function UnlockScreen(): React.JSX.Element {
               style={{gap: 8}}>
               <Text className="text-xl">👆</Text>
               <Text className="text-base font-semibold text-primary">
-                Use biometrics
+                {t('unlock.useBiometrics')}
               </Text>
             </Pressable>
           ) : null}

@@ -17,20 +17,22 @@ import {
   type RelationshipLevel,
 } from '@features/collection/domain/entities';
 import {MessageOptionCard} from '@features/collection/presentation/components';
+import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
 import {onlyDigits} from '@utils/validation';
 
-const REL_LEVELS: Array<{label: string; value: RelationshipLevel}> = [
-  {label: 'Strong', value: 'strong'},
-  {label: 'Neutral', value: 'neutral'},
-  {label: 'New', value: 'weak'},
+const REL_LEVELS: Array<{labelKey: TKey; value: RelationshipLevel}> = [
+  {labelKey: 'collect.relStrong', value: 'strong'},
+  {labelKey: 'collect.relNeutral', value: 'neutral'},
+  {labelKey: 'collect.relNew', value: 'weak'},
 ];
 
 /** Conversational AI collection assistant: tweak context, pick a language, send. */
 export function CollectionAssistantScreen({
   route,
 }: AppScreenProps<'CollectionAssistant'>): React.JSX.Element {
+  const t = useT();
   const params = route.params;
 
   const [name, setName] = useState(params.name);
@@ -77,7 +79,7 @@ export function CollectionAssistantScreen({
   return (
     <Screen>
       <View className="py-6">
-        <Text variant="title">Collection Assistant</Text>
+        <Text variant="title">{t('collect.title')}</Text>
 
         {/* Assistant intro bubble */}
         <View className="mt-4 flex-row">
@@ -86,28 +88,31 @@ export function CollectionAssistantScreen({
           </View>
           <View className="flex-1 rounded-2xl rounded-tl-sm bg-slate-100 p-3">
             <Text className="text-sm text-slate-800">
-              Hi! I'll help you write a collection message for{' '}
-              <Text className="font-semibold">{name || 'your customer'}</Text>.
-              They owe {formatINR(Math.max(amount, 0))}
-              {daysOverdue > 0 ? `, ${daysOverdue} days overdue` : ''}. Pick a
-              language and pick the tone that fits 👇
+              {t('collect.intro', {
+                name: name || t('collect.yourCustomer'),
+                amount: formatINR(Math.max(amount, 0)),
+                overdue:
+                  daysOverdue > 0
+                    ? t('collect.overdueSuffix', {days: daysOverdue})
+                    : '',
+              })}
             </Text>
           </View>
         </View>
 
         {/* Editable context */}
         <View className="mt-5 rounded-2xl border border-border bg-white p-4" style={{gap: 14}}>
-          <FormField label="Customer name">
-            <TextField value={name} onChangeText={setName} placeholder="Name" />
+          <FormField label={t('collect.customerName')}>
+            <TextField value={name} onChangeText={setName} placeholder={t('collect.namePlaceholder')} />
           </FormField>
           <View className="flex-row" style={{gap: 12}}>
             <View className="flex-1">
-              <FormField label="Outstanding">
+              <FormField label={t('collect.outstanding')}>
                 <AmountInput value={amount} onChange={setAmount} />
               </FormField>
             </View>
             <View className="w-28">
-              <FormField label="Days overdue">
+              <FormField label={t('collect.daysOverdue')}>
                 <TextField
                   value={String(daysOverdue)}
                   onChangeText={v => setDaysOverdue(Number(onlyDigits(v) || 0))}
@@ -117,12 +122,12 @@ export function CollectionAssistantScreen({
               </FormField>
             </View>
           </View>
-          <FormField label="Relationship">
+          <FormField label={t('collect.relationship')}>
             <View className="flex-row" style={{gap: 8}}>
               {REL_LEVELS.map(l => (
                 <FilterChip
                   key={l.value}
-                  label={l.label}
+                  label={t(l.labelKey)}
                   selected={currentLevel === l.value}
                   onPress={() => setRelationshipScore(scoreForLevel(l.value))}
                 />
@@ -133,7 +138,7 @@ export function CollectionAssistantScreen({
 
         {/* Language selector */}
         <Text variant="label" className="mt-5 mb-2">
-          Language
+          {t('collect.language')}
         </Text>
         <View className="flex-row flex-wrap" style={{gap: 8}}>
           {LANGUAGE_ORDER.map(lng => (
@@ -152,7 +157,7 @@ export function CollectionAssistantScreen({
             <Text className="text-base">🤖</Text>
           </View>
           <Text variant="caption" className="mt-2">
-            Here are 3 ways to ask — tap to send.
+            {t('collect.waysToAsk')}
           </Text>
         </View>
         <View className="mt-3 pl-10">

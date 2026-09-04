@@ -20,6 +20,7 @@ import {
   requestSmsPermission,
   scanBankSms,
 } from '@features/sms-import/data/smsReader';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {toISODate} from '@utils/date';
@@ -37,11 +38,6 @@ interface Candidate {
   rawText: string;
   saved: boolean;
 }
-
-const KIND_OPTIONS = [
-  {label: '− Expense', value: 'expense' as Kind},
-  {label: '+ Income', value: 'income' as Kind},
-];
 
 let seq = 0;
 function toCandidate(p: ParsedBankSms): Candidate {
@@ -68,6 +64,7 @@ function mergeNew(existing: Candidate[], incoming: ParsedBankSms[]): Candidate[]
 export function SmsImportScreen({
   navigation,
 }: AppScreenProps<'SmsImport'>): React.JSX.Element {
+  const t = useT();
   const scanSupported = isSmsScanSupported();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [pasteText, setPasteText] = useState('');
@@ -76,14 +73,10 @@ export function SmsImportScreen({
   const onScan = async () => {
     const perm = await requestSmsPermission();
     if (perm === 'blocked') {
-      Alert.alert(
-        'Permission needed',
-        'SMS access is turned off. Enable it in Settings to scan bank messages.',
-        [
-          {text: 'Cancel', style: 'cancel'},
-          {text: 'Open Settings', onPress: () => Linking.openSettings()},
-        ],
-      );
+      Alert.alert(t('sms.permTitle'), t('sms.permMsg'), [
+        {text: t('common.cancel'), style: 'cancel'},
+        {text: t('sms.openSettings'), onPress: () => Linking.openSettings()},
+      ]);
       return;
     }
     if (perm !== 'granted') return; // denied / unsupported → silently no-op
@@ -93,15 +86,12 @@ export function SmsImportScreen({
       const {parsed} = await scanBankSms({maxCount: 200, sinceDays: 90});
       setCandidates(prev => mergeNew(prev, parsed));
       if (parsed.length === 0) {
-        Alert.alert(
-          'No transactions found',
-          'No bank transaction messages were found in your recent SMS.',
-        );
+        Alert.alert(t('sms.noneTitle'), t('sms.noneMsg'));
       }
     } catch (e) {
       Alert.alert(
-        'Could not read messages',
-        e instanceof Error ? e.message : 'Please try again.',
+        t('sms.readErrorTitle'),
+        e instanceof Error ? e.message : t('ai.tryAgain'),
       );
     } finally {
       setScanning(false);
@@ -111,10 +101,7 @@ export function SmsImportScreen({
   const onDetectPaste = () => {
     const parsed = parseBankSms(pasteText);
     if (!parsed) {
-      Alert.alert(
-        'Couldn’t read that',
-        'That message doesn’t look like a bank transaction. Paste the full SMS text (including the amount).',
-      );
+      Alert.alert(t('sms.pasteFailTitle'), t('sms.pasteFailMsg'));
       return;
     }
     setCandidates(prev => mergeNew(prev, [parsed]));
@@ -132,16 +119,15 @@ export function SmsImportScreen({
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingVertical: 16, paddingBottom: 40}}>
-        <Text variant="title">Import from SMS</Text>
+        <Text variant="title">{t('sms.title')}</Text>
         <Text variant="subtitle" className="mt-0.5">
-          Turn bank transaction messages into entries — you review and confirm
-          each one before it’s saved.
+          {t('sms.subtitle')}
         </Text>
 
         {/* Scan (Android) */}
         {scanSupported ? (
           <Button
-            title={scanning ? 'Scanning…' : '🔍 Scan bank SMS'}
+            title={scanning ? t('sms.scanning') : t('sms.scanBtn')}
             className="mt-5"
             loading={scanning}
             onPress={onScan}
@@ -149,8 +135,7 @@ export function SmsImportScreen({
         ) : (
           <View className="mt-5 rounded-xl bg-amber-50 px-4 py-3">
             <Text className="text-sm font-medium text-amber-700">
-              Automatic SMS scanning isn’t available on iOS. Paste a bank message
-              below instead.
+              {t('sms.iosNotice')}
             </Text>
           </View>
         )}
@@ -158,19 +143,19 @@ export function SmsImportScreen({
         {/* Paste (all platforms) */}
         <View className="mt-4 rounded-2xl border border-border bg-white p-4">
           <Text variant="label" className="mb-2">
-            Paste a bank SMS
+            {t('sms.pasteLabel')}
           </Text>
           <TextInput
             className="min-h-[64px] rounded-xl border border-border p-3 text-sm text-slate-900"
             value={pasteText}
             onChangeText={setPasteText}
-            placeholder="e.g. Rs.2500 debited from a/c XX1234 on 05-08-26 to VPA ramesh@okhdfc"
+            placeholder={t('sms.pastePlaceholder')}
             placeholderTextColor={colors.muted}
             multiline
             textAlignVertical="top"
           />
           <Button
-            title="Detect transaction"
+            title={t('sms.detectBtn')}
             variant="secondary"
             className="mt-3"
             disabled={!pasteText.trim()}
@@ -183,18 +168,16 @@ export function SmsImportScreen({
           <View className="mt-8">
             <EmptyState
               icon="💬"
-              title="No messages yet"
-              message={
-                scanSupported
-                  ? 'Scan your inbox or paste a bank SMS to get started.'
-                  : 'Paste a bank SMS above to get started.'
-              }
+              title={t('sms.emptyTitle')}
+              message={scanSupported ? t('sms.emptyScan') : t('sms.emptyPaste')}
             />
           </View>
         ) : (
           <View className="mt-6" style={{gap: 12}}>
             <Text variant="label">
-              {candidates.filter(c => !c.saved).length} to review
+              {t('sms.toReview', {
+                count: candidates.filter(c => !c.saved).length,
+              })}
             </Text>
             {candidates.map(c => (
               <CandidateCard
@@ -226,18 +209,26 @@ function CandidateCard({
   onRemove: () => void;
   onViewTxns: () => void;
 }): React.JSX.Element {
+  const t = useT();
   const createExpense = useCreateExpense();
   const createIncome = useCreateIncome();
   const saving = createExpense.isPending || createIncome.isPending;
   const {kind} = candidate;
+  const KIND_OPTIONS = [
+    {label: t('sms.kindExpense'), value: 'expense' as Kind},
+    {label: t('sms.kindIncome'), value: 'income' as Kind},
+  ];
 
   const onSave = () => {
     if (Number.isNaN(candidate.amount) || candidate.amount <= 0) {
-      Alert.alert('Enter an amount', 'Add a valid amount before saving.');
+      Alert.alert(t('sms.enterAmountTitle'), t('sms.enterAmountMsg'));
       return;
     }
     const onError = (e: unknown) =>
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Try again.');
+      Alert.alert(
+        t('form.couldNotSave'),
+        e instanceof Error ? e.message : t('ai.tryAgain'),
+      );
     const notes = `From SMS: ${candidate.rawText}`.slice(0, 280);
 
     if (kind === 'expense') {
@@ -270,10 +261,10 @@ function CandidateCard({
     return (
       <View className="flex-row items-center justify-between rounded-2xl border border-success/30 bg-success/5 px-4 py-3">
         <Text className="text-sm font-semibold text-success">
-          ✓ Saved as {kind === 'income' ? 'income' : 'expense'}
+          {kind === 'income' ? t('sms.savedAsIncome') : t('sms.savedAsExpense')}
         </Text>
         <Pressable onPress={onViewTxns} accessibilityRole="button">
-          <Text className="text-sm font-semibold text-primary">View</Text>
+          <Text className="text-sm font-semibold text-primary">{t('sms.view')}</Text>
         </Pressable>
       </View>
     );
@@ -284,7 +275,7 @@ function CandidateCard({
   return (
     <View className="rounded-2xl border border-border bg-white p-4">
       <View style={{gap: 14}}>
-        <FormField label="Type">
+        <FormField label={t('ai.type')}>
           <SegmentedControl
             value={kind}
             options={KIND_OPTIONS}
@@ -297,32 +288,32 @@ function CandidateCard({
           />
         </FormField>
 
-        <FormField label="Amount" required>
+        <FormField label={t('form.amount')} required>
           <AmountInput
             value={candidate.amount}
             onChange={amount => onChange({amount})}
           />
         </FormField>
 
-        <FormField label={kind === 'income' ? 'Received from' : 'Paid to'}>
+        <FormField label={kind === 'income' ? t('sms.receivedFrom') : t('sms.paidTo')}>
           <TextField
             value={candidate.party}
             onChangeText={party => onChange({party})}
-            placeholder={kind === 'income' ? 'Payer' : 'Merchant / payee'}
+            placeholder={kind === 'income' ? t('sms.payer') : t('sms.merchant')}
             maxLength={80}
           />
         </FormField>
 
-        <FormField label="Category">
+        <FormField label={t('form.category')}>
           <Select
-            placeholder="Select category"
+            placeholder={t('form.selectCategory')}
             options={categories}
             value={candidate.category}
             onSelect={category => onChange({category})}
           />
         </FormField>
 
-        <FormField label="Date">
+        <FormField label={t('form.date')}>
           <DateField value={candidate.date} onChange={date => onChange({date})} />
         </FormField>
       </View>
@@ -333,14 +324,14 @@ function CandidateCard({
 
       <View className="mt-3 flex-row" style={{gap: 12}}>
         <Button
-          title="Add transaction"
+          title={t('sms.add')}
           className="flex-1"
           fullWidth={false}
           loading={saving}
           onPress={onSave}
         />
         <Button
-          title="Ignore"
+          title={t('sms.ignore')}
           variant="ghost"
           className="flex-1"
           fullWidth={false}

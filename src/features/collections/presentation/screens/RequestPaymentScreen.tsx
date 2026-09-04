@@ -11,6 +11,7 @@ import {
 } from '@features/collections/domain/upi';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {useLedgerMutations} from '@features/customers/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 import {formatINR} from '@utils/currency';
@@ -20,8 +21,10 @@ export function RequestPaymentScreen({
   navigation,
   route,
 }: AppScreenProps<'RequestPayment'>): React.JSX.Element {
+  const t = useT();
   const {customer} = route.params;
-  const businessName = useAuthStore(s => s.business?.businessName) ?? 'My Business';
+  const businessName =
+    useAuthStore(s => s.business?.businessName) ?? t('dashboard.yourBusiness');
   const upiId = useCollectionSettingsStore(s => s.upiId);
   const storedPayee = useCollectionSettingsStore(s => s.payeeName);
   const payeeName = storedPayee || businessName;
@@ -49,11 +52,16 @@ export function RequestPaymentScreen({
 
   const message = useMemo(
     () =>
-      `Hi ${customer.fullName}, please pay ${formatINR(amt)} to ${payeeName}.\n` +
-      `UPI ID: ${upiId}\n` +
-      `Pay instantly: ${upiUri}\n` +
-      `Ref: ${ref}\n— ${businessName}`,
-    [customer.fullName, amt, payeeName, upiId, upiUri, ref, businessName],
+      t('request.msg', {
+        name: customer.fullName,
+        amount: formatINR(amt),
+        payee: payeeName,
+        upi: upiId,
+        uri: upiUri,
+        ref,
+        business: businessName,
+      }),
+    [t, customer.fullName, amt, payeeName, upiId, upiUri, ref, businessName],
   );
 
   const onWhatsApp = async () => {
@@ -65,7 +73,7 @@ export function RequestPaymentScreen({
       const canWa = await Linking.canOpenURL(wa);
       await Linking.openURL(canWa ? wa : sms);
     } catch {
-      Alert.alert('Could not open WhatsApp', 'No messaging app available.');
+      Alert.alert(t('request.couldNotWhatsApp'), t('request.noMessagingApp'));
     }
   };
 
@@ -79,7 +87,7 @@ export function RequestPaymentScreen({
 
   const onMarkReceived = () => {
     if (Number.isNaN(amount) || amount <= 0) {
-      return Alert.alert('Enter an amount first');
+      return Alert.alert(t('request.enterAmountFirst'));
     }
     receivePayment.mutate(
       {
@@ -91,11 +99,20 @@ export function RequestPaymentScreen({
       },
       {
         onSuccess: () => {
-          Alert.alert('Payment recorded', `${formatINR(amount)} received from ${customer.fullName}.`);
+          Alert.alert(
+            t('request.recordedTitle'),
+            t('request.recordedMsg', {
+              amount: formatINR(amount),
+              name: customer.fullName,
+            }),
+          );
           navigation.goBack();
         },
         onError: err =>
-          Alert.alert('Could not save', err instanceof Error ? err.message : 'Try again.'),
+          Alert.alert(
+            t('form.couldNotSave'),
+            err instanceof Error ? err.message : t('ai.tryAgain'),
+          ),
       },
     );
   };
@@ -103,21 +120,23 @@ export function RequestPaymentScreen({
   return (
     <Screen>
       <View className="py-6">
-        <Text variant="title">Request payment</Text>
+        <Text variant="title">{t('request.title')}</Text>
         <Text variant="subtitle" className="mt-1">
-          From {customer.fullName}
+          {t('request.from', {name: customer.fullName})}
           {customer.outstandingAmount > 0
-            ? ` · ${formatINR(customer.outstandingAmount)} due`
+            ? t('request.dueSuffix', {
+                amount: formatINR(customer.outstandingAmount),
+              })
             : ''}
         </Text>
 
         {!configured ? (
           <View className="mt-5 rounded-2xl bg-amber-50 p-4">
             <Text className="text-sm font-medium text-amber-800">
-              Add your UPI ID to collect payments.
+              {t('request.noUpi')}
             </Text>
             <Button
-              title="Set UPI ID in Settings"
+              title={t('request.setUpi')}
               variant="secondary"
               className="mt-3"
               onPress={() => navigation.navigate('Settings')}
@@ -128,7 +147,7 @@ export function RequestPaymentScreen({
             {/* Amount */}
             <View className="mt-5 rounded-3xl bg-slate-900 px-5 pb-6 pt-5">
               <Text className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Amount to collect
+                {t('request.amountToCollect')}
               </Text>
               <View className="mt-2">
                 <AmountInput value={amount} onChange={setAmount} />
@@ -141,41 +160,40 @@ export function RequestPaymentScreen({
                 <QRCode value={upiUri} size={200} />
               </ErrorBoundary>
               <Text variant="caption" className="mt-3 text-center">
-                Scan with any UPI app to pay {payeeName}
+                {t('request.scanToPay', {payee: payeeName})}
               </Text>
             </View>
 
             {/* Details */}
             <View className="mt-4 rounded-2xl border border-border bg-white px-4">
-              <Detail label="UPI ID" value={upiId} />
-              <Detail label="Amount" value={formatINR(amt)} />
-              <Detail label="Customer" value={customer.fullName} />
-              <Detail label="Reference" value={ref} />
-              <Detail label="Status" value="Pending" />
+              <Detail label={t('request.upiId')} value={upiId} />
+              <Detail label={t('form.amount')} value={formatINR(amt)} />
+              <Detail label={t('ai.customer')} value={customer.fullName} />
+              <Detail label={t('request.reference')} value={ref} />
+              <Detail label={t('request.status')} value={t('request.pending')} />
             </View>
 
             {/* Actions */}
             <Button
-              title="Send request on WhatsApp"
+              title={t('request.sendWhatsApp')}
               className="mt-6"
               onPress={onWhatsApp}
             />
             <Button
-              title="Share payment request"
+              title={t('request.share')}
               variant="secondary"
               className="mt-2"
               onPress={onShare}
             />
             <Button
-              title="✓ Mark as received"
+              title={t('request.markReceived')}
               variant="secondary"
               className="mt-2"
               loading={receivePayment.isPending}
               onPress={onMarkReceived}
             />
             <Text variant="caption" className="mt-3 text-center">
-              Payment goes directly to your UPI. Tap “Mark as received” once it
-              lands to record it in the khata.
+              {t('request.footer')}
             </Text>
           </>
         )}
