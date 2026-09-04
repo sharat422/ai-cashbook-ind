@@ -17,6 +17,7 @@ import {
 } from '@features/reports/domain/exportReport';
 import {getReportTransactions} from '@features/reports/data/reportTransactions';
 import {useReportSummary} from '@features/reports/presentation/hooks/useReportSummary';
+import {useT, type TKey} from '@/i18n';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
@@ -42,15 +43,17 @@ function presetRange(p: Exclude<Preset, 'custom'>): {from: string; to: string} {
   }
 }
 
-const PRESETS: Array<{label: string; value: Exclude<Preset, 'custom'>}> = [
-  {label: 'Today', value: 'today'},
-  {label: 'Week', value: 'week'},
-  {label: 'Month', value: 'month'},
-  {label: 'Quarter', value: 'quarter'},
+const PRESETS: Array<{labelKey: TKey; value: Exclude<Preset, 'custom'>}> = [
+  {labelKey: 'khata.presetToday', value: 'today'},
+  {labelKey: 'khata.presetWeek', value: 'week'},
+  {labelKey: 'khata.presetMonth', value: 'month'},
+  {labelKey: 'khata.presetQuarter', value: 'quarter'},
 ];
 
 export function ReportsScreen(): React.JSX.Element {
-  const businessName = useAuthStore(s => s.business?.businessName) ?? 'Your business';
+  const t = useT();
+  const businessName =
+    useAuthStore(s => s.business?.businessName) ?? t('dashboard.yourBusiness');
   const [preset, setPreset] = useState<Preset>('month');
   const initial = presetRange('month');
   const [from, setFrom] = useState(initial.from);
@@ -78,8 +81,8 @@ export function ReportsScreen(): React.JSX.Element {
       else await exportReportXlsx(data, items);
     } catch (e) {
       Alert.alert(
-        'Could not export',
-        e instanceof Error ? e.message : 'Please try again.',
+        t('reports.couldNotExport'),
+        e instanceof Error ? e.message : t('ai.tryAgain'),
       );
     } finally {
       setExporting(null);
@@ -104,9 +107,9 @@ export function ReportsScreen(): React.JSX.Element {
             colors={[colors.primary]}
           />
         }>
-        <Text variant="title">Reports</Text>
+        <Text variant="title">{t('reports.title')}</Text>
         <Text variant="subtitle" className="mt-0.5">
-          Profit &amp; loss and category breakdown
+          {t('reports.subtitle')}
         </Text>
 
         {/* Range filters */}
@@ -114,7 +117,7 @@ export function ReportsScreen(): React.JSX.Element {
           {PRESETS.map(p => (
             <FilterChip
               key={p.value}
-              label={p.label}
+              label={t(p.labelKey)}
               selected={preset === p.value}
               onPress={() => applyPreset(p.value)}
             />
@@ -137,29 +140,28 @@ export function ReportsScreen(): React.JSX.Element {
             <Skeleton className="h-40 rounded-3xl" />
           ) : isError && !data ? (
             <ErrorState
-              message={error?.message ?? 'Could not load the report.'}
+              message={error?.message ?? t('reports.loadError')}
               onRetry={refetch}
               retrying={isRefetching}
             />
           ) : data && isReportEmpty(data) ? (
             <EmptyState
               icon="📊"
-              title="Nothing to report"
-              message="No income or expenses in this range. Try a wider date range."
+              title={t('reports.emptyTitle')}
+              message={t('reports.emptyMsg')}
             />
           ) : data ? (
             <>
               {data.source === 'local' ? (
                 <Text className="mb-3 text-xs font-medium text-amber-700">
-                  Offline — figures computed on this device. Pull to refresh when
-                  back online.
+                  {t('reports.offlineNote')}
                 </Text>
               ) : null}
 
               {/* P&L hero */}
               <View className="rounded-3xl bg-slate-900 px-5 py-6">
                 <Text className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Net profit
+                  {t('reports.netProfit')}
                 </Text>
                 <Text
                   className={`mt-1 text-4xl font-bold ${
@@ -172,7 +174,7 @@ export function ReportsScreen(): React.JSX.Element {
                 <View className="mt-5 flex-row" style={{gap: 12}}>
                   <View className="flex-1 rounded-2xl bg-white/5 p-3">
                     <Text className="text-[11px] uppercase text-slate-400">
-                      Income
+                      {t('reports.income')}
                     </Text>
                     <Text className="mt-1 text-base font-semibold text-green-300">
                       {formatINR(data.incomeTotal)}
@@ -180,7 +182,7 @@ export function ReportsScreen(): React.JSX.Element {
                   </View>
                   <View className="flex-1 rounded-2xl bg-white/5 p-3">
                     <Text className="text-[11px] uppercase text-slate-400">
-                      Expense
+                      {t('reports.expense')}
                     </Text>
                     <Text className="mt-1 text-base font-semibold text-red-300">
                       {formatINR(data.expenseTotal)}
@@ -190,12 +192,12 @@ export function ReportsScreen(): React.JSX.Element {
               </View>
 
               <CategoryTable
-                title="Income by category"
+                title={t('reports.incomeByCategory')}
                 rows={data.incomeByCategory}
                 tone="income"
               />
               <CategoryTable
-                title="Expense by category"
+                title={t('reports.expenseByCategory')}
                 rows={data.expenseByCategory}
                 tone="expense"
               />
@@ -219,8 +221,7 @@ export function ReportsScreen(): React.JSX.Element {
                 />
               </View>
               <Text variant="caption" className="mt-2 text-center">
-                P&amp;L summary + full transaction list. PDF to print/share; Excel
-                to open in a spreadsheet.
+                {t('reports.exportHint')}
               </Text>
             </>
           ) : null}
@@ -239,13 +240,14 @@ function CategoryTable({
   rows: {category: string; amount: number; share: number}[];
   tone: 'income' | 'expense';
 }): React.JSX.Element {
+  const t = useT();
   return (
     <View className="mt-4 rounded-2xl border border-border bg-white p-4">
       <Text variant="label" className="mb-3">
         {title}
       </Text>
       {rows.length === 0 ? (
-        <Text variant="caption">No entries in this range.</Text>
+        <Text variant="caption">{t('reports.noEntries')}</Text>
       ) : (
         <View style={{gap: 10}}>
           {rows.map(r => (

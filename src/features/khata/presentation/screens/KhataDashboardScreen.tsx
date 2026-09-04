@@ -17,6 +17,7 @@ import {
   TrendChart,
 } from '@features/khata/presentation/components';
 import {useKhataSummary} from '@features/khata/presentation/hooks';
+import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
@@ -45,23 +46,28 @@ function presetRange(preset: Exclude<DatePreset, 'custom'>): {
   }
 }
 
-const DATE_PRESETS: Array<{label: string; value: Exclude<DatePreset, 'custom'>}> = [
-  {label: 'Today', value: 'today'},
-  {label: 'Week', value: 'week'},
-  {label: 'Month', value: 'month'},
-  {label: 'Quarter', value: 'quarter'},
+const DATE_PRESETS: Array<{labelKey: TKey; value: Exclude<DatePreset, 'custom'>}> = [
+  {labelKey: 'khata.presetToday', value: 'today'},
+  {labelKey: 'khata.presetWeek', value: 'week'},
+  {labelKey: 'khata.presetMonth', value: 'month'},
+  {labelKey: 'khata.presetQuarter', value: 'quarter'},
 ];
-
-const BRANCH_OPTIONS = ['All branches', 'Main Branch'];
 
 /** Executive Khata dashboard — receivables, payables, trend, defaulters. */
 export function KhataDashboardScreen({
   navigation,
 }: AppScreenProps<'KhataDashboard'>): React.JSX.Element {
+  const t = useT();
   const businessName = useAuthStore(s => s.business?.businessName);
+  const allBranches = t('khata.allBranches');
+  const allBusinesses = t('khata.allBusinesses');
+  const BRANCH_OPTIONS = useMemo(
+    () => [allBranches, t('khata.mainBranch')],
+    [allBranches, t],
+  );
   const businessOptions = useMemo(
-    () => ['All businesses', businessName ?? 'My Business'],
-    [businessName],
+    () => [allBusinesses, businessName ?? t('dashboard.yourBusiness')],
+    [allBusinesses, businessName, t],
   );
 
   const [preset, setPreset] = useState<DatePreset>('month');
@@ -82,10 +88,10 @@ export function KhataDashboardScreen({
     () => ({
       from,
       to,
-      branch: branch.startsWith('All') ? 'all' : branch,
-      business: business.startsWith('All') ? 'all' : business,
+      branch: branch === allBranches ? 'all' : branch,
+      business: business === allBusinesses ? 'all' : business,
     }),
-    [from, to, branch, business],
+    [from, to, branch, business, allBranches, allBusinesses],
   );
 
   const {data, isLoading, isError, error, refetch, isRefetching} =
@@ -104,9 +110,9 @@ export function KhataDashboardScreen({
             colors={[colors.primary]}
           />
         }>
-        <Text variant="title">Khata Dashboard</Text>
+        <Text variant="title">{t('khata.title')}</Text>
         <Text variant="subtitle" className="mt-0.5">
-          {businessName ?? 'Your business'}
+          {businessName ?? t('dashboard.yourBusiness')}
         </Text>
 
         {/* AI insights banner */}
@@ -115,9 +121,11 @@ export function KhataDashboardScreen({
           onPress={() => navigation.navigate('KhataInsights')}
           className="mt-4 flex-row items-center justify-between rounded-2xl bg-slate-900 px-4 py-3">
           <View className="flex-1 pr-2">
-            <Text className="text-sm font-bold text-white">✨ AI Insights</Text>
+            <Text className="text-sm font-bold text-white">
+              {t('khata.aiInsights')}
+            </Text>
             <Text className="text-xs text-slate-400">
-              Smart takeaways from your khata
+              {t('khata.aiInsightsSub')}
             </Text>
           </View>
           <Text className="text-base font-semibold text-white">→</Text>
@@ -130,10 +138,10 @@ export function KhataDashboardScreen({
           className="mt-3 flex-row items-center justify-between rounded-2xl border border-border bg-white px-4 py-3">
           <View className="flex-1 pr-2">
             <Text className="text-sm font-bold text-slate-900">
-              🔎 Customer intelligence
+              {t('khata.custIntel')}
             </Text>
             <Text className="text-xs text-muted">
-              Aging, risk & who to chase
+              {t('khata.custIntelSub')}
             </Text>
           </View>
           <Text className="text-base font-semibold text-primary">→</Text>
@@ -144,7 +152,7 @@ export function KhataDashboardScreen({
           {DATE_PRESETS.map(p => (
             <FilterChip
               key={p.value}
-              label={p.label}
+              label={t(p.labelKey)}
               selected={preset === p.value}
               onPress={() => applyPreset(p.value)}
             />
@@ -164,7 +172,7 @@ export function KhataDashboardScreen({
         <View className="mt-3 flex-row" style={{gap: 12}}>
           <View className="flex-1">
             <Select
-              label="Branch"
+              label={t('khata.branch')}
               options={BRANCH_OPTIONS}
               value={branch}
               onSelect={setBranch}
@@ -172,7 +180,7 @@ export function KhataDashboardScreen({
           </View>
           <View className="flex-1">
             <Select
-              label="Business"
+              label={t('khata.business')}
               options={businessOptions}
               value={business}
               onSelect={setBusiness}
@@ -186,36 +194,35 @@ export function KhataDashboardScreen({
             <SkeletonBody />
           ) : isError && !data ? (
             <ErrorState
-              message={error?.message ?? 'Could not load the dashboard.'}
+              message={error?.message ?? t('khata.loadError')}
               onRetry={refetch}
               retrying={isRefetching}
             />
           ) : data && isKhataEmpty(data) ? (
             <EmptyState
               icon="📒"
-              title="No khata activity"
-              message="No receivables, collections or trend data for this filter."
+              title={t('khata.emptyTitle')}
+              message={t('khata.emptyMsg')}
             />
           ) : data ? (
             <>
               {data.source === 'local' ? (
                 <Text className="mb-3 text-xs font-medium text-amber-700">
-                  Offline — showing on-device trend & collections only. Pull to
-                  refresh for full figures.
+                  {t('khata.offlineNote')}
                 </Text>
               ) : null}
 
               {/* Receivable / Payable */}
               <View className="flex-row" style={{gap: 12}}>
                 <KhataStatCard
-                  label="Total Receivable"
+                  label={t('khata.totalReceivable')}
                   amount={data.totalReceivable}
                   icon="📥"
                   accent="receivable"
                   hero
                 />
                 <KhataStatCard
-                  label="Total Payable"
+                  label={t('khata.totalPayable')}
                   amount={data.totalPayable}
                   icon="📤"
                   accent="payable"
@@ -226,13 +233,13 @@ export function KhataDashboardScreen({
               {/* Overdue / Today's collections */}
               <View className="mt-3 flex-row" style={{gap: 12}}>
                 <KhataStatCard
-                  label="Overdue Amount"
+                  label={t('khata.overdueAmount')}
                   amount={data.overdueAmount}
                   icon="⏰"
                   accent="overdue"
                 />
                 <KhataStatCard
-                  label="Today's Collections"
+                  label={t('khata.todayCollections')}
                   amount={data.todayCollections}
                   icon="💸"
                   accent="collections"
@@ -242,7 +249,7 @@ export function KhataDashboardScreen({
               {/* Payment trend */}
               <View className="mt-4 rounded-2xl border border-border bg-white p-4">
                 <Text variant="label" className="mb-2">
-                  Payment Trend
+                  {t('khata.paymentTrend')}
                 </Text>
                 <TrendChart data={data.trend} />
               </View>
@@ -250,7 +257,7 @@ export function KhataDashboardScreen({
               {/* Top defaulters */}
               <View className="mt-4 rounded-2xl border border-border bg-white p-4">
                 <Text variant="label" className="mb-3">
-                  Top Defaulters
+                  {t('khata.topDefaulters')}
                 </Text>
                 <TopDefaultersList defaulters={data.topDefaulters} />
               </View>
