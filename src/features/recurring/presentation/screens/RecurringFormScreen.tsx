@@ -11,6 +11,7 @@ import {
   type RecurringFrequency,
 } from '@features/recurring/domain/entities';
 import {useRecurringMutations} from '@features/recurring/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {toISODate} from '@utils/date';
 
@@ -19,11 +20,6 @@ const FREQUENCY_OPTIONS = RECURRING_FREQUENCIES.map(f => ({
   value: f,
 }));
 
-const ACTIVE_OPTIONS = [
-  {label: 'Active', value: true},
-  {label: 'Paused', value: false},
-];
-
 /** Allow next-due dates up to ~10 years out (unlike the past-only expense form). */
 const FAR_FUTURE = new Date(new Date().getFullYear() + 10, 11, 31);
 
@@ -31,8 +27,14 @@ export function RecurringFormScreen({
   navigation,
   route,
 }: AppScreenProps<'RecurringForm'>): React.JSX.Element {
+  const t = useT();
   const editing = route.params?.recurring;
   const {create, update, remove} = useRecurringMutations();
+
+  const ACTIVE_OPTIONS = [
+    {label: t('recurring.active'), value: true},
+    {label: t('recurring.paused'), value: false},
+  ];
 
   const [name, setName] = useState(editing?.name ?? '');
   const [amount, setAmount] = useState<number>(editing?.amount ?? NaN);
@@ -50,18 +52,28 @@ export function RecurringFormScreen({
   const [notes, setNotes] = useState(editing?.notes ?? '');
   const [active, setActive] = useState(editing?.active ?? true);
   const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<'name' | 'amount' | 'category' | null>(null);
+  const clearError = () => {
+    if (error) {
+      setError(null);
+      setErrorField(null);
+    }
+  };
 
   const onSave = () => {
     if (!name.trim()) {
-      setError('Enter a name');
+      setError(t('recurring.errName'));
+      setErrorField('name');
       return;
     }
     if (Number.isNaN(amount) || amount <= 0) {
-      setError('Enter a valid amount');
+      setError(t('recurring.errAmount'));
+      setErrorField('amount');
       return;
     }
     if (!category) {
-      setError('Choose a category');
+      setError(t('recurring.errCategory'));
+      setErrorField('category');
       return;
     }
     const draft: RecurringDraft = {
@@ -78,7 +90,10 @@ export function RecurringFormScreen({
 
     const onSuccess = () => navigation.goBack();
     const onError = (e: unknown) =>
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Try again.');
+      Alert.alert(
+        t('form.couldNotSave'),
+        e instanceof Error ? e.message : t('ai.tryAgain'),
+      );
 
     if (editing) {
       update.mutate({id: editing.id, draft}, {onSuccess, onError});
@@ -89,10 +104,13 @@ export function RecurringFormScreen({
 
   const onDelete = () => {
     if (!editing) return;
-    Alert.alert('Delete recurring expense?', `Remove "${editing.name}"?`, [
-      {text: 'Cancel', style: 'cancel'},
+    Alert.alert(
+      t('recurring.deleteTitle'),
+      t('recurring.deleteMsg', {name: editing.name}),
+      [
+      {text: t('common.cancel'), style: 'cancel'},
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () =>
           remove.mutate(editing.id, {onSuccess: () => navigation.goBack()}),
@@ -106,54 +124,63 @@ export function RecurringFormScreen({
     <Screen>
       <View className="py-6">
         <Text variant="title">
-          {editing ? 'Edit recurring' : 'New recurring expense'}
+          {editing ? t('recurring.editTitle') : t('recurring.newTitle')}
         </Text>
 
         <View className="mt-6" style={{gap: 18}}>
-          <FormField label="Name" required error={error?.includes('name') ? error : null}>
+          <FormField
+            label={t('recurring.name')}
+            required
+            error={errorField === 'name' ? error : null}>
             <TextField
-              placeholder="e.g. Shop rent"
+              placeholder={t('recurring.namePlaceholder')}
               value={name}
               onChangeText={v => {
                 setName(v);
-                if (error) setError(null);
+                clearError();
               }}
               maxLength={120}
             />
           </FormField>
 
-          <FormField label="Amount" required error={error?.includes('amount') ? error : null}>
+          <FormField
+            label={t('form.amount')}
+            required
+            error={errorField === 'amount' ? error : null}>
             <AmountInput
               value={amount}
               onChange={v => {
                 setAmount(v);
-                if (error) setError(null);
+                clearError();
               }}
             />
           </FormField>
 
-          <FormField label="Category" required error={error?.includes('category') ? error : null}>
+          <FormField
+            label={t('form.category')}
+            required
+            error={errorField === 'category' ? error : null}>
             <Select
-              placeholder="Select category"
+              placeholder={t('form.selectCategory')}
               options={EXPENSE_CATEGORIES as unknown as string[]}
               value={category}
               onSelect={v => {
                 setCategory(v);
-                if (error) setError(null);
+                clearError();
               }}
             />
           </FormField>
 
-          <FormField label="Paid to" hint="Optional">
+          <FormField label={t('recurring.paidTo')} hint={t('common.optional')}>
             <TextField
-              placeholder="e.g. Landlord"
+              placeholder={t('recurring.paidToPlaceholder')}
               value={vendor}
               onChangeText={setVendor}
               maxLength={120}
             />
           </FormField>
 
-          <FormField label="Frequency">
+          <FormField label={t('recurring.frequency')}>
             <SegmentedControl
               value={frequency}
               options={FREQUENCY_OPTIONS}
@@ -161,11 +188,11 @@ export function RecurringFormScreen({
             />
           </FormField>
 
-          <FormField label="Repeat every" hint={frequencyLabel(frequency, interval)}>
+          <FormField label={t('recurring.repeatEvery')} hint={frequencyLabel(frequency, interval)}>
             <Stepper value={interval} onChange={setInterval} />
           </FormField>
 
-          <FormField label="Next due date">
+          <FormField label={t('recurring.nextDue')}>
             <DateField
               value={nextDueDate}
               onChange={setNextDueDate}
@@ -173,9 +200,9 @@ export function RecurringFormScreen({
             />
           </FormField>
 
-          <FormField label="Notes" hint="Optional">
+          <FormField label={t('form.notes')} hint={t('common.optional')}>
             <TextField
-              placeholder="Any details"
+              placeholder={t('recurring.notesPlaceholder')}
               value={notes}
               onChangeText={setNotes}
               maxLength={200}
@@ -183,7 +210,7 @@ export function RecurringFormScreen({
           </FormField>
 
           {editing ? (
-            <FormField label="Status">
+            <FormField label={t('recurring.status')}>
               <SegmentedControl
                 value={active}
                 options={ACTIVE_OPTIONS}
@@ -194,21 +221,21 @@ export function RecurringFormScreen({
         </View>
 
         <Button
-          title={editing ? 'Save changes' : 'Add recurring expense'}
+          title={editing ? t('recurring.saveChanges') : t('recurring.addExpense')}
           className="mt-8"
           loading={saving}
           onPress={onSave}
         />
         {editing ? (
           <Button
-            title="Delete"
+            title={t('common.delete')}
             variant="ghost"
             className="mt-2"
             onPress={onDelete}
           />
         ) : (
           <Button
-            title="Cancel"
+            title={t('common.cancel')}
             variant="ghost"
             className="mt-2"
             onPress={() => navigation.goBack()}

@@ -10,6 +10,7 @@ import {
   useRecurringExpenses,
   useRecurringMutations,
 } from '@features/recurring/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
@@ -18,6 +19,7 @@ import {formatDisplayDate} from '@utils/date';
 export function RecurringListScreen({
   navigation,
 }: AppScreenProps<'Recurring'>): React.JSX.Element {
+  const t = useT();
   const {data, isLoading, isError, error, refetch, isRefetching} =
     useRecurringExpenses();
   const {post} = useRecurringMutations();
@@ -29,20 +31,22 @@ export function RecurringListScreen({
 
   const onPost = (rec: RecurringExpense) => {
     Alert.alert(
-      'Record this expense?',
-      `Add ${formatINR(rec.amount)} for "${rec.name}" on ${formatDisplayDate(
-        rec.nextDueDate,
-      )} and roll the schedule forward?`,
+      t('recurring.postTitle'),
+      t('recurring.postMsg', {
+        amount: formatINR(rec.amount),
+        name: rec.name,
+        date: formatDisplayDate(rec.nextDueDate),
+      }),
       [
-        {text: 'Cancel', style: 'cancel'},
+        {text: t('common.cancel'), style: 'cancel'},
         {
-          text: 'Record',
+          text: t('recurring.record'),
           onPress: () =>
             post.mutate(rec.id, {
               onError: e =>
                 Alert.alert(
-                  'Could not record',
-                  e instanceof Error ? e.message : 'Try again.',
+                  t('recurring.couldNotRecord'),
+                  e instanceof Error ? e.message : t('ai.tryAgain'),
                 ),
             }),
         },
@@ -54,24 +58,26 @@ export function RecurringListScreen({
     <Screen scroll={false} edges={['top']}>
       <View className="pb-3 pt-4">
         <View className="flex-row items-center justify-between">
-          <Text variant="title">Recurring</Text>
+          <Text variant="title">{t('recurring.title')}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => navigation.navigate('RecurringForm')}
             className="rounded-full bg-primary px-4 py-2">
-            <Text className="text-sm font-semibold text-white">+ Add</Text>
+            <Text className="text-sm font-semibold text-white">
+              {t('recurring.add')}
+            </Text>
           </Pressable>
         </View>
         <Text variant="caption" className="mt-1">
-          Rent, salaries, subscriptions — set once, record with a tap.
+          {t('recurring.subtitle')}
         </Text>
 
         {data && items.length > 0 ? (
           <View className="mt-4 flex-row rounded-2xl bg-slate-900 p-4" style={{gap: 10}}>
-            <Summary label="Due now" value={`${data.dueCount}`} accent="text-amber-300" />
-            <Summary label="Due amount" value={formatINR(data.dueTotal)} accent="text-red-300" />
+            <Summary label={t('recurring.dueNow')} value={`${data.dueCount}`} accent="text-amber-300" />
+            <Summary label={t('recurring.dueAmount')} value={formatINR(data.dueTotal)} accent="text-red-300" />
             <Summary
-              label="Per month"
+              label={t('recurring.perMonth')}
               value={formatINR(data.monthlyTotal)}
               accent="text-green-300"
             />
@@ -89,7 +95,7 @@ export function RecurringListScreen({
         ) : showError ? (
           <View className="flex-1 justify-center">
             <ErrorState
-              message={error?.message ?? 'Could not load recurring expenses.'}
+              message={error?.message ?? t('recurring.loadError')}
               onRetry={refetch}
               retrying={isRefetching}
             />
@@ -98,9 +104,9 @@ export function RecurringListScreen({
           <View className="flex-1 justify-center">
             <EmptyState
               icon="🔁"
-              title="No recurring expenses yet"
-              message="Add rent, staff salaries or subscriptions so they’re never forgotten."
-              actionLabel="+ Add recurring expense"
+              title={t('recurring.emptyTitle')}
+              message={t('recurring.emptyMsg')}
+              actionLabel={t('recurring.addFirst')}
               onAction={() => navigation.navigate('RecurringForm')}
             />
           </View>
@@ -144,6 +150,7 @@ function RecurringRow({
   onEdit: () => void;
   onPost: () => void;
 }): React.JSX.Element {
+  const t = useT();
   return (
     <Pressable
       onPress={onEdit}
@@ -158,17 +165,19 @@ function RecurringRow({
             </Text>
             {!rec.active ? (
               <Text className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-muted">
-                Paused
+                {t('recurring.paused')}
               </Text>
             ) : rec.isDue ? (
               <Text className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
-                DUE
+                {t('recurring.due')}
               </Text>
             ) : null}
           </View>
           <Text variant="caption" className="mt-0.5">
             {frequencyLabel(rec.frequency, rec.interval)} · {rec.category}
-            {rec.active ? ` · next ${formatDisplayDate(rec.nextDueDate)}` : ''}
+            {rec.active
+              ? ` · ${t('recurring.next', {date: formatDisplayDate(rec.nextDueDate)})}`
+              : ''}
           </Text>
         </View>
         <Text className="text-base font-semibold text-slate-900">
@@ -178,7 +187,7 @@ function RecurringRow({
 
       {rec.isDue ? (
         <Button
-          title={posting ? 'Recording…' : 'Mark paid & record'}
+          title={posting ? t('recurring.recording') : t('recurring.markPaid')}
           className="mt-3"
           loading={posting}
           onPress={onPost}
