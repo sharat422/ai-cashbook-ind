@@ -20,6 +20,7 @@ import {isValidUpiId} from '@features/collections/domain/upi';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {
   APP_LANGUAGE_LABEL,
+  appLanguageByLabel,
   SUPPORTED_APP_LANGUAGES,
 } from '@features/auth/utils/languagePreference';
 import {usePermissions} from '@features/auth/hooks';
@@ -292,13 +293,10 @@ export function SettingsScreen({
           <Text className="mb-2 text-base font-semibold text-slate-900">
             {t('settings.contentLanguage')}
           </Text>
-          <SegmentedControl
-            value={language}
-            options={SUPPORTED_APP_LANGUAGES.map(l => ({
-              label: APP_LANGUAGE_LABEL[l],
-              value: l,
-            }))}
-            onChange={setLanguage}
+          <Select
+            value={APP_LANGUAGE_LABEL[language]}
+            options={SUPPORTED_APP_LANGUAGES.map(l => APP_LANGUAGE_LABEL[l])}
+            onSelect={label => setLanguage(appLanguageByLabel(label))}
           />
           <View className="mt-4 border-t border-border pt-4">
             <Text className="mb-2 text-base font-semibold text-slate-900">

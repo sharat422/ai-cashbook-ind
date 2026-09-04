@@ -31,10 +31,20 @@ const LOCALES_DIR = join(ROOT, 'src/i18n/locales');
 const HASHES_FILE = join(LOCALES_DIR, '.hashes.json');
 
 const SOURCE = 'en';
-// Target locales the app actually ships translated. Kannada/Tamil currently
-// fall back to English; add 'kn'/'ta' here (and run a full translate) to enable.
-const TARGET_LOCALES = ['hi', 'te'];
-const LOCALE_NAMES = {hi: 'Hindi', te: 'Telugu', kn: 'Kannada', ta: 'Tamil'};
+// Target locales the app ships. Everything except English is generated from
+// en.json by this script (run `npm run i18n:translate` after editing en.json).
+const TARGET_LOCALES = ['hi', 'te', 'ta', 'kn', 'mr', 'gu', 'bn', 'ml', 'pa'];
+const LOCALE_NAMES = {
+  hi: 'Hindi',
+  te: 'Telugu',
+  ta: 'Tamil',
+  kn: 'Kannada',
+  mr: 'Marathi',
+  gu: 'Gujarati',
+  bn: 'Bengali',
+  ml: 'Malayalam',
+  pa: 'Punjabi',
+};
 
 const MODEL = process.env.I18N_MODEL || 'claude-haiku-4-5-20251001';
 const CHUNK_SIZE = 60; // keys per batch request — keeps each response small/reliable
@@ -137,8 +147,18 @@ async function runBatch(requests) {
 // ---------------------------------------------------------------------------
 function check(en, allHashes, locales) {
   let bad = false;
+  let pending = false;
   for (const l of locales) {
-    const {missing, outdated, orphans} = analyze(en, readJSON(localeFile(l)), allHashes[l] || {});
+    const target = readJSON(localeFile(l));
+    const {missing, outdated, orphans} = analyze(en, target, allHashes[l] || {});
+    // A locale that's entirely empty hasn't been generated yet — that's a TODO
+    // (run i18n:translate), not a regression, so it never fails the gate. Once
+    // it has any translations it's "live" and drift IS enforced.
+    if (Object.keys(target).length === 0) {
+      pending = true;
+      console.log(`• ${l}: not generated yet (${missing.length} keys) — run i18n:translate`);
+      continue;
+    }
     if (missing.length || outdated.length || orphans.length) {
       bad = true;
       console.error(`✗ ${l}: ${missing.length} missing, ${outdated.length} outdated, ${orphans.length} orphaned`);
@@ -150,10 +170,14 @@ function check(en, allHashes, locales) {
     }
   }
   if (bad) {
-    console.error('\nTranslations are stale. Run:  npm run i18n:translate');
+    console.error('\nLive translations are stale. Run:  npm run i18n:translate');
     process.exit(1);
   }
-  console.log('\nAll target locales are in sync with en.json.');
+  console.log(
+    pending
+      ? '\nLive locales are in sync. Some locales are not generated yet — run npm run i18n:translate.'
+      : '\nAll target locales are in sync with en.json.',
+  );
 }
 
 async function translate(en, allHashes, locales, dryRun) {

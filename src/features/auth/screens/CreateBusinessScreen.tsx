@@ -18,6 +18,7 @@ import {useCreateBusiness} from '@features/auth/hooks';
 import {
   DEFAULT_APP_LANGUAGE,
   APP_LANGUAGE_LABEL,
+  appLanguageByLabel,
   SUPPORTED_APP_LANGUAGES,
   type AppLanguage,
 } from '@features/auth/utils/languagePreference';
@@ -155,14 +156,11 @@ export function CreateBusinessScreen(): React.JSX.Element {
             error={errors.gstRegistered}
           />
 
-          <SegmentedControl
+          <Select
             label={t('auth.business.languageLabel')}
-            options={SUPPORTED_APP_LANGUAGES.map(language => ({
-              label: APP_LANGUAGE_LABEL[language],
-              value: language,
-            }))}
-            value={form.preferredLanguage}
-            onChange={value => update('preferredLanguage', value)}
+            options={SUPPORTED_APP_LANGUAGES.map(l => APP_LANGUAGE_LABEL[l])}
+            value={APP_LANGUAGE_LABEL[form.preferredLanguage]}
+            onSelect={label => update('preferredLanguage', appLanguageByLabel(label))}
           />
         </View>
 

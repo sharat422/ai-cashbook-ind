@@ -1,4 +1,4 @@
-import {en, translations} from './translations';
+import {en, translations, type TKey} from './translations';
 import {translate} from './useT';
 
 describe('translate', () => {
@@ -16,9 +16,20 @@ describe('translate', () => {
     expect(translate('te', 'settings.title')).toBe('సెట్టింగ్‌లు');
   });
 
-  it('falls back to English for languages without a translation (kn/ta)', () => {
-    expect(translate('kn', 'dashboard.welcome')).toBe('Welcome back');
-    expect(translate('ta', 'settings.title')).toBe('Settings');
+  it('falls back to English, then the raw key, when a translation is missing', () => {
+    // Unknown key → returns the key itself (last-resort fallback).
+    expect(translate('hi', 'this.key.does.not.exist' as TKey)).toBe(
+      'this.key.does.not.exist',
+    );
+    // For every target locale, any key it hasn't translated yet resolves to the
+    // English source. (Stays valid whether a locale is empty, partial, or full —
+    // once fully translated the loop simply finds nothing to assert.)
+    const enJson = en as Record<string, string>;
+    const targets = ['hi', 'te', 'ta', 'kn', 'mr', 'gu', 'bn', 'ml', 'pa'] as const;
+    for (const lang of targets) {
+      const missing = Object.keys(enJson).find(k => !(k in translations[lang]!));
+      if (missing) expect(translate(lang, missing as TKey)).toBe(enJson[missing]);
+    }
   });
 
   it('interpolates placeholders', () => {

@@ -3,8 +3,13 @@ import type {AppLanguage} from '@features/auth/utils/languagePreference';
 import en from './locales/en.json';
 import hi from './locales/hi.json';
 import te from './locales/te.json';
-import kn from './locales/kn.json';
 import ta from './locales/ta.json';
+import kn from './locales/kn.json';
+import mr from './locales/mr.json';
+import gu from './locales/gu.json';
+import bn from './locales/bn.json';
+import ml from './locales/ml.json';
+import pa from './locales/pa.json';
 
 /**
  * App UI strings.
@@ -24,8 +29,13 @@ export const translations: Record<AppLanguage, Partial<Record<TKey, string>>> = 
   en,
   hi,
   te,
-  kn,
   ta,
+  kn,
+  mr,
+  gu,
+  bn,
+  ml,
+  pa,
 };
 
 export {en};
