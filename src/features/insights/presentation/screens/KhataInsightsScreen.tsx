@@ -5,6 +5,7 @@ import {ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import type {Insight} from '@features/insights/domain/entities';
 import {InsightCard} from '@features/insights/presentation/components';
 import {useInsights} from '@features/insights/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 
@@ -12,6 +13,7 @@ import {colors} from '@theme/colors';
 export function KhataInsightsScreen({
   navigation,
 }: AppScreenProps<'KhataInsights'>): React.JSX.Element {
+  const t = useT();
   const {data, isLoading, isError, error, refetch, isRefetching} = useInsights();
 
   const onDrill = useCallback(
@@ -44,9 +46,11 @@ export function KhataInsightsScreen({
         }>
         {/* Hero */}
         <View className="rounded-3xl bg-slate-900 px-5 py-6">
-          <Text className="text-2xl font-bold text-white">✨ AI Insights</Text>
+          <Text className="text-2xl font-bold text-white">
+            {t('insights.heroTitle')}
+          </Text>
           <Text className="mt-1 text-sm text-slate-400">
-            Smart takeaways from your khata — pull to refresh for the latest.
+            {t('insights.heroSub')}
           </Text>
         </View>
 
@@ -55,7 +59,7 @@ export function KhataInsightsScreen({
             <SkeletonCards />
           ) : isError && !data ? (
             <ErrorState
-              message={error?.message ?? 'Could not generate insights.'}
+              message={error?.message ?? t('insights.loadError')}
               onRetry={refetch}
               retrying={isRefetching}
             />
@@ -68,7 +72,7 @@ export function KhataInsightsScreen({
               />
             ))
           ) : (
-            <Text variant="caption">No insights yet — check back soon.</Text>
+            <Text variant="caption">{t('insights.empty')}</Text>
           )}
         </View>
       </ScrollView>

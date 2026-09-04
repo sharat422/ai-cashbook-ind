@@ -11,21 +11,23 @@ import {
   useCustomerAging,
   useCustomerInsights,
 } from '@features/customer-intel/presentation/hooks';
+import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
 
-const AGING_ROWS: Array<{key: keyof Aging['buckets']; label: string; tint: string}> = [
-  {key: 'current', label: 'Current', tint: 'bg-success'},
-  {key: 'd1_30', label: '1–30 days', tint: 'bg-amber-400'},
-  {key: 'd31_60', label: '31–60 days', tint: 'bg-amber-500'},
-  {key: 'd61_90', label: '61–90 days', tint: 'bg-orange-500'},
-  {key: 'd90_plus', label: '90+ days', tint: 'bg-danger'},
+const AGING_ROWS: Array<{key: keyof Aging['buckets']; labelKey: TKey; tint: string}> = [
+  {key: 'current', labelKey: 'custIntel.bucketCurrent', tint: 'bg-success'},
+  {key: 'd1_30', labelKey: 'custIntel.bucket1_30', tint: 'bg-amber-400'},
+  {key: 'd31_60', labelKey: 'custIntel.bucket31_60', tint: 'bg-amber-500'},
+  {key: 'd61_90', labelKey: 'custIntel.bucket61_90', tint: 'bg-orange-500'},
+  {key: 'd90_plus', labelKey: 'custIntel.bucket90plus', tint: 'bg-danger'},
 ];
 
 export function CustomerInsightsScreen({
   navigation,
 }: AppScreenProps<'CustomerInsights'>): React.JSX.Element {
+  const t = useT();
   const aging = useCustomerAging();
   const insights = useCustomerInsights();
 
@@ -52,21 +54,21 @@ export function CustomerInsightsScreen({
             colors={[colors.primary]}
           />
         }>
-        <Text variant="title">Customer intelligence</Text>
+        <Text variant="title">{t('custIntel.title')}</Text>
         <Text variant="subtitle" className="mt-0.5">
-          Aging, risk, and who to chase
+          {t('custIntel.subtitle')}
         </Text>
 
         {/* Aging */}
         <View className="mt-5 rounded-2xl border border-border bg-white p-4">
           <Text variant="label" className="mb-3">
-            Receivables aging
+            {t('custIntel.aging')}
           </Text>
           {aging.isLoading && !aging.data ? (
             <Skeleton className="h-40 rounded-xl" />
           ) : aging.isError && !aging.data ? (
             <ErrorState
-              message={aging.error?.message ?? 'Could not load aging.'}
+              message={aging.error?.message ?? t('custIntel.agingError')}
               onRetry={aging.refetch}
             />
           ) : aging.data ? (
@@ -80,7 +82,7 @@ export function CustomerInsightsScreen({
         ) : insights.isError && !insights.data ? (
           <View className="mt-4">
             <ErrorState
-              message={insights.error?.message ?? 'Could not load insights.'}
+              message={insights.error?.message ?? t('custIntel.insightsError')}
               onRetry={insights.refetch}
             />
           </View>
@@ -93,6 +95,7 @@ export function CustomerInsightsScreen({
 }
 
 function AgingBars({aging}: {aging: Aging}): React.JSX.Element {
+  const t = useT();
   const max = Math.max(
     aging.buckets.current,
     aging.buckets.d1_30,
@@ -102,7 +105,7 @@ function AgingBars({aging}: {aging: Aging}): React.JSX.Element {
     1,
   );
   if (aging.total <= 0) {
-    return <Text variant="caption">No outstanding receivables.</Text>;
+    return <Text variant="caption">{t('custIntel.noReceivables')}</Text>;
   }
   return (
     <View style={{gap: 12}}>
@@ -111,7 +114,7 @@ function AgingBars({aging}: {aging: Aging}): React.JSX.Element {
         return (
           <View key={r.key}>
             <View className="flex-row items-center justify-between">
-              <Text className="text-sm text-slate-700">{r.label}</Text>
+              <Text className="text-sm text-slate-700">{t(r.labelKey)}</Text>
               <Text className="text-sm font-semibold text-slate-900">
                 {formatINR(value)}
               </Text>
@@ -126,7 +129,7 @@ function AgingBars({aging}: {aging: Aging}): React.JSX.Element {
         );
       })}
       <View className="mt-1 flex-row items-center justify-between border-t border-border pt-2">
-        <Text className="text-sm font-semibold text-slate-900">Total due</Text>
+        <Text className="text-sm font-semibold text-slate-900">{t('custIntel.totalDue')}</Text>
         <Text className="text-sm font-bold text-slate-900">
           {formatINR(aging.total)}
         </Text>
@@ -142,11 +145,12 @@ function Lists({
   data: CustomerInsights;
   onTap: (id: string, name: string) => void;
 }): React.JSX.Element {
+  const t = useT();
   return (
     <View style={{gap: 12}} className="mt-4">
       <Section
         icon="💰"
-        title="Who owes me the most?"
+        title={t('custIntel.topDebtors')}
         rows={data.topDebtors.map(r => ({
           id: r.customerId,
           name: r.name,
@@ -156,8 +160,8 @@ function Lists({
       />
       <Section
         icon="⏰"
-        title="Who is late?"
-        subtitle={`${data.overdueCount} overdue`}
+        title={t('custIntel.whoLate')}
+        subtitle={t('custIntel.overdueCount', {count: data.overdueCount})}
         rows={data.overdue.map(r => ({
           id: r.customerId,
           name: r.name,
@@ -167,7 +171,7 @@ function Lists({
       />
       <Section
         icon="✅"
-        title="Who paid this month?"
+        title={t('custIntel.whoPaid')}
         rows={data.paidThisMonth.map(r => ({
           id: r.customerId,
           name: r.name,
@@ -177,21 +181,21 @@ function Lists({
       />
       <Section
         icon="🛌"
-        title="Who hasn’t purchased recently?"
+        title={t('custIntel.dormant')}
         rows={data.dormant.map(r => ({
           id: r.customerId,
           name: r.name,
-          right: `${r.daysSince}d ago`,
+          right: t('custIntel.daysAgo', {days: r.daysSince}),
         }))}
         onTap={onTap}
       />
       <Section
         icon="🚨"
-        title="Which customers are high risk?"
+        title={t('custIntel.highRisk')}
         rows={data.highRisk.map(r => ({
           id: r.customerId,
           name: r.name,
-          right: `Risk ${r.score}`,
+          right: t('custIntel.risk', {score: r.score}),
         }))}
         onTap={onTap}
       />
@@ -212,6 +216,7 @@ function Section({
   rows: Array<{id: string; name: string; right: string}>;
   onTap: (id: string, name: string) => void;
 }): React.JSX.Element {
+  const t = useT();
   return (
     <View className="rounded-2xl border border-border bg-white p-4">
       <View className="mb-2 flex-row items-center justify-between">
@@ -221,7 +226,7 @@ function Section({
         {subtitle ? <Text variant="caption">{subtitle}</Text> : null}
       </View>
       {rows.length === 0 ? (
-        <Text variant="caption">None right now.</Text>
+        <Text variant="caption">{t('custIntel.none')}</Text>
       ) : (
         <View style={{gap: 6}}>
           {rows.slice(0, 5).map(r => (
