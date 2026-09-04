@@ -9,12 +9,14 @@ import {
   totalPieces,
   type Counts,
 } from '@features/cash-counter/domain/denominations';
+import {useT} from '@/i18n';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
 import {onlyDigits} from '@utils/validation';
 
 /** Physical cash counter: enter how many of each note/coin → live total. */
 export function CashCounterScreen(): React.JSX.Element {
+  const t = useT();
   const [counts, setCounts] = useState<Counts>({});
 
   const total = useMemo(() => cashTotal(counts), [counts]);
@@ -28,9 +30,9 @@ export function CashCounterScreen(): React.JSX.Element {
   return (
     <Screen scroll={false}>
       <View className="flex-1 py-6">
-        <Text variant="title">Cash counter</Text>
+        <Text variant="title">{t('cash.title')}</Text>
         <Text variant="subtitle" className="mt-1">
-          Count physical cash in hand.
+          {t('cash.subtitle')}
         </Text>
 
         <ScrollView
@@ -40,13 +42,13 @@ export function CashCounterScreen(): React.JSX.Element {
           {/* Header row */}
           <View className="flex-row px-1 pb-2">
             <Text variant="caption" className="w-20">
-              Note/coin
+              {t('cash.noteCoin')}
             </Text>
             <Text variant="caption" className="flex-1 text-center">
-              Count
+              {t('cash.count')}
             </Text>
             <Text variant="caption" className="w-28 text-right">
-              Subtotal
+              {t('cash.subtotal')}
             </Text>
           </View>
 
@@ -85,10 +87,12 @@ export function CashCounterScreen(): React.JSX.Element {
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-xs uppercase tracking-wide text-slate-400">
-                Total cash
+                {t('cash.totalCash')}
               </Text>
               <Text className="mt-0.5 text-xs text-slate-400">
-                {pieces} piece{pieces === 1 ? '' : 's'}
+                {pieces === 1
+                  ? t('cash.pieceOne')
+                  : t('cash.pieces', {count: pieces})}
               </Text>
             </View>
             <Text
@@ -102,7 +106,7 @@ export function CashCounterScreen(): React.JSX.Element {
 
         {total > 0 ? (
           <Pressable className="mt-2 self-center" onPress={() => setCounts({})}>
-            <Text className="text-sm font-semibold text-primary">Reset</Text>
+            <Text className="text-sm font-semibold text-primary">{t('cash.reset')}</Text>
           </Pressable>
         ) : null}
       </View>

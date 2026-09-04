@@ -3,6 +3,7 @@ import {FlatList, Pressable, View} from 'react-native';
 
 import {EmptyState, Screen, Text} from '@components/ui';
 import {useInboxStore, type AppNotification} from '@/services/notifications';
+import {useT} from '@/i18n';
 import {formatDisplayDate} from '@utils/date';
 
 function NotificationRow({item}: {item: AppNotification}): React.JSX.Element {
@@ -26,6 +27,7 @@ function NotificationRow({item}: {item: AppNotification}): React.JSX.Element {
 
 /** In-app notification inbox (the default delivery channel). */
 export function NotificationsScreen(): React.JSX.Element {
+  const t = useT();
   const notifications = useInboxStore(state => state.notifications);
   const markAllRead = useInboxStore(state => state.markAllRead);
   const clear = useInboxStore(state => state.clear);
@@ -39,11 +41,11 @@ export function NotificationsScreen(): React.JSX.Element {
     <Screen scroll={false}>
       <View className="flex-1 py-8">
         <View className="mb-4 flex-row items-center justify-between">
-          <Text variant="title">Notifications</Text>
+          <Text variant="title">{t('notifications.title')}</Text>
           {notifications.length > 0 ? (
             <Pressable onPress={clear}>
               <Text className="text-sm font-semibold text-danger">
-                Clear all
+                {t('notifications.clearAll')}
               </Text>
             </Pressable>
           ) : null}
@@ -59,8 +61,8 @@ export function NotificationsScreen(): React.JSX.Element {
             <View className="mt-16">
               <EmptyState
                 icon="🔔"
-                title="No notifications yet"
-                message="Your daily summaries and alerts will show up here."
+                title={t('notifications.emptyTitle')}
+                message={t('notifications.emptyMsg')}
               />
             </View>
           }

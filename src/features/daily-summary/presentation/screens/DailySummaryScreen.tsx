@@ -18,13 +18,9 @@ import {
 import {sendDailySummaryNow} from '@features/daily-summary/presentation/dispatch';
 import {useDailySummary} from '@features/daily-summary/presentation/hooks';
 import {useSummarySettingsStore} from '@features/daily-summary/presentation/store/summarySettings.store';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {toISODate} from '@utils/date';
-
-const ENABLED_OPTIONS = [
-  {label: 'On', value: true},
-  {label: 'Off', value: false},
-] as const;
 
 const pad = (n: number) => `${n}`.padStart(2, '0');
 
@@ -35,9 +31,14 @@ const pad = (n: number) => `${n}`.padStart(2, '0');
 export function DailySummaryScreen({
   navigation,
 }: AppScreenProps<'DailySummary'>): React.JSX.Element {
+  const t = useT();
   const today = toISODate(new Date());
   const {data, isLoading, isError, error, refetch, isRefetching} =
     useDailySummary(today);
+  const ENABLED_OPTIONS = [
+    {label: t('common.on'), value: true},
+    {label: t('common.off'), value: false},
+  ];
 
   const enabled = useSummarySettingsStore(state => state.enabled);
   const hour = useSummarySettingsStore(state => state.hour);
@@ -52,15 +53,15 @@ export function DailySummaryScreen({
     try {
       const delivered = await sendDailySummaryNow();
       Alert.alert(
-        'Summary sent',
+        t('daily.sentTitle'),
         delivered.length > 0
-          ? `Delivered to: ${delivered.join(', ')}. Check the bell on the dashboard.`
-          : 'No channels were available to deliver to.',
+          ? t('daily.sentMsg', {channels: delivered.join(', ')})
+          : t('daily.sentNone'),
       );
     } catch (e) {
       Alert.alert(
-        'Could not send',
-        e instanceof Error ? e.message : 'Please try again.',
+        t('daily.couldNotSend'),
+        e instanceof Error ? e.message : t('ai.tryAgain'),
       );
     } finally {
       setSending(false);
@@ -70,9 +71,9 @@ export function DailySummaryScreen({
   return (
     <Screen>
       <View className="py-8">
-        <Text variant="title">Daily Summary</Text>
+        <Text variant="title">{t('daily.title')}</Text>
         <Text variant="subtitle" className="mt-2">
-          Your income, expenses and profit for today.
+          {t('daily.subtitle')}
         </Text>
 
         {/* Summary */}
@@ -81,21 +82,21 @@ export function DailySummaryScreen({
             <Skeleton className="h-44 rounded-3xl" />
           ) : isError && !data ? (
             <ErrorState
-              message={error?.message ?? 'Could not generate the summary.'}
+              message={error?.message ?? t('daily.loadError')}
               onRetry={refetch}
               retrying={isRefetching}
             />
           ) : data && isSummaryEmpty(data) ? (
             <EmptyState
               icon="🗓️"
-              title="Nothing recorded today"
-              message="Add income or an expense and your summary will appear here."
+              title={t('daily.emptyTitle')}
+              message={t('daily.emptyMsg')}
             />
           ) : data ? (
             <>
               <ProfitHeroCard summary={data} />
               <Text variant="label" className="mt-7 mb-3">
-                Top expense categories
+                {t('daily.topCategories')}
               </Text>
               <TopCategoriesList categories={data.topExpenseCategories} />
             </>
@@ -105,7 +106,7 @@ export function DailySummaryScreen({
         {/* Notification settings */}
         <View className="mt-8 rounded-2xl border border-border bg-white p-4">
           <Text variant="label" className="mb-2">
-            Daily summary notification
+            {t('daily.notifLabel')}
           </Text>
           <SegmentedControl
             value={enabled}
@@ -114,7 +115,7 @@ export function DailySummaryScreen({
           />
 
           <View className="mt-4 flex-row items-center justify-between">
-            <Text className="text-sm text-slate-700">Delivery time</Text>
+            <Text className="text-sm text-slate-700">{t('daily.deliveryTime')}</Text>
             <View className="flex-row items-center" style={{gap: 16}}>
               <Pressable
                 onPress={() => setTime((hour + 23) % 24, minute)}
@@ -132,21 +133,18 @@ export function DailySummaryScreen({
             </View>
           </View>
           <Text variant="caption" className="mt-2">
-            Delivered to the in-app inbox{' '}
-            {/* WhatsApp lights up once enabled in env + backend */}
-            (WhatsApp when enabled). Background delivery needs the OS scheduler —
-            see the docs.
+            {t('daily.deliveryHint')}
           </Text>
         </View>
 
         <Button
-          title="Send summary now"
+          title={t('daily.sendNow')}
           className="mt-5"
           loading={sending}
           onPress={onSendNow}
         />
         <Button
-          title="Open notifications"
+          title={t('daily.openNotifications')}
           variant="secondary"
           className="mt-2"
           onPress={() => navigation.navigate('Notifications')}
