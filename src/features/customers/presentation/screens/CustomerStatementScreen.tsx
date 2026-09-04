@@ -7,6 +7,7 @@ import {buildStatement} from '@features/customers/domain/customerStatement';
 import {StatementDocument} from '@features/customers/presentation/components';
 import {exportStatement, type ExportFormat} from '@features/customers/presentation/exportStatement';
 import {useCustomerLedger} from '@features/customers/presentation/hooks';
+import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
@@ -34,11 +35,11 @@ function presetRange(preset: Preset): {from: string; to: string} {
   }
 }
 
-const PRESETS: Array<{label: string; value: Preset}> = [
-  {label: 'This month', value: 'month'},
-  {label: 'Last month', value: 'last-month'},
-  {label: '3 months', value: '3-months'},
-  {label: 'All', value: 'all'},
+const PRESETS: Array<{labelKey: TKey; value: Preset}> = [
+  {labelKey: 'customers.presetMonth', value: 'month'},
+  {labelKey: 'customers.presetLastMonth', value: 'last-month'},
+  {labelKey: 'customers.preset3Months', value: '3-months'},
+  {labelKey: 'customers.presetAll', value: 'all'},
 ];
 
 const EXPORTS: Array<{label: string; value: ExportFormat}> = [
@@ -51,6 +52,7 @@ const EXPORTS: Array<{label: string; value: ExportFormat}> = [
 export function CustomerStatementScreen({
   route,
 }: AppScreenProps<'CustomerStatement'>): React.JSX.Element {
+  const t = useT();
   const {customer} = route.params;
   const businessName = useAuthStore(s => s.business?.businessName);
   const {data: ledger, isLoading, isError, error, refetch} = useCustomerLedger(
@@ -77,7 +79,7 @@ export function CustomerStatementScreen({
   return (
     <Screen>
       <View className="py-6">
-        <Text variant="title">Statement</Text>
+        <Text variant="title">{t('customers.statementTitle')}</Text>
         <Text variant="subtitle" className="mt-1">
           {customer.fullName}
           {customer.businessName ? ` · ${customer.businessName}` : ''}
@@ -85,13 +87,13 @@ export function CustomerStatementScreen({
 
         {/* Date range */}
         <Text variant="label" className="mt-5 mb-2">
-          Date range
+          {t('customers.dateRange')}
         </Text>
         <View className="flex-row flex-wrap" style={{gap: 8}}>
           {PRESETS.map(p => (
             <FilterChip
               key={p.value}
-              label={p.label}
+              label={t(p.labelKey)}
               selected={preset === p.value}
               onPress={() => applyPreset(p.value)}
             />
@@ -110,7 +112,7 @@ export function CustomerStatementScreen({
 
         {/* Export options */}
         <Text variant="label" className="mt-5 mb-2">
-          Export
+          {t('customers.export')}
         </Text>
         <View className="flex-row" style={{gap: 8}}>
           {EXPORTS.map(ex => (
@@ -134,7 +136,7 @@ export function CustomerStatementScreen({
 
         {/* Preview */}
         <Text variant="label" className="mt-6 mb-2">
-          Preview
+          {t('customers.preview')}
         </Text>
         {isLoading && !ledger ? (
           <View className="py-10">
@@ -142,7 +144,7 @@ export function CustomerStatementScreen({
           </View>
         ) : isError && !ledger ? (
           <ErrorState
-            message={error?.message ?? 'Could not load the statement.'}
+            message={error?.message ?? t('customers.loadStatementError')}
             onRetry={refetch}
           />
         ) : statement ? (

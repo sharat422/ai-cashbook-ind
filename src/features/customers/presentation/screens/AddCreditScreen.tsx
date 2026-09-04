@@ -18,6 +18,7 @@ import {
 import {useLedgerMutations} from '@features/customers/presentation/hooks';
 import {useCreditDraftStore} from '@features/customers/presentation/store/creditDraft.store';
 import {useConnectivity} from '@features/income/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
 import {toISODate} from '@utils/date';
@@ -33,6 +34,7 @@ export function AddCreditScreen({
   navigation,
   route,
 }: AppScreenProps<'AddCredit'>): React.JSX.Element {
+  const t = useT();
   const {customer} = route.params;
   const online = useConnectivity();
   const creditLimit = useCreditLimit(customer.id);
@@ -78,7 +80,7 @@ export function AddCreditScreen({
 
   const onSaveDraft = () => {
     saveDraft(customer.id, currentDraft());
-    Alert.alert('Draft saved', 'You can finish this credit entry later.');
+    Alert.alert(t('customers.draftSaved'), t('customers.draftSavedMsg'));
     navigation.goBack();
   };
 
@@ -94,7 +96,7 @@ export function AddCreditScreen({
 
   const onSubmit = () => {
     if (Number.isNaN(amount) || amount <= 0) {
-      setError('Enter an amount greater than ₹0');
+      setError(t('customers.amountError'));
       return;
     }
     addCredit.mutate(
@@ -110,7 +112,7 @@ export function AddCreditScreen({
           clearDraft(customer.id);
           setSuccess(true);
         },
-        onError: err => Alert.alert('Could not add credit', err.message),
+        onError: err => Alert.alert(t('customers.couldNotAddCredit'), err.message),
       },
     );
   };
@@ -118,19 +120,21 @@ export function AddCreditScreen({
   return (
     <Screen>
       <View className="py-6">
-        <Text variant="title">Add credit · Udhaar</Text>
+        <Text variant="title">{t('customers.addCreditTitle')}</Text>
         <Text variant="subtitle" className="mt-1">
-          For {customer.fullName}
+          {t('customers.forCustomer', {name: customer.fullName})}
           {customer.businessName ? ` · ${customer.businessName}` : ''}
         </Text>
 
         {restored ? (
           <View className="mt-4 flex-row items-center justify-between rounded-xl bg-primary/5 px-4 py-3">
             <Text className="text-sm font-medium text-primary">
-              Draft restored
+              {t('customers.draftRestored')}
             </Text>
             <Pressable onPress={onDiscardDraft}>
-              <Text className="text-sm font-semibold text-danger">Discard</Text>
+              <Text className="text-sm font-semibold text-danger">
+                {t('customers.discard')}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -138,7 +142,7 @@ export function AddCreditScreen({
         {!online ? (
           <View className="mt-4 rounded-xl bg-amber-50 px-4 py-3">
             <Text className="text-sm font-medium text-amber-700">
-              You're offline — this credit is saved on-device and syncs later.
+              {t('customers.offlineCredit')}
             </Text>
           </View>
         ) : null}
@@ -158,8 +162,10 @@ export function AddCreditScreen({
                   info.status === 'exceeded' ? 'text-danger' : 'text-amber-800'
                 }`}>
                 {info.status === 'exceeded'
-                  ? `🚨 This will exceed the credit limit by ${formatINR(info.over)}.`
-                  : `⚠️ This nears the ${formatINR(creditLimit ?? 0)} credit limit.`}
+                  ? t('customers.willExceed', {amount: formatINR(info.over)})
+                  : t('customers.nearsLimit', {
+                      amount: formatINR(creditLimit ?? 0),
+                    })}
               </Text>
             </View>
           );
@@ -168,7 +174,7 @@ export function AddCreditScreen({
         {/* Large amount field */}
         <View className="mt-6 rounded-3xl bg-slate-900 px-5 pb-6 pt-5">
           <Text className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Credit amount
+            {t('customers.creditAmount')}
           </Text>
           <View className="mt-3">
             <AmountInput
@@ -202,42 +208,42 @@ export function AddCreditScreen({
 
         {/* Details */}
         <View className="mt-6" style={{gap: 18}}>
-          <FormField label="Date" required>
+          <FormField label={t('form.date')} required>
             <DateField value={date} onChange={setDate} />
           </FormField>
 
-          <FormField label="Invoice number" hint="Optional">
+          <FormField label={t('customers.invoiceNumber')} hint={t('common.optional')}>
             <TextField
               value={invoiceNumber}
               onChangeText={v => setInvoiceNumber(v.toUpperCase())}
-              placeholder="e.g. INV-1042"
+              placeholder={t('customers.invoicePlaceholder')}
               autoCapitalize="characters"
               maxLength={40}
             />
           </FormField>
 
-          <FormField label="Notes" hint="Optional">
+          <FormField label={t('form.notes')} hint={t('common.optional')}>
             <NotesInput
               value={notes}
               onChange={setNotes}
-              placeholder="e.g. 2 bags cement, 1 box tiles"
+              placeholder={t('customers.creditNotesPlaceholder')}
               maxLength={200}
             />
           </FormField>
 
-          <FormField label="Attachment" hint="Bill / receipt (camera or gallery)">
+          <FormField label={t('form.attachment')} hint={t('customers.attachmentHint')}>
             <AttachmentPicker value={attachment} onChange={setAttachment} />
           </FormField>
         </View>
 
         <Button
-          title="Add credit"
+          title={t('customers.addCredit')}
           className="mt-8"
           loading={addCredit.isPending}
           onPress={onSubmit}
         />
         <Button
-          title="Save as draft"
+          title={t('customers.saveDraft')}
           variant="secondary"
           className="mt-2"
           onPress={onSaveDraft}
@@ -246,9 +252,13 @@ export function AddCreditScreen({
 
       <SuccessOverlay
         visible={success}
-        title={`${formatINR(Number.isNaN(amount) ? 0 : amount)} credit added`}
+        title={t('customers.creditAdded', {
+          amount: formatINR(Number.isNaN(amount) ? 0 : amount),
+        })}
         subtitle={
-          online ? 'Added to the ledger' : 'Saved — will sync when online'
+          online
+            ? t('customers.addedToLedger')
+            : t('customers.savedWillSync')
         }
         onDone={() => {
           setSuccess(false);

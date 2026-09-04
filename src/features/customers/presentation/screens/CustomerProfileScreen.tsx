@@ -40,6 +40,7 @@ import {
 } from '@features/customer-intel/store/creditLimit.store';
 import {useConnectivity} from '@features/income/presentation/hooks';
 import {SendReminderSheet} from '@features/reminders/presentation/components';
+import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
@@ -47,16 +48,17 @@ import {formatINR} from '@utils/currency';
 
 type Filter = 'all' | 'credit' | 'payment';
 
-const FILTERS: Array<{label: string; value: Filter}> = [
-  {label: 'All', value: 'all'},
-  {label: 'Credit', value: 'credit'},
-  {label: 'Payments', value: 'payment'},
+const FILTERS: Array<{labelKey: TKey; value: Filter}> = [
+  {labelKey: 'customers.filterAll', value: 'all'},
+  {labelKey: 'customers.filterCredit', value: 'credit'},
+  {labelKey: 'customers.filterPayments', value: 'payment'},
 ];
 
 export function CustomerProfileScreen({
   navigation,
   route,
 }: AppScreenProps<'CustomerProfile'>): React.JSX.Element {
+  const t = useT();
   const {customer} = route.params;
   const ledgerQuery = useCustomerLedger(customer.id);
   const {receivePayment} = useLedgerMutations(customer.id);
@@ -105,7 +107,7 @@ export function CustomerProfileScreen({
         setPaymentOpen(false);
         setPaidAmount(input.amount);
       },
-      onError: err => Alert.alert('Could not save', err.message),
+      onError: err => Alert.alert(t('form.couldNotSave'), err.message),
     });
   };
 
@@ -130,7 +132,7 @@ export function CustomerProfileScreen({
       {/* Outstanding balance hero */}
       <View className="mt-6 rounded-3xl bg-slate-900 px-5 py-6">
         <Text className="text-xs font-medium uppercase tracking-wide text-slate-400">
-          Outstanding balance
+          {t('customers.outstanding')}
         </Text>
         <Text
           className={`mt-2 text-4xl font-bold ${
@@ -143,7 +145,7 @@ export function CustomerProfileScreen({
         <View className="mt-4 flex-row" style={{gap: 12}}>
           <View className="flex-1 rounded-2xl bg-white/5 p-3">
             <Text className="text-[11px] uppercase text-slate-400">
-              Credit history
+              {t('customers.creditHistory')}
             </Text>
             <Text className="mt-1 text-base font-semibold text-amber-300">
               {formatINR(ledger?.totalCredit ?? 0)}
@@ -151,7 +153,7 @@ export function CustomerProfileScreen({
           </View>
           <View className="flex-1 rounded-2xl bg-white/5 p-3">
             <Text className="text-[11px] uppercase text-slate-400">
-              Payment history
+              {t('customers.paymentHistory')}
             </Text>
             <Text className="mt-1 text-base font-semibold text-green-300">
               {formatINR(ledger?.totalPayment ?? 0)}
@@ -171,8 +173,10 @@ export function CustomerProfileScreen({
               limitInfo.status === 'exceeded' ? 'text-danger' : 'text-amber-800'
             }`}>
             {limitInfo.status === 'exceeded'
-              ? `🚨 Credit limit exceeded by ${formatINR(limitInfo.over)}.`
-              : `⚠️ Approaching credit limit (${formatINR(creditLimit ?? 0)}).`}
+              ? t('customers.limitExceeded', {amount: formatINR(limitInfo.over)})
+              : t('customers.limitApproaching', {
+                  amount: formatINR(creditLimit ?? 0),
+                })}
           </Text>
         </View>
       ) : null}
@@ -180,12 +184,12 @@ export function CustomerProfileScreen({
       {/* Primary actions */}
       <View className="mt-5 flex-row" style={{gap: 12}}>
         <ActionButton
-          label="Add credit"
+          label={t('customers.addCredit')}
           tone="credit"
           onPress={() => navigation.navigate('AddCredit', {customer})}
         />
         <ActionButton
-          label="Receive payment"
+          label={t('customers.receivePayment')}
           tone="payment"
           onPress={() => setPaymentOpen(true)}
         />
@@ -194,19 +198,19 @@ export function CustomerProfileScreen({
       {/* Secondary actions */}
       <View className="mt-3 flex-row flex-wrap" style={{gap: 8}}>
         <SecondaryAction
-          label="💳 Request"
+          label={t('customers.request')}
           onPress={() => navigation.navigate('RequestPayment', {customer})}
         />
         <SecondaryAction
-          label="🔔 Reminder"
+          label={t('customers.reminder')}
           onPress={() => setReminderOpen(true)}
         />
         <SecondaryAction
-          label="📄 Statement"
+          label={t('customers.statement')}
           onPress={() => navigation.navigate('CustomerStatement', {customer})}
         />
         <SecondaryAction
-          label="🤝 Collect"
+          label={t('customers.collect')}
           onPress={() =>
             navigation.navigate('CollectionAssistant', {
               name: customer.fullName,
@@ -218,25 +222,25 @@ export function CustomerProfileScreen({
           }
         />
         <SecondaryAction
-          label="🎯 Limit"
+          label={t('customers.limit')}
           onPress={() => setLimitOpen(true)}
         />
         <SecondaryAction
-          label="✏️ Edit"
+          label={t('customers.edit')}
           onPress={() => navigation.navigate('CustomerForm', {customer})}
         />
         <SecondaryAction
-          label="📞 Call"
+          label={t('customers.call')}
           onPress={() => Linking.openURL(`tel:${customer.mobile}`)}
         />
       </View>
 
       {/* Contact details */}
       <View className="mt-6 rounded-2xl border border-border bg-white px-4">
-        <Detail label="Mobile" value={`+91 ${customer.mobile}`} />
-        <Detail label="GST number" value={customer.gstNumber} />
-        <Detail label="Address" value={customer.address} />
-        <Detail label="Notes" value={customer.notes} />
+        <Detail label={t('customers.mobile')} value={`+91 ${customer.mobile}`} />
+        <Detail label={t('customers.gst')} value={customer.gstNumber} />
+        <Detail label={t('customers.address')} value={customer.address} />
+        <Detail label={t('form.notes')} value={customer.notes} />
       </View>
 
       {/* Payment score (#17) — good-payer score = 100 − risk. */}
@@ -244,7 +248,7 @@ export function CustomerProfileScreen({
         <View className="mt-6 rounded-2xl border border-border bg-white p-4">
           <View className="flex-row items-center justify-between">
             <View>
-              <Text variant="caption">Payment Score</Text>
+              <Text variant="caption">{t('customers.paymentScore')}</Text>
               <Text className="text-3xl font-bold text-slate-900">
                 {100 - risk.prediction.score}
                 <Text className="text-base font-normal text-muted">/100</Text>
@@ -267,25 +271,25 @@ export function CustomerProfileScreen({
                     : 'text-danger'
                 }`}>
                 {risk.prediction.category === 'low'
-                  ? 'Low risk'
+                  ? t('customers.riskLow')
                   : risk.prediction.category === 'medium'
-                  ? 'Medium risk'
-                  : 'High risk'}
+                  ? t('customers.riskMedium')
+                  : t('customers.riskHigh')}
               </Text>
             </View>
           </View>
           <View className="mt-4 flex-row rounded-xl bg-slate-50 p-3" style={{gap: 8}}>
             <ScoreStat
-              label="Usually pays"
+              label={t('customers.usuallyPays')}
               value={`${Math.round(risk.features.avgPaymentDelayDays)}d`}
             />
             <ScoreStat
-              label="Current overdue"
+              label={t('customers.currentOverdue')}
               value={formatINR(customer.isOverdue ? Math.max(outstanding, 0) : 0)}
             />
             <ScoreStat
-              label="History"
-              value={`${risk.features.historyCount} txns`}
+              label={t('customers.history')}
+              value={t('customers.txns', {count: risk.features.historyCount})}
             />
           </View>
         </View>
@@ -306,16 +310,16 @@ export function CustomerProfileScreen({
 
       {/* Timeline header + filters */}
       <View className="mt-7 flex-row items-center justify-between">
-        <Text variant="label">Transaction timeline</Text>
+        <Text variant="label">{t('customers.timeline')}</Text>
         <Text variant="caption">
-          {ledger ? `${ledger.entries.length} entries` : ''}
+          {ledger ? t('customers.entries', {count: ledger.entries.length}) : ''}
         </Text>
       </View>
       <View className="mt-3 flex-row" style={{gap: 8}}>
         {FILTERS.map(f => (
           <FilterChip
             key={f.value}
-            label={f.label}
+            label={t(f.labelKey)}
             selected={filter === f.value}
             onPress={() => setFilter(f.value)}
           />
@@ -343,14 +347,14 @@ export function CustomerProfileScreen({
             </View>
           ) : ledgerQuery.isError ? (
             <ErrorState
-              message={ledgerQuery.error?.message ?? 'Could not load activity.'}
+              message={ledgerQuery.error?.message ?? t('customers.loadActivityError')}
               onRetry={ledgerQuery.refetch}
             />
           ) : (
             <EmptyState
               icon="🧾"
-              title="No transactions yet"
-              message="Add a credit or record a payment to start the timeline."
+              title={t('customers.noTxnTitle')}
+              message={t('customers.noTxnMsg')}
             />
           )
         }
@@ -369,8 +373,10 @@ export function CustomerProfileScreen({
         visible={paidAmount !== null}
         confetti
         holdMs={2200}
-        title={`${formatINR(paidAmount ?? 0)} received`}
-        subtitle={online ? 'Payment recorded' : 'Saved — will sync when online'}
+        title={t('customers.received', {amount: formatINR(paidAmount ?? 0)})}
+        subtitle={
+          online ? t('customers.paymentRecorded') : t('customers.savedWillSync')
+        }
         onDone={() => setPaidAmount(null)}
       />
 

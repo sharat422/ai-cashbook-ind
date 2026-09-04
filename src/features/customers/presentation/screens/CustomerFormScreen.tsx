@@ -8,6 +8,7 @@ import {
   useCustomerForm,
   useCustomerMutations,
 } from '@features/customers/presentation/hooks';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
 /** Add or edit a customer. Edit mode when a customer is passed in params. */
@@ -15,6 +16,7 @@ export function CustomerFormScreen({
   navigation,
   route,
 }: AppScreenProps<'CustomerForm'>): React.JSX.Element {
+  const t = useT();
   const editing = route.params?.customer;
   const form = useCustomerForm(editing);
   const {create, update} = useCustomerMutations();
@@ -28,15 +30,12 @@ export function CustomerFormScreen({
       // 409 = another device edited this customer since it was loaded. Don't
       // clobber their change — tell the user to reload the latest version.
       if (err instanceof ApiError && err.status === 409) {
-        Alert.alert(
-          'Edited on another device',
-          'This customer was changed on another device. Go back and reopen it ' +
-            'to see the latest details, then re-apply your changes.',
-          [{text: 'OK', onPress: () => navigation.goBack()}],
-        );
+        Alert.alert(t('customers.conflictTitle'), t('customers.conflictMsg'), [
+          {text: t('common.ok'), onPress: () => navigation.goBack()},
+        ]);
         return;
       }
-      Alert.alert('Could not save', err.message);
+      Alert.alert(t('form.couldNotSave'), err.message);
     };
 
     if (editing) {
@@ -60,12 +59,10 @@ export function CustomerFormScreen({
     <Screen>
       <View className="py-6">
         <Text variant="title">
-          {editing ? 'Edit customer' : 'Add customer'}
+          {editing ? t('customers.editTitle') : t('customers.addTitle')}
         </Text>
         <Text variant="subtitle" className="mt-1">
-          {editing
-            ? 'Update this customer’s details.'
-            : 'Save a customer to track dues and transactions.'}
+          {editing ? t('customers.editSubtitle') : t('customers.addSubtitle')}
         </Text>
 
         <View className="mt-6">
@@ -73,13 +70,13 @@ export function CustomerFormScreen({
         </View>
 
         <Button
-          title={editing ? 'Save changes' : 'Add customer'}
+          title={editing ? t('customers.saveChanges') : t('customers.addTitle')}
           className="mt-8"
           loading={isSaving}
           onPress={onSubmit}
         />
         <Button
-          title="Cancel"
+          title={t('common.cancel')}
           variant="ghost"
           className="mt-2"
           onPress={() => navigation.goBack()}

@@ -10,6 +10,7 @@ import {
 } from '@features/customers/presentation/components';
 import {useCustomers} from '@features/customers/presentation/hooks';
 import {useDebouncedValue} from '@/shared/hooks/useDebouncedValue';
+import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 
@@ -18,6 +19,7 @@ export function CustomerListScreen({
   navigation,
   route,
 }: AppScreenProps<'Customers'>): React.JSX.Element {
+  const t = useT();
   const [search, setSearch] = React.useState(route.params?.search ?? '');
   const debounced = useDebouncedValue(search, 350);
 
@@ -65,7 +67,7 @@ export function CustomerListScreen({
     <Screen scroll={false} edges={['top']}>
       <View className="pb-3 pt-4">
         <View className="flex-row items-center justify-between">
-          <Text variant="title">Customers</Text>
+          <Text variant="title">{t('customers.title')}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => navigation.navigate('CustomerForm')}
@@ -77,7 +79,9 @@ export function CustomerListScreen({
               shadowOffset: {width: 0, height: 4},
               elevation: 3,
             }}>
-            <Text className="text-sm font-semibold text-white">+ Add</Text>
+            <Text className="text-sm font-semibold text-white">
+              {t('customers.add')}
+            </Text>
           </Pressable>
         </View>
 
@@ -85,13 +89,15 @@ export function CustomerListScreen({
           <SearchBar
             value={search}
             onChangeText={setSearch}
-            placeholder="Search by name, business or mobile"
+            placeholder={t('customers.searchPlaceholder')}
           />
         </View>
 
         {!showSkeleton && !showError ? (
           <Text variant="caption" className="mt-3">
-            {total.toLocaleString('en-IN')} customer{total === 1 ? '' : 's'}
+            {total === 1
+              ? t('customers.countOne')
+              : t('customers.count', {count: total.toLocaleString('en-IN')})}
           </Text>
         ) : null}
       </View>
@@ -102,7 +108,7 @@ export function CustomerListScreen({
         ) : showError ? (
           <View className="flex-1 justify-center">
             <ErrorState
-              message={error?.message ?? 'Could not load customers.'}
+              message={error?.message ?? t('customers.loadError')}
               onRetry={refetch}
               retrying={isRefetching}
             />
@@ -111,13 +117,17 @@ export function CustomerListScreen({
           <View className="flex-1 justify-center">
             <EmptyState
               icon={hasSearch ? '🔎' : '👥'}
-              title={hasSearch ? 'No customers found' : 'No customers yet'}
+              title={
+                hasSearch
+                  ? t('customers.emptySearchTitle')
+                  : t('customers.emptyTitle')
+              }
               message={
                 hasSearch
-                  ? 'Try a different name or number.'
-                  : 'Add your first customer to start tracking dues.'
+                  ? t('customers.emptySearchMsg')
+                  : t('customers.emptyMsg')
               }
-              actionLabel={hasSearch ? undefined : '+ Add customer'}
+              actionLabel={hasSearch ? undefined : t('customers.addFirst')}
               onAction={
                 hasSearch
                   ? undefined
