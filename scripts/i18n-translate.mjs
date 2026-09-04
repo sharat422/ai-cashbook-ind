@@ -47,7 +47,7 @@ const LOCALE_NAMES = {
 };
 
 const MODEL = process.env.I18N_MODEL || 'claude-haiku-4-5-20251001';
-const CHUNK_SIZE = 60; // keys per batch request — keeps each response small/reliable
+const CHUNK_SIZE = 35; // keys per request — smaller = less blast radius if one response is malformed
 const API = 'https://api.anthropic.com/v1/messages/batches';
 
 // ---------------------------------------------------------------------------
@@ -91,8 +91,10 @@ function systemPrompt(localeName) {
     `- Keep leading emoji, the ₹ symbol, %, · and other punctuation as-is.\n` +
     `- Common finance loanwords may stay as shopkeepers actually say them ` +
     `(e.g. "udhaar", "GST").\n` +
-    `- Return ONLY a JSON object mapping each input key to its translated string. ` +
-    `No markdown, no commentary.`
+    `- Return ONLY a strictly valid, minified JSON object (RFC 8259) mapping each ` +
+    `input key to its translated string. Escape every double-quote (\\") and ` +
+    `backslash inside values; no trailing commas, no comments, no text outside ` +
+    `the JSON object.`
   );
 }
 
@@ -112,34 +114,81 @@ async function anthropic(path, init) {
   return res;
 }
 
-/** Submit a batch of translation requests, poll to completion, return custom_id → parsed object. */
-async function runBatch(requests) {
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/** GET with retries — Anthropic occasionally returns transient 429/5xx (incl. a
+ * 503 "credential validation failed") while a batch is processing; those must
+ * not abort a long-running poll. Only 4xx (except 429) fail fast. */
+async function anthropicGet(path, tries = 6) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await anthropic(path);
+    } catch (err) {
+      const m = /→ (\d+):/.exec(err.message);
+      const code = m ? Number(m[1]) : 0;
+      const transient = code === 0 || code === 429 || code >= 500;
+      if (!transient || attempt >= tries - 1) throw err;
+      await sleep(Math.min(2000 * 2 ** attempt, 30_000));
+    }
+  }
+}
+
+/** Submit a batch of translation requests; returns the batch id. */
+async function submitBatch(requests) {
   const created = await (await anthropic('/v1/messages/batches', {
     method: 'POST',
     body: JSON.stringify({requests}),
   })).json();
-  const id = created.id;
-  process.stdout.write(`  batch ${id} submitted (${requests.length} requests)`);
+  process.stdout.write(`  batch ${created.id} submitted (${requests.length} requests)`);
+  return created.id;
+}
 
-  let status = created;
-  while (status.processing_status !== 'ended') {
-    await new Promise(r => setTimeout(r, 5000));
+/** Poll a batch to completion (resilient), then return custom_id → parsed JSON. */
+async function pollAndCollect(id) {
+  let status;
+  do {
+    await sleep(5000);
     process.stdout.write('.');
-    status = await (await anthropic(`/v1/messages/batches/${id}`)).json();
-  }
+    status = await (await anthropicGet(`/v1/messages/batches/${id}`)).json();
+  } while (status.processing_status !== 'ended');
   process.stdout.write(' done\n');
 
-  const jsonl = await (await anthropic(`/v1/messages/batches/${id}/results`)).text();
+  const jsonl = await (await anthropicGet(`/v1/messages/batches/${id}/results`)).text();
   const out = {};
   for (const line of jsonl.split('\n').filter(Boolean)) {
-    const row = JSON.parse(line);
+    const row = JSON.parse(line); // the batch envelope is always well-formed
     if (row.result?.type !== 'succeeded') {
-      throw new Error(`Request ${row.custom_id} failed: ${JSON.stringify(row.result)}`);
+      console.warn(`  ! ${row.custom_id}: request failed (${row.result?.type}) — skipping`);
+      continue;
     }
     const text = row.result.message.content.map(b => b.text || '').join('');
-    out[row.custom_id] = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+    const parsed = extractJson(text);
+    if (parsed) out[row.custom_id] = parsed;
+    else console.warn(`  ! ${row.custom_id}: unparseable model JSON — skipping (will re-run)`);
   }
   return out;
+}
+
+/** Parse the model's translation object, tolerating code fences or surrounding
+ * prose. Returns null if it still can't be parsed (that chunk is left for a
+ * re-run rather than aborting the whole batch). */
+function extractJson(text) {
+  const cleaned = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fall back to the outermost {...} span in case of leading/trailing prose.
+    const first = cleaned.indexOf('{');
+    const last = cleaned.lastIndexOf('}');
+    if (first !== -1 && last > first) {
+      try {
+        return JSON.parse(cleaned.slice(first, last + 1));
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -180,9 +229,12 @@ function check(en, allHashes, locales) {
   );
 }
 
-async function translate(en, allHashes, locales, dryRun) {
+/** Pure: compute the batch requests + custom_id → {locale, keys} plan from the
+ * current stale keys. Deterministic (same order/chunking), so a resume rebuilds
+ * the identical plan without resubmitting. */
+function buildPlan(en, allHashes, locales) {
   const requests = [];
-  const plan = {}; // custom_id -> {locale, keys}
+  const plan = {};
   for (const l of locales) {
     const {stale, orphans} = analyze(en, readJSON(localeFile(l)), allHashes[l] || {});
     if (orphans.length) console.log(`  ${l}: pruning ${orphans.length} orphaned key(s)`);
@@ -192,8 +244,7 @@ async function translate(en, allHashes, locales, dryRun) {
     }
     console.log(`  ${l}: ${stale.length} key(s) to translate`);
     chunk(stale, CHUNK_SIZE).forEach((keys, i) => {
-      // custom_id must match ^[a-zA-Z0-9_-]{1,64}$ — use '-' (locale codes are
-      // lowercase letters, so e.g. "hi-0", "te-3").
+      // custom_id must match ^[a-zA-Z0-9_-]{1,64}$ — use '-' (e.g. "hi-0").
       const id = `${l}-${i}`;
       plan[id] = {locale: l, keys};
       requests.push({
@@ -212,23 +263,11 @@ async function translate(en, allHashes, locales, dryRun) {
       });
     });
   }
+  return {requests, plan};
+}
 
-  if (dryRun) {
-    console.log(`\n[dry-run] would submit ${requests.length} request(s) via the Batch API.`);
-    return;
-  }
-  if (!requests.length) {
-    console.log('\nNothing stale — all target locales already in sync.');
-    return;
-  }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('\nANTHROPIC_API_KEY is not set — required to translate.');
-    process.exit(1);
-  }
-
-  const results = await runBatch(requests);
-
-  // Merge results back per locale, prune orphans, verify placeholders, rewrite files.
+/** Merge batch results into the locale files (placeholder-safe) + update hashes. */
+function applyResults(results, plan, en, allHashes, locales) {
   const updates = {}; // locale -> merged object
   for (const [id, {locale, keys}] of Object.entries(plan)) {
     const translated = results[id] || {};
@@ -261,6 +300,39 @@ async function translate(en, allHashes, locales, dryRun) {
   console.log('\nWrote updated locale files + hash manifest.');
 }
 
+async function translate(en, allHashes, locales, dryRun) {
+  const {requests, plan} = buildPlan(en, allHashes, locales);
+  if (dryRun) {
+    console.log(`\n[dry-run] would submit ${requests.length} request(s) via the Batch API.`);
+    return;
+  }
+  if (!requests.length) {
+    console.log('\nNothing stale — all target locales already in sync.');
+    return;
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('\nANTHROPIC_API_KEY is not set — required to translate.');
+    process.exit(1);
+  }
+  const id = await submitBatch(requests);
+  console.log(`\n  polling… (if interrupted, resume with: node scripts/i18n-translate.mjs --resume ${id})`);
+  const results = await pollAndCollect(id);
+  applyResults(results, plan, en, allHashes, locales);
+}
+
+/** Recover an already-submitted batch by id (rebuilds the identical plan from
+ * the current stale keys — no resubmit, so no double cost). */
+async function resume(en, allHashes, locales, batchId) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('\nANTHROPIC_API_KEY is not set — required to resume.');
+    process.exit(1);
+  }
+  const {plan} = buildPlan(en, allHashes, locales);
+  console.log(`  resuming batch ${batchId}…`);
+  const results = await pollAndCollect(batchId);
+  applyResults(results, plan, en, allHashes, locales);
+}
+
 /**
  * Load ANTHROPIC_API_KEY from a gitignored .env at the repo root if it isn't
  * already in the environment — so `npm run i18n:translate` works without pasting
@@ -288,6 +360,7 @@ async function main() {
   const args = process.argv.slice(2);
   const isCheck = args.includes('--check');
   const isDry = args.includes('--dry-run');
+  const resumeId = args.includes('--resume') ? args[args.indexOf('--resume') + 1] : null;
   const localesArg = args[args.indexOf('--locales') + 1];
   const locales =
     args.includes('--locales') && localesArg
@@ -302,6 +375,7 @@ async function main() {
   const allHashes = readJSON(HASHES_FILE);
 
   if (isCheck) check(en, allHashes, locales);
+  else if (resumeId) await resume(en, allHashes, locales, resumeId);
   else await translate(en, allHashes, locales, isDry);
 }
 
