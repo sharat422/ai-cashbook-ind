@@ -83,6 +83,14 @@ export function AITransactionScreen({
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which review field the error belongs to, so it renders inline under it.
+  const [errorField, setErrorField] = useState<'name' | 'amount' | null>(null);
+  const clearFieldError = () => {
+    if (error) {
+      setError(null);
+      setErrorField(null);
+    }
+  };
   // When set, the "Which <name>?" picker is shown (multiple matches).
   const [candidates, setCandidates] = useState<Customer[] | null>(null);
 
@@ -229,9 +237,18 @@ export function AITransactionScreen({
   };
 
   const onConfirm = async () => {
-    if (!name.trim()) return setError(t('ai.enterName'));
-    if (Number.isNaN(amount) || amount <= 0) return setError(t('ai.enterAmount'));
+    if (!name.trim()) {
+      setError(t('ai.enterName'));
+      setErrorField('name');
+      return;
+    }
+    if (Number.isNaN(amount) || amount <= 0) {
+      setError(t('ai.enterAmount'));
+      setErrorField('amount');
+      return;
+    }
     setError(null);
+    setErrorField(null);
     setBusy(true);
     try {
       const found = await findCustomerCandidates(name);
@@ -340,11 +357,18 @@ export function AITransactionScreen({
               </View>
 
               <View style={{gap: 16}}>
-                <FormField label={t('ai.customer')} required>
+                <FormField
+                  label={t('ai.customer')}
+                  required
+                  error={errorField === 'name' ? error : null}>
                   <TextField
                     value={name}
-                    onChangeText={setName}
+                    onChangeText={v => {
+                      setName(v);
+                      clearFieldError();
+                    }}
                     placeholder={t('ai.customerPlaceholder')}
+                    error={errorField === 'name' ? error : null}
                   />
                 </FormField>
 
@@ -356,8 +380,18 @@ export function AITransactionScreen({
                   />
                 </FormField>
 
-                <FormField label={t('form.amount')} required>
-                  <AmountInput value={amount} onChange={setAmount} />
+                <FormField
+                  label={t('form.amount')}
+                  required
+                  error={errorField === 'amount' ? error : null}>
+                  <AmountInput
+                    value={amount}
+                    onChange={v => {
+                      setAmount(v);
+                      clearFieldError();
+                    }}
+                    error={errorField === 'amount' ? error : null}
+                  />
                 </FormField>
 
                 {type === 'payment' ? (
@@ -379,10 +413,6 @@ export function AITransactionScreen({
                   <DateField value={date} onChange={setDate} />
                 </FormField>
               </View>
-
-              {error ? (
-                <Text className="mt-3 text-sm text-danger">{error}</Text>
-              ) : null}
 
               {/* Disambiguation picker OR confirm button */}
               {candidates ? (

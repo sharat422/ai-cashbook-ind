@@ -34,7 +34,16 @@ def add_expense(client, headers, *, amount, date, category="Fuel", vendor="HP Pe
     return r.json()
 
 
-def add_customer(client, headers, *, full_name="Ramesh Traders", mobile="8888888888", **extra):
+_mobile_seq = 8_000_000_000
+
+
+def add_customer(client, headers, *, full_name="Ramesh Traders", mobile=None, **extra):
+    # A mobile is unique per business (see _assert_mobile_unique), so default to a
+    # fresh valid 10-digit number each call unless the test pins one explicitly.
+    global _mobile_seq
+    if mobile is None:
+        _mobile_seq += 1
+        mobile = str(_mobile_seq)
     body = {"full_name": full_name, "mobile": mobile, **extra}
     r = client.post("/api/v1/customers", headers=headers, json=body)
     assert r.status_code == 200, r.text

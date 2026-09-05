@@ -35,6 +35,25 @@ def _owned_customer(db: Session, business: Business, customer_id: str) -> Custom
     return customer
 
 
+def _assert_mobile_unique(
+    db: Session, business: Business, mobile: str, exclude_id: str | None = None
+) -> None:
+    """A mobile number identifies one customer within a business. Reject a second
+    customer with the same number (empty mobile = party-by-name, no constraint)."""
+    if not mobile:
+        return
+    q = select(Customer).where(
+        Customer.business_id == business.id, Customer.mobile == mobile
+    )
+    if exclude_id is not None:
+        q = q.where(Customer.id != exclude_id)
+    if db.scalars(q).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A customer with this mobile number already exists.",
+        )
+
+
 @router.get("/customers")
 def list_customers(
     limit: int = Query(20, ge=1, le=100),
@@ -91,6 +110,7 @@ def create_customer(
     # given. Store the normalized digits so downstream (WhatsApp/UPI) is clean.
     data = body.model_dump()
     data["mobile"] = validate_mobile(body.mobile, required=False)
+    _assert_mobile_unique(db, business, data["mobile"])
     row = Customer(business_id=business.id, **data)
     db.add(row)
     db.commit()
@@ -123,6 +143,7 @@ def update_customer(
 
     data = body.model_dump()
     data["mobile"] = validate_mobile(body.mobile, required=False)
+    _assert_mobile_unique(db, business, data["mobile"], exclude_id=customer_id)
     for key, value in data.items():
         setattr(customer, key, value)
     customer.version = (customer.version or 1) + 1
