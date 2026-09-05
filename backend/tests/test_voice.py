@@ -117,6 +117,22 @@ def test_voice_parse_422_on_silence(user, client, monkeypatch):
     assert r.status_code == 422
 
 
+def test_voice_parse_retries_auto_detect_when_forced_language_empty(user, client, monkeypatch):
+    """A forced language that yields an empty transcript (e.g. 'Telugu' set but
+    Hinglish spoken) retries with auto-detect instead of failing."""
+    calls = []
+
+    def fake(audio_bytes, filename, language=None, prompt=None):
+        calls.append(language)
+        return "" if language else "Ramesh ko 2500 diya"  # empty when forced, ok on auto
+
+    monkeypatch.setattr(ai_routes, "transcribe_audio", fake)
+    r = _post_audio(client, user.headers, language="te")
+    assert r.status_code == 200, r.text
+    assert calls == ["te", None]  # tried forced first, then auto-detect
+    assert r.json()["transcript"] == "Ramesh ko 2500 diya"
+
+
 def test_voice_parse_maps_openai_4xx_to_422(user, client, monkeypatch):
     """OpenAI rejects undecodable/too-short audio with a 4xx (it carries a
     .status_code). That's a client audio problem, so we return 422 (the app

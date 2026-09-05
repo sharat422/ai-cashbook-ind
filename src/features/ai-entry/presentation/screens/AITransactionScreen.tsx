@@ -29,9 +29,11 @@ import {
   ensureMicPermission,
   isVoiceAvailable,
   MIN_RECORDING_MS,
+  SILENCE_PEAK_DB,
   startRecording,
   stopRecording,
 } from '@features/ai-entry/data/voiceRecorder';
+import {logError} from '@/services/diagnostics/errorLog.store';
 import type {Customer} from '@features/customers/domain/entities';
 import {
   PAYMENT_METHODS,
@@ -100,8 +102,10 @@ export function AITransactionScreen({
       let audio;
       try {
         audio = await stopRecording();
-      } catch {
+      } catch (e) {
         setRecording(false);
+        // Capture the real native error so we're not guessing (Settings → Error log).
+        logError('voice.stopRecorder', e instanceof Error ? e : new Error(String(e)));
         return Alert.alert(t('ai.couldNotRead'), t('ai.tryAgain'));
       }
       setRecording(false);
@@ -110,11 +114,21 @@ export function AITransactionScreen({
       if (audio.durationMs > 0 && audio.durationMs < MIN_RECORDING_MS) {
         return Alert.alert(t('ai.tooShortTitle'), t('ai.tooShortMsg'));
       }
+      // The mic reported near-silence (metering worked but heard nothing) — no
+      // engine can transcribe that, so tell the user before the round-trip.
+      if (audio.peakDb !== null && audio.peakDb < SILENCE_PEAK_DB) {
+        logError(
+          'voice.silent',
+          new Error(`silent capture · peakDb=${audio.peakDb} · durMs=${audio.durationMs}`),
+        );
+        return Alert.alert(t('ai.didntCatch'), t('ai.didntCatchMsg'));
+      }
       setError(null);
       setCandidates(null);
+      const captured = audio;
       voice.mutate(
         {
-          audio,
+          audio: captured,
           today: toISODate(new Date()),
           language: voiceLanguage ?? undefined, // explicit code, or auto-detect
         },
@@ -123,7 +137,16 @@ export function AITransactionScreen({
             setText(result.transcript); // show what was heard — editable
             applyParsed(result);
           },
-          onError: onVoiceError,
+          onError: err => {
+            // Record the server's real reason + our capture stats, so a single
+            // repro tells us exactly what failed.
+            logError(
+              'voice.parse',
+              err instanceof Error ? err : new Error(String(err)),
+              `peakDb=${captured.peakDb} · durMs=${captured.durationMs}`,
+            );
+            onVoiceError(err);
+          },
         },
       );
       return;
@@ -134,7 +157,8 @@ export function AITransactionScreen({
     try {
       await startRecording();
       setRecording(true);
-    } catch {
+    } catch (e) {
+      logError('voice.startRecorder', e instanceof Error ? e : new Error(String(e)));
       Alert.alert(t('ai.couldNotRead'), t('ai.tryAgain'));
     }
   };

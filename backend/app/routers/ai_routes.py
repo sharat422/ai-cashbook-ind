@@ -36,13 +36,23 @@ def _transcribe_or_raise(audio: UploadFile, language: str | None) -> str:
     if not audio_bytes:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Empty audio.")
 
-    try:
-        transcript = transcribe_audio(
-            audio_bytes,
-            audio.filename or "audio.m4a",
-            language=language or None,  # explicit language, or Whisper auto-detect
+    filename = audio.filename or "audio.m4a"
+
+    def _run(lang: str | None) -> str:
+        return transcribe_audio(
+            audio_bytes, filename,
+            language=lang or None,  # explicit language, or Whisper auto-detect
             prompt=CASHBOOK_TRANSCRIBE_PROMPT,  # bias toward amounts/currency
         )
+
+    try:
+        transcript = _run(language)
+        # Forcing the wrong language (e.g. the user has "Telugu" set but speaks
+        # Hinglish) often yields an empty transcript — retry with auto-detect so
+        # a language mismatch doesn't read as "didn't catch that".
+        if not transcript and language:
+            log.info("empty transcript for language=%s; retrying with auto-detect", language)
+            transcript = _run(None)
     except Exception as exc:  # noqa: BLE001
         # Always record WHY on the server — without this the real Whisper error
         # (undecodable audio vs. auth vs. upstream outage) is invisible.

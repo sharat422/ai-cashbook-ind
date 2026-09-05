@@ -29,9 +29,10 @@ function recorder(): AudioRecorderPlayer {
 }
 
 /**
- * 16 kHz mono AAC — the sweet spot for Whisper (it resamples to 16 kHz anyway),
- * and small to upload. On Android the VOICE_RECOGNITION source engages the
- * platform's noise suppression + auto-gain, our on-device "cleanup" for speech.
+ * Mono AAC. Android records at 16 kHz with the VOICE_RECOGNITION source (engages
+ * the platform noise suppression + auto-gain). iOS records at its native 44.1 kHz
+ * — forcing 16 kHz on the iOS AAC encoder is a known source of failed/silent
+ * recordings on some devices; the server (Whisper) resamples anyway.
  */
 const AUDIO_SET: AudioSet = {
   // Android
@@ -42,7 +43,7 @@ const AUDIO_SET: AudioSet = {
   AudioChannelsAndroid: 1,
   AudioEncodingBitRateAndroid: 32000,
   // iOS
-  AVSampleRateKeyIOS: 16000,
+  AVSampleRateKeyIOS: 44100,
   AVNumberOfChannelsKeyIOS: 1,
   AVFormatIDKeyIOS: AVEncodingOption.aac,
   AVEncoderAudioQualityKeyIOS: AVEncoderAudioQualityIOSType.high,
@@ -55,14 +56,25 @@ export interface RecordedAudio {
   type: string;
   /** How long the clip ran (ms) — lets callers reject accidental short taps. */
   durationMs: number;
+  /**
+   * Loudest mic level seen during the clip, in dB (≈ -160 silence … 0 loud), or
+   * null if the device didn't report metering. Lets the caller tell "the mic
+   * heard nothing" (silent capture) from "heard speech but couldn't transcribe".
+   */
+  peakDb: number | null;
 }
 
 /** Below this, a tap is almost certainly accidental: too short for Whisper to
  * decode into speech, and it would just come back as a failed transcription. */
 export const MIN_RECORDING_MS = 700;
 
+/** Peak dB below this (when metering worked) means the mic captured ~silence. */
+export const SILENCE_PEAK_DB = -45;
+
 // Wall-clock start of the current recording, used to derive the clip duration.
 let startedAtMs = 0;
+// Loudest metering sample seen this recording; -160 = the "no sample yet" floor.
+let peakDb = -160;
 
 /**
  * Ask for the microphone at runtime (Android). iOS prompts automatically on the
@@ -88,18 +100,35 @@ export async function startRecording(): Promise<void> {
   if (!isVoiceAvailable()) {
     throw new Error('Voice recording is unavailable in this build.');
   }
-  await recorder().startRecorder(undefined, AUDIO_SET);
+  const rec = recorder();
+  peakDb = -160;
+  // Metering lets us detect a silent capture (mic muted / not actually recording).
+  rec.addRecordBackListener(e => {
+    const m = (e as {currentMetering?: number}).currentMetering;
+    if (typeof m === 'number' && Number.isFinite(m) && m > peakDb) peakDb = m;
+  });
+  // 3rd arg enables metering; if a platform ignores it, peakDb just stays -160.
+  await rec.startRecorder(undefined, AUDIO_SET, true);
   startedAtMs = Date.now();
 }
 
 /** Stop and return the clip as an uploadable file part. */
 export async function stopRecording(): Promise<RecordedAudio> {
-  const path = await recorder().stopRecorder();
+  const rec = recorder();
+  const path = await rec.stopRecorder();
+  try {
+    rec.removeRecordBackListener();
+  } catch {
+    // listener may already be gone — ignore
+  }
   const durationMs = startedAtMs ? Date.now() - startedAtMs : 0;
   startedAtMs = 0;
+  // -160 means we never got a metering sample → report null (unknown) rather
+  // than a false "silent".
+  const reportedPeak = peakDb > -160 ? peakDb : null;
   const uri = path.startsWith('file://') ? path : `file://${path}`;
   // Whisper infers the format from the filename extension, so keep it accurate.
   const ext = (path.split('.').pop() || 'm4a').toLowerCase();
   const type = ext === 'mp4' ? 'audio/mp4' : ext === 'wav' ? 'audio/wav' : 'audio/m4a';
-  return {uri, name: `voice.${ext}`, type, durationMs};
+  return {uri, name: `voice.${ext}`, type, durationMs, peakDb: reportedPeak};
 }
