@@ -26,12 +26,13 @@
 # "Seed .env" step overrides .env.example), so a build ALWAYS points at the
 # right backend automatically — no manual env editing. See PRODUCTION_SETUP.md.
 #
-# GIT BRANCH → WORKFLOW (run the matching workflow from the matching branch):
-#   * dev  branch  → android / ios-staging       (→ staging backend)
-#   * main branch  → android-production / ios-production (→ production backend)
-# These are triggered manually in Codemagic (a TestFlight/Play upload per push is
-# intentional to run by hand). In Codemagic → workflow settings you can add a
-# branch trigger (dev for staging, main for production) if you want auto-builds.
+# GIT BRANCH → WORKFLOW (auto-build on push, via each workflow's `triggering`):
+#   * push to dev   → android + ios-staging       (→ staging backend)
+#   * push to main  → android-production + ios-production (→ production backend)
+# So a merge to main auto-builds + uploads the production apps to TestFlight/Play.
+# NOTE: Codemagic only honours `triggering` when a webhook connects this repo to
+# the app (Codemagic → app settings → connect repository / add webhook). You can
+# still run any workflow manually from the Codemagic UI regardless.
 #
 # NOTE: both iOS workflows use the same bundle id, so their builds land in the
 # SAME TestFlight app — distinguish them by the build's "What to Test" notes.
@@ -104,6 +105,12 @@ workflows:
     name: Android Release Build (staging)
     max_build_duration: 60
     instance_type: linux_x2
+    triggering:
+      events: [push]
+      cancel_previous_builds: true
+      branch_patterns:
+        - pattern: dev
+          include: true
     environment:
       node: 18.20.4
       java: 17
@@ -140,6 +147,12 @@ workflows:
     name: Android · Production (signed AAB for Play)
     max_build_duration: 60
     instance_type: linux_x2
+    triggering:
+      events: [push]
+      cancel_previous_builds: true
+      branch_patterns:
+        - pattern: main
+          include: true
     environment:
       node: 18.20.4
       java: 17
@@ -218,6 +231,12 @@ workflows:
     name: iOS · Staging (TestFlight)
     max_build_duration: 90
     instance_type: mac_mini_m2
+    triggering:
+      events: [push]
+      cancel_previous_builds: true
+      branch_patterns:
+        - pattern: dev
+          include: true
     integrations:
       app_store_connect: AICashBook
     environment:
@@ -247,6 +266,12 @@ workflows:
     name: iOS · Production (TestFlight)
     max_build_duration: 90
     instance_type: mac_mini_m2
+    triggering:
+      events: [push]
+      cancel_previous_builds: true
+      branch_patterns:
+        - pattern: main
+          include: true
     integrations:
       app_store_connect: AICashBook
     environment:

@@ -1,0 +1,50 @@
+name: tests
+
+# Gate every change before it reaches an environment: frontend type-check + Jest
+# and the backend pytest suite. Runs on pushes to dev/main and on PRs targeting
+# them, so a red suite is visible before a merge (and before the branch auto-
+# deploys to staging/production).
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+# A newer push to the same branch/PR cancels the older in-flight run.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: frontend (tsc + jest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npm run tsc
+      - name: Unit tests
+        run: npm test -- --ci
+
+  backend:
+    name: backend (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Pytest
+        run: python -m pytest -q
