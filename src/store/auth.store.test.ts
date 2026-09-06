@@ -1,14 +1,8 @@
 /**
  * Auth status state machine — the derived `status()` that RootNavigator uses to
- * choose the Auth / Onboarding / App stack.
- *
- * We force `bypassAuth: false` here to exercise the real token/business logic
- * (the live build may toggle the temporary bypass on).
+ * choose the Auth / Onboarding / App stack. Login is always enforced (there is
+ * no auth bypass): status is driven purely by token + business presence.
  */
-
-jest.mock('@config/constants', () => ({
-  APP_CONFIG: {bypassAuth: false},
-}));
 
 import {useAuthStore} from '@store/auth.store';
 

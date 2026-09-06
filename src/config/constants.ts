@@ -7,13 +7,6 @@ export const APP_CONFIG = {
   name: 'Smart CashBook',
   /** User-facing app version (keep in step with the iOS/Android build number). */
   version: '1.0.0',
-  /**
-   * TEMPORARY: skip phone/OTP login and open the app straight to the
-   * landing (Dashboard) screen. Set back to `false` to re-enable auth.
-   */
-  bypassAuth: false,
-  /** Base URL for the backend API. Swap with env-driven config in production. */
-  apiBaseUrl: 'https://api.smartcashbook.example.com',
   /** How long the splash screen stays visible while bootstrapping (ms). */
   splashDurationMs: 1500,
   /** OTP length expected from the backend. */
@@ -21,6 +14,8 @@ export const APP_CONFIG = {
   /** Resend OTP cooldown window (seconds). */
   otpResendSeconds: 30,
 } as const;
+// Note: the live API base URL comes from ENV.apiBaseUrl (src/config/env.ts),
+// baked per-environment at build time by Codemagic — never hard-coded here.
 
 /**
  * Customer-support channels. Set these to your real support number/email before
