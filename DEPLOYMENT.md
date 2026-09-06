@@ -29,9 +29,14 @@ git push                      # → production backend redeploys
 
 - **Backend (Render)** auto-deploys on push: `dev` → staging, `main` → production
   (wired via the `branch:` fields in `render.yaml`).
-- **Mobile (Codemagic)** builds are run **manually** per release — run the
-  `*-staging` workflows from `dev`, the `*-production` workflows from `main`
-  (each bakes in the correct API URL). See `codemagic.yaml`.
+- **Mobile (Codemagic)** auto-builds on push via each workflow's `triggering`:
+  `dev` → staging apps (`android`, `ios-staging`), `main` → production apps
+  (`android-production`, `ios-production`, which upload to TestFlight/Play).
+  Requires the Codemagic↔repo webhook to be connected; you can still run any
+  workflow manually. See `codemagic.yaml`.
+- **Tests (GitHub Actions, `tests.yml`)** run frontend tsc + Jest and backend
+  pytest on every push to `dev`/`main` and on PRs, so a red suite is caught
+  before it auto-deploys.
 
 ## One-time Render setup after this change
 
