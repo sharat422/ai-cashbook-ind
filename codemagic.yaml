@@ -26,6 +26,13 @@
 # "Seed .env" step overrides .env.example), so a build ALWAYS points at the
 # right backend automatically — no manual env editing. See PRODUCTION_SETUP.md.
 #
+# GIT BRANCH → WORKFLOW (run the matching workflow from the matching branch):
+#   * dev  branch  → android / ios-staging       (→ staging backend)
+#   * main branch  → android-production / ios-production (→ production backend)
+# These are triggered manually in Codemagic (a TestFlight/Play upload per push is
+# intentional to run by hand). In Codemagic → workflow settings you can add a
+# branch trigger (dev for staging, main for production) if you want auto-builds.
+#
 # NOTE: both iOS workflows use the same bundle id, so their builds land in the
 # SAME TestFlight app — distinguish them by the build's "What to Test" notes.
 # For side-by-side installs, give staging a separate bundle id (e.g.

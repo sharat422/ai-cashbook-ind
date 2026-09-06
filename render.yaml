@@ -13,7 +13,16 @@
 # invalid in production and vice-versa. Secrets (`sync: false`) are set per-service
 # in the Render dashboard, never in git. See PRODUCTION_SETUP.md.
 #
+# GIT BRANCH → ENVIRONMENT (auto-deploy on push):
+#   • dev  branch → staging     (smart-cashbook-api)
+#   • main branch → production  (smart-cashbook-api-prod)
+# Day-to-day: build on `dev` (auto-deploys to staging); when a change is verified,
+# merge dev → main to release it to production. Keep this blueprint's tracked
+# branch = main in the Render dashboard so production config changes are reviewed.
+#
 # Apply/refresh: Render → New + → Blueprint → this repo → Apply (manages BOTH envs).
+# After changing the `branch:` fields below, re-sync the Blueprint in Render so
+# each service starts tracking its new branch.
 # Free web instances sleep after ~15 min idle; move each to a paid plan for
 # always-on before real launch.
 
@@ -35,6 +44,7 @@ services:
   - type: web
     name: smart-cashbook-api
     runtime: python
+    branch: dev            # staging tracks the dev branch
     rootDir: backend
     plan: free
     healthCheckPath: /health
@@ -81,6 +91,7 @@ services:
   - type: web
     name: smart-cashbook-api-prod
     runtime: python
+    branch: main           # production tracks the main branch
     rootDir: backend
     plan: free            # ⬆ bump to "starter" for always-on before launch
     region: singapore     # low latency to India
