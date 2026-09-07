@@ -17,15 +17,28 @@ import {
   type ExpenseCategory,
 } from '@features/expense/domain/entities';
 import {useCreateExpense} from '@features/expense/presentation/hooks';
+import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {
   INCOME_CATEGORIES,
   type IncomeCategory,
 } from '@features/income/domain/entities';
 import {useConnectivity, useCreateIncome} from '@features/income/presentation/hooks';
+import {useIncomeStore} from '@features/income/presentation/store/income.store';
+import {
+  detectAnomalies,
+  type Anomaly,
+  type AnomalyCandidate,
+} from '@features/transactions/domain/anomalyDetection';
 import type {Attachment} from '@/shared/types/attachment';
-import {useT} from '@/i18n';
+import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {toISODate} from '@utils/date';
+
+/** i18n key for each anomaly flag's explanation. */
+const ANOMALY_KEY: Record<Anomaly['type'], TKey> = {
+  duplicate: 'anomaly.duplicate',
+  'round-outlier': 'anomaly.roundOutlier',
+};
 
 type TxnType = 'income' | 'expense';
 
@@ -63,6 +76,9 @@ export function QuickAddScreen({
   const online = useConnectivity();
   const createIncome = useCreateIncome();
   const createExpense = useCreateExpense();
+  // Recent entries drive on-device anomaly checks (same-kind history only).
+  const incomeEntries = useIncomeStore(s => s.entries);
+  const expenseEntries = useExpenseStore(s => s.entries);
 
   const [type, setType] = useState<TxnType>(route.params?.type ?? 'expense');
   const [amount, setAmount] = useState<number>(NaN);
@@ -96,12 +112,8 @@ export function QuickAddScreen({
     }
   };
 
-  const onSubmit = () => {
-    if (Number.isNaN(amount) || amount <= 0) {
-      return setAmountError(t('ai.enterAmount'));
-    }
-    setAmountError(null);
-
+  /** Persist the entry (only reached once anomalies, if any, are acknowledged). */
+  const doSave = () => {
     const trimmedNote = note.trim() || undefined;
     const chosenCategory = category ?? defaultCategory;
 
@@ -135,6 +147,44 @@ export function QuickAddScreen({
         },
       );
     }
+  };
+
+  const onSubmit = () => {
+    if (Number.isNaN(amount) || amount <= 0) {
+      return setAmountError(t('ai.enterAmount'));
+    }
+    setAmountError(null);
+
+    // Gentle anomaly check against recent entries of the SAME kind. Never blocks
+    // — if something looks off we ask the user to confirm; they decide.
+    const candidate: AnomalyCandidate = {
+      amount,
+      date,
+      category: category ?? defaultCategory,
+      description: type === 'expense' ? vendor.trim() || note : note,
+    };
+    const history = (type === 'income' ? incomeEntries : expenseEntries).map(
+      e => ({
+        amount: e.amount,
+        date: e.date,
+        category: e.category,
+        description:
+          'vendor' in e ? (e as {vendor?: string}).vendor || e.notes : e.notes,
+      }),
+    );
+    const flags = detectAnomalies(candidate, history);
+    if (flags.length > 0) {
+      Alert.alert(
+        t('anomaly.title'),
+        flags.map(f => t(ANOMALY_KEY[f.type])).join('\n\n'),
+        [
+          {text: t('anomaly.review'), style: 'cancel'},
+          {text: t('anomaly.saveAnyway'), onPress: doSave},
+        ],
+      );
+      return;
+    }
+    doSave();
   };
 
   return (
