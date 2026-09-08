@@ -664,7 +664,12 @@
     "assistant.title": "155b92226a0c",
     "assistant.tryAsking": "0612a7ce2c79",
     "auth.business.error": "3cd33131a0a6",
-    "auth.business.gstLabel": "ed322109b2de"
+    "auth.business.gstLabel": "ed322109b2de",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "gu": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -1331,7 +1336,12 @@
     "assistant.title": "155b92226a0c",
     "assistant.tryAsking": "0612a7ce2c79",
     "auth.business.error": "3cd33131a0a6",
-    "auth.business.gstLabel": "ed322109b2de"
+    "auth.business.gstLabel": "ed322109b2de",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "hi": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -1998,7 +2008,12 @@
     "unlock.subtitle": "a2126ae0867f",
     "unlock.title": "e4cac6cef453",
     "unlock.useBiometrics": "117a6845cda3",
-    "recurring.repeatEvery": "7bd2492af73e"
+    "recurring.repeatEvery": "7bd2492af73e",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "kn": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2665,7 +2680,12 @@
     "settings.preferences": "9dfd349ebee5",
     "settings.restoreData": "f253f6a3d823",
     "settings.restoreDataConfirmMsg": "a437a1587cc6",
-    "settings.restoreDataConfirmTitle": "f725cc7b7531"
+    "settings.restoreDataConfirmTitle": "f725cc7b7531",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "ml": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -3332,7 +3352,12 @@
     "unlock.incorrect": "7693c77c63f0",
     "unlock.subtitle": "a2126ae0867f",
     "unlock.title": "e4cac6cef453",
-    "unlock.useBiometrics": "117a6845cda3"
+    "unlock.useBiometrics": "117a6845cda3",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "mr": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -3999,7 +4024,12 @@
     "unlock.incorrect": "7693c77c63f0",
     "unlock.subtitle": "a2126ae0867f",
     "unlock.title": "e4cac6cef453",
-    "unlock.useBiometrics": "117a6845cda3"
+    "unlock.useBiometrics": "117a6845cda3",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "pa": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -4666,7 +4696,12 @@
     "unlock.incorrect": "7693c77c63f0",
     "unlock.subtitle": "a2126ae0867f",
     "unlock.title": "e4cac6cef453",
-    "unlock.useBiometrics": "117a6845cda3"
+    "unlock.useBiometrics": "117a6845cda3",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "ta": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -5333,7 +5368,12 @@
     "unlock.subtitle": "a2126ae0867f",
     "unlock.title": "e4cac6cef453",
     "unlock.useBiometrics": "117a6845cda3",
-    "recurring.repeatEvery": "7bd2492af73e"
+    "recurring.repeatEvery": "7bd2492af73e",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   },
   "te": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -6000,6 +6040,11 @@
     "unlock.incorrect": "7693c77c63f0",
     "unlock.subtitle": "a2126ae0867f",
     "unlock.title": "e4cac6cef453",
-    "unlock.useBiometrics": "117a6845cda3"
+    "unlock.useBiometrics": "117a6845cda3",
+    "anomaly.duplicate": "ed2265620336",
+    "anomaly.review": "81c5855ddc57",
+    "anomaly.roundOutlier": "d029da2d429a",
+    "anomaly.saveAnyway": "943a4eef3a36",
+    "anomaly.title": "f7e83d9bb02b"
   }
 }
