@@ -72,3 +72,21 @@ def validate_mobile(
     if not _MOBILE_RE.match(digits):
         raise _reject(f"Enter a valid 10-digit {field.lower()}.")
     return digits
+
+
+def validate_date(value: str) -> str:
+    from datetime import date
+    try:
+        parsed = date.fromisoformat(value)
+    except (TypeError, ValueError):
+        raise _reject("Date must be a valid YYYY-MM-DD date.")
+    if parsed.isoformat() != value:
+        raise _reject("Date must use YYYY-MM-DD format.")
+    return value
+
+
+def validate_text(value: str, field: str, max_length: int) -> str:
+    result = value.strip()
+    if not result or len(result) > max_length:
+        raise _reject(f"{field} must contain 1 to {max_length} characters.")
+    return result

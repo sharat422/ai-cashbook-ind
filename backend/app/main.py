@@ -16,6 +16,7 @@ from .routers import (
     business,
     customers,
     daily_summary,
+    summary_insights,
     dashboard,
     expenses,
     customer_insights,
@@ -48,7 +49,7 @@ install_error_handlers(app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
-    allow_credentials=True,
+    allow_credentials=False,  # Bearer-token API; no cross-origin cookies.
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -62,6 +63,7 @@ for module in (
     transactions,
     dashboard,
     daily_summary,
+    summary_insights,
     khata,
     ai_routes,
     notifications,

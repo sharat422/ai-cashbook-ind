@@ -27,8 +27,11 @@ def get_current_user(
             creds.credentials,
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
+            options={"require": ["sub", "exp"]},
         )
         user_id = payload.get("sub")
+        if not isinstance(user_id, str) or not user_id:
+            raise jwt.InvalidTokenError("Missing subject")
     except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..calc import today_iso
+from ..validation import validate_date
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW
@@ -19,7 +20,7 @@ def daily_summary(
     business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
-    day = date or today_iso()
+    day = validate_date(date) if date else today_iso()
 
     incomes = db.scalars(
         select(Income).where(

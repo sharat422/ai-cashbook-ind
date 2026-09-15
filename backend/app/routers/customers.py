@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
@@ -10,20 +10,21 @@ from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
 from ..models import Business, Customer, LedgerEntry, now_iso
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
-from ..validation import validate_amount, validate_mobile
+from ..validation import validate_date, validate_text, validate_amount, validate_mobile
 
 router = APIRouter(tags=["customers"])
 
 
 class CustomerBody(BaseModel):
-    full_name: str
+    model_config = ConfigDict(str_strip_whitespace=True)
+    full_name: str = Field(min_length=1, max_length=200)
     # Optional so quick flows (e.g. AI voice entry) can create a party by name;
     # the mobile can be filled in later from the customer form.
     mobile: str = ""
     gst_number: str | None = None
-    business_name: str | None = None
-    address: str | None = None
-    notes: str | None = None
+    business_name: str | None = Field(default=None, max_length=200)
+    address: str | None = Field(default=None, max_length=1000)
+    notes: str | None = Field(default=None, max_length=5000)
 
 
 def _owned_customer(db: Session, business: Business, customer_id: str) -> Customer:
@@ -197,6 +198,10 @@ def add_ledger_entry(
 ) -> dict:
     customer = _owned_customer(db, business, customer_id)
     amount = validate_amount(amount)
+    date = validate_date(date)
+    client_id = validate_text(client_id, "Client ID", 80)
+    if notes is not None and len(notes) > 5000:
+        raise HTTPException(422, "Notes must not exceed 5000 characters.")
     if type not in ("credit", "payment"):
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,

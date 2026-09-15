@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
 
     @model_validator(mode="after")
+    def _production_secrets(self) -> "Settings":
+        if not self.debug:
+            if len(self.jwt_secret) < 32 or self.jwt_secret == "dev-secret-change-me":
+                raise ValueError("Production requires a JWT_SECRET of at least 32 characters")
+            if self.jwt_algorithm != "HS256":
+                raise ValueError("This deployment supports HS256 tokens only")
+        return self
+
+    @model_validator(mode="after")
     def _use_render_external_url(self) -> "Settings":
         """On Render the platform injects RENDER_EXTERNAL_URL (the public
         https://<name>.onrender.com address). Prefer it for building absolute

@@ -1,7 +1,7 @@
 import json
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session
 
 from ..assistant import answer_question
@@ -14,7 +14,8 @@ router = APIRouter(tags=["assistant"])
 
 
 class AskBody(BaseModel):
-    question: str
+    model_config = ConfigDict(str_strip_whitespace=True)
+    question: str = Field(min_length=1, max_length=2000)
 
 
 @router.post("/assistant/ask")

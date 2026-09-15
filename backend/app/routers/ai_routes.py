@@ -3,7 +3,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from datetime import datetime, timezone
@@ -32,7 +32,9 @@ def _transcribe_or_raise(audio: UploadFile, language: str | None) -> str:
     Shared by the khata (/voice/parse) and expense (/voice/parse-expense) voice
     endpoints so both surface the same friendly errors and log the real reason.
     """
-    audio_bytes = audio.file.read()
+    audio_bytes = audio.file.read(20 * 1024 * 1024 + 1)
+    if len(audio_bytes) > 20 * 1024 * 1024:
+        raise HTTPException(413, "Audio must be 20 MB or smaller.")
     if not audio_bytes:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Empty audio.")
 
@@ -84,11 +86,11 @@ def _transcribe_or_raise(audio: UploadFile, language: str | None) -> str:
 
 
 class CategorizeBody(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=5000)
 
 
 class ParseTransactionBody(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=5000)
     # Client's local date (YYYY-MM-DD); defaults to server UTC today.
     today: str | None = None
 
@@ -147,7 +149,7 @@ def voice_parse_route(
 # --- Expense voice/text parser (separate from the khata transaction parser) ---
 
 class ParseExpenseBody(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=5000)
     today: str | None = None
     language: str | None = None
 

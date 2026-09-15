@@ -1,18 +1,15 @@
 import {customerRemote} from '@features/customers/data/customer.remote';
+import {customerRepository} from '@features/customers/data/customer.repository';
 import type {Customer} from '@features/customers/domain/entities';
-import {ledgerRemote} from '@features/customers/data/ledger.remote';
+import {ledgerRepository} from '@features/customers/data/ledger.repository';
 import type {PaymentMethod} from '@features/customers/domain/ledger';
 import type {ParsedType} from './entities';
-
-function makeClientId(): string {
-  return `ai_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
 
 /** Customers whose name matches — powers the "Which Ramesh?" disambiguation. */
 export async function findCustomerCandidates(name: string): Promise<Customer[]> {
   const q = name.trim();
   if (!q) return [];
-  const page = await customerRemote.list({search: q, cursor: null, limit: 10});
+  const page = await customerRepository.list({search: q, cursor: null, limit: 10});
   return page.items;
 }
 
@@ -41,7 +38,7 @@ export async function addLedgerForCustomer(
   customerId: string,
   input: LedgerInput,
 ): Promise<void> {
-  await ledgerRemote.add(
+  await ledgerRepository.addEntry(
     customerId,
     {
       type: input.type,
@@ -50,6 +47,5 @@ export async function addLedgerForCustomer(
       paymentMethod: input.type === 'payment' ? input.paymentMethod : undefined,
       notes: input.notes,
     },
-    makeClientId(),
   );
 }

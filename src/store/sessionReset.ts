@@ -30,7 +30,7 @@ import {useAuthStore} from '@store/auth.store';
 export function resetBusinessData(): void {
   useIncomeStore.setState({entries: [], queue: [], isSyncing: false, lastSyncedAt: null});
   useExpenseStore.setState({entries: [], queue: [], isSyncing: false, lastSyncedAt: null});
-  usePendingLedgerStore.setState({entries: []});
+  usePendingLedgerStore.setState({entries: [], cached: {}, customers: {}});
   useCreditDraftStore.setState({drafts: {}});
   useCreditLimitStore.setState({limits: {}});
   useCategorizationStore.setState({decisions: []});
