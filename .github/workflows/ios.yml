@@ -1,0 +1,99 @@
+name: iOS build check
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'ios/**'
+      - 'src/**'
+      - 'App.tsx'
+      - 'index.js'
+      - 'Gemfile'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.env.example'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'ios/**'
+      - 'src/**'
+      - 'App.tsx'
+      - 'index.js'
+      - 'Gemfile'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.env.example'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator-build:
+    name: AISmartCashBook simulator build
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # RN 0.76.5 is known in this repository to fail with Xcode 26 native C++
+      # compilation. Xcode 16.2 remains installed on the macos-15 image and is
+      # pinned for this unsigned CI build.
+      - name: Select Xcode 16.2
+        run: sudo xcode-select --switch /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Create CI environment
+        shell: bash
+        run: |
+          cp .env.example .env
+          sed -i '' 's|^API_BASE_URL=.*|API_BASE_URL=https://smart-cashbook-api.onrender.com|' .env
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: bundle exec pod install
+
+      - name: Build workspace for iOS Simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace AISmartCashBook.xcworkspace \
+            -scheme AISmartCashBook \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/AISmartCashBookDerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcbeautify
+
+      - name: Upload Xcode logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs-${{ github.run_number }}
+          path: ~/Library/Logs/gym
+          if-no-files-found: ignore
+          retention-days: 7
