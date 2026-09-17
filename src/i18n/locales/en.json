@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "No recurring expenses yet",
   "recurring.errAmount": "Enter a valid amount",
   "recurring.errCategory": "Choose a category",
+  "recurring.errDuplicateName": "This expense name is already added.",
   "recurring.errName": "Enter a name",
   "recurring.frequency": "Frequency",
   "recurring.loadError": "Could not load recurring expenses.",

@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "இதுவரை நியமிত செலவு இல்லை",
   "recurring.errAmount": "சரியான தொகையை உள்ளிடவும்",
   "recurring.errCategory": "ஒரு பிரிவைத் தேர்ந்தெடுக்கவும்",
+  "recurring.errDuplicateName": "இந்த செலவு பெயர் ஏற்கனவே சேர்க்கப்பட்டுள்ளது.",
   "recurring.errName": "ஒரு பெயரை உள்ளிடவும்",
   "recurring.frequency": "அதிர்வெண்",
   "recurring.loadError": "நியமிত செலவுகளை சுமக்க முடியவில்லை.",

@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "এখনও কোন নিয়মিত খরচ নেই",
   "recurring.errAmount": "বৈধ পরিমাণ প্রবেশ করুন",
   "recurring.errCategory": "একটি বিভাগ বেছে নিন",
+  "recurring.errDuplicateName": "এই খরচের নাম আগেই যোগ করা হয়েছে।",
   "recurring.errName": "একটি নাম প্রবেশ করুন",
   "recurring.frequency": "ফ্রিকোয়েন্সি",
   "recurring.loadError": "নিয়মিত খরচ লোড করতে পারলাম না।",

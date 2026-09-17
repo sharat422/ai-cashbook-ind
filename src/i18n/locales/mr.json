@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "अद्याप कोणताही आवर्ती खर्च नाही",
   "recurring.errAmount": "वैध रकम प्रविष्ट करा",
   "recurring.errCategory": "श्रेणी निवडा",
+  "recurring.errDuplicateName": "हा खर्च नाव आधीच जोडला आहे.",
   "recurring.errName": "नाव प्रविष्ट करा",
   "recurring.frequency": "वारंवारता",
   "recurring.loadError": "आवर्ती खर्च लोड करू शकलो नाही।",

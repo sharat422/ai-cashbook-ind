@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "ਅਜੇ ਕੋਈ ਬਾਰ-ਬਾਰ ਖਰਚ ਨਹੀਂ",
   "recurring.errAmount": "ਵੈਧ ਰਕਮ ਦਾਖਲ ਕਰੋ",
   "recurring.errCategory": "ਸ਼੍ਰੇਣੀ ਚੁਣੋ",
+  "recurring.errDuplicateName": "ਇਹ ਖਰਚ ਦਾ ਨਾਮ ਪਹਿਲਾਂ ਹੀ ਸ਼ਾਮਲ ਹੈ।",
   "recurring.errName": "ਨਾਮ ਦਾਖਲ ਕਰੋ",
   "recurring.frequency": "ਬਾਰ-ਬਾਰੀ",
   "recurring.loadError": "ਬਾਰ-ਬਾਰ ਖਰਚ ਲੋਡ ਨਹੀਂ ਕੀਤੇ ਜਾ ਸਕੇ।",

@@ -8,9 +8,13 @@ import {
   RECURRING_FREQUENCIES,
   frequencyLabel,
   type RecurringDraft,
+  type RecurringExpense,
   type RecurringFrequency,
 } from '@features/recurring/domain/entities';
-import {useRecurringMutations} from '@features/recurring/presentation/hooks';
+import {
+  useRecurringExpenses,
+  useRecurringMutations,
+} from '@features/recurring/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {toISODate} from '@utils/date';
@@ -30,6 +34,9 @@ export function RecurringFormScreen({
   const t = useT();
   const editing = route.params?.recurring;
   const {create, update, remove} = useRecurringMutations();
+  // Existing templates drive an instant duplicate-name check (no round-trip);
+  // the backend still enforces uniqueness as the source of truth.
+  const {data: existing} = useRecurringExpenses();
 
   const ACTIVE_OPTIONS = [
     {label: t('recurring.active'), value: true},
@@ -61,8 +68,19 @@ export function RecurringFormScreen({
   };
 
   const onSave = () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setError(t('recurring.errName'));
+      setErrorField('name');
+      return;
+    }
+    const isDuplicate = (existing?.items ?? []).some(
+      (r: RecurringExpense) =>
+        r.id !== editing?.id &&
+        r.name.trim().toLowerCase() === trimmedName.toLowerCase(),
+    );
+    if (isDuplicate) {
+      setError(t('recurring.errDuplicateName'));
       setErrorField('name');
       return;
     }

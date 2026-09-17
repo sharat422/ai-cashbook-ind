@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "ఇంకా నిరావర్తన ఖర్చులు లేవు",
   "recurring.errAmount": "సరైన మొత్తాన్ని నమోదు చేయండి",
   "recurring.errCategory": "ఒక వర్గం ఎంచుకోండి",
+  "recurring.errDuplicateName": "ఈ ఖర్చు పేరు ఇప్పటికే జోడించారు.",
   "recurring.errName": "పేరు నమోదు చేయండి",
   "recurring.frequency": "ఆవర్తనం",
   "recurring.loadError": "నిరావర్తన ఖర్చులను లోడ్ చేయలేకపోయాము.",

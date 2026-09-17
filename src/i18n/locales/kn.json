@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "ಇನ್ನೂ ಪುನರಾವರ್ತಿತ ಖರ್ಚು ಇಲ್ಲ",
   "recurring.errAmount": "ಮಾನ್ಯ ಮೊತ್ತ ನಮೂದಿಸಿ",
   "recurring.errCategory": "ವರ್ಗ ಆಯ್ಕೆ ಮಾಡಿ",
+  "recurring.errDuplicateName": "ಈ ಖರ್ಚಿನ ಹೆಸರು ಈಗಾಗಲೇ ಸೇರಿಸಲಾಗಿದೆ.",
   "recurring.errName": "ಹೆಸರು ನಮೂದಿಸಿ",
   "recurring.frequency": "ಆವರ್ತನ",
   "recurring.loadError": "ಪುನರಾವರ್ತಿತ ಖರ್ಚುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",

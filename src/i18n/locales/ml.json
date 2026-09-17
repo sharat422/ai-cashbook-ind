@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "ഇതുവരെ ആവർത്തന ചെലവ് ഇല്ല",
   "recurring.errAmount": "സാധുതയുള്ള തുക നൽകുക",
   "recurring.errCategory": "ഒരു വിഭാഗം തിരഞ്ഞെടുക്കുക",
+  "recurring.errDuplicateName": "ഈ ഖരച്ച പേരെ ഇതിനകം ചേർത്തിട്ടുണ്ട്.",
   "recurring.errName": "ഒരു പേര് നൽകുക",
   "recurring.frequency": "ആവൃത്തി",
   "recurring.loadError": "ആവർത്തന ചെലവ് ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല.",

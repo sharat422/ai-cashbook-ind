@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "હજુ કોઈ બમણું ખર્ચ નથી",
   "recurring.errAmount": "માન્ય રકમ દાખલ કરો",
   "recurring.errCategory": "શ્રેણી પસંદ કરો",
+  "recurring.errDuplicateName": "આ ખર્ચનું નામ પહેલાથી ઉમેર્યું છે.",
   "recurring.errName": "નામ દાખલ કરો",
   "recurring.frequency": "આવર્તન",
   "recurring.loadError": "બમણું ખર્ચ લોડ કરી શક્યા નહીં.",

@@ -509,6 +509,7 @@
   "recurring.emptyTitle": "अभी कोई recurring खर्च नहीं है",
   "recurring.errAmount": "सही रकम दर्ज करें",
   "recurring.errCategory": "एक category चुनें",
+  "recurring.errDuplicateName": "यह खर्च का नाम पहले से जोड़ा जा चुका है।",
   "recurring.errName": "नाम दर्ज करें",
   "recurring.frequency": "कितनी बार",
   "recurring.loadError": "Recurring खर्च लोड नहीं हो सके।",

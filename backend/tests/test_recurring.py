@@ -108,6 +108,74 @@ def test_validation_rejects_bad_input(user, client):
         assert r.status_code == 422, r.text
 
 
+def test_duplicate_name_is_rejected(user, client):
+    _make(client, user.headers, name="Shop rent")
+    # Same name (case-insensitive, whitespace-trimmed) → 422, not a second row.
+    r = client.post(
+        "/api/v1/recurring-expenses",
+        headers=user.headers,
+        json={
+            "name": "  SHOP RENT  ",
+            "amount": 9000,
+            "category": "Rent",
+            "frequency": "monthly",
+            "interval": 1,
+            "next_due_date": today_iso(),
+        },
+    )
+    assert r.status_code == 422, r.text
+    assert "already" in r.json()["detail"].lower()
+    listing = client.get("/api/v1/recurring-expenses", headers=user.headers).json()
+    assert len(listing["items"]) == 1  # the duplicate was not saved
+
+
+def test_duplicate_name_is_scoped_per_business(make_user, client):
+    a = make_user()
+    b = make_user()
+    _make(client, a.headers, name="Rent")
+    # A different business may reuse the same name — uniqueness is per-tenant.
+    r = client.post(
+        "/api/v1/recurring-expenses",
+        headers=b.headers,
+        json={
+            "name": "Rent",
+            "amount": 5000,
+            "category": "Rent",
+            "frequency": "monthly",
+            "interval": 1,
+            "next_due_date": today_iso(),
+        },
+    )
+    assert r.status_code == 200, r.text
+
+
+def test_edit_keeping_same_name_is_allowed_but_colliding_name_is_rejected(user, client):
+    first = _make(client, user.headers, name="Rent")
+    second = _make(client, user.headers, name="Salaries")
+
+    # Editing a template without changing its name must NOT trip the guard.
+    same = client.patch(
+        f"/api/v1/recurring-expenses/{first['id']}",
+        headers=user.headers,
+        json={
+            "name": "Rent", "amount": 12345, "category": "Rent",
+            "frequency": "monthly", "interval": 1, "next_due_date": today_iso(),
+        },
+    )
+    assert same.status_code == 200 and same.json()["amount"] == 12345
+
+    # Renaming one template onto another's name → 422.
+    collide = client.patch(
+        f"/api/v1/recurring-expenses/{second['id']}",
+        headers=user.headers,
+        json={
+            "name": "rent", "amount": 100, "category": "Rent",
+            "frequency": "monthly", "interval": 1, "next_due_date": today_iso(),
+        },
+    )
+    assert collide.status_code == 422, collide.text
+
+
 def test_update_and_delete(user, client):
     rec = _make(client, user.headers)
     upd = client.patch(
