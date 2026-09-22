@@ -14,6 +14,7 @@ from .routers import (
     assistant,
     auth,
     business,
+    consent,
     customers,
     daily_summary,
     summary_insights,
@@ -76,6 +77,7 @@ for module in (
     restore,
     team,
     feedback,
+    consent,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

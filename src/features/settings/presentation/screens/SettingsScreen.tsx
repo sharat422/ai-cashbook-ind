@@ -378,6 +378,12 @@ export function SettingsScreen({
           onPress={() => navigation.navigate('Notifications')}
         />
         <Button
+          title={t('settings.privacyConsent')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('ConsentSettings')}
+        />
+        <Button
           title={t('settings.help')}
           variant="secondary"
           className="mt-3"

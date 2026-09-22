@@ -23,6 +23,7 @@ export type AuthStackParamList = {
 
 /** Screens shown after login but before onboarding is complete. */
 export type OnboardingStackParamList = {
+  Consent: undefined;
   CreateBusiness: undefined;
 };
 
@@ -30,6 +31,7 @@ export type OnboardingStackParamList = {
 export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
+  ConsentSettings: undefined;
   Business: undefined;
   Assistant: undefined;
   Reports: undefined;
