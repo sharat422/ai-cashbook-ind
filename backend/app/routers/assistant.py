@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..assistant import answer_question
 from ..database import get_db
-from ..deps import require
+from ..deps import require, require_ai_consent
 from ..rbac import DATA_VIEW
 from ..models import AiDecision, Business
 
@@ -22,6 +22,7 @@ class AskBody(BaseModel):
 def assistant_ask(
     body: AskBody,
     business: Business = Depends(require(DATA_VIEW)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """Answer a natural-language question about the business. The LLM only

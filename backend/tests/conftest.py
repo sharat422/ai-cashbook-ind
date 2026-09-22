@@ -88,7 +88,12 @@ def make_user(client):
     as many independent tenants as they need.
     """
 
-    def _make(*, with_business: bool = True, business_name: str = "Test Traders"):
+    def _make(
+        *,
+        with_business: bool = True,
+        business_name: str = "Test Traders",
+        ai_consent: bool = False,
+    ):
         mobile = _unique_mobile()
         headers = _login(client, mobile)
         business = None
@@ -106,6 +111,16 @@ def make_user(client):
             )
             assert r.status_code == 200, r.text
             business = r.json()
+        # AI endpoints are gated on AI-processing consent; opt in when asked so
+        # AI tests exercise the real paths. Off by default so consent/gate tests
+        # start from the real (un-consented) state.
+        if ai_consent:
+            cr = client.put(
+                "/api/v1/consents",
+                headers=headers,
+                json={"choices": [{"purpose": "ai", "granted": True}]},
+            )
+            assert cr.status_code == 200, cr.text
         return SimpleNamespace(mobile=mobile, headers=headers, business=business)
 
     return _make
@@ -113,5 +128,9 @@ def make_user(client):
 
 @pytest.fixture
 def user(make_user):
-    """The common case: one authenticated user with one onboarded business."""
-    return make_user()
+    """The common case: one authenticated user with one onboarded business.
+
+    Grants AI consent so AI-powered endpoints (gated on it) work; tests that
+    need the un-consented state call `make_user(ai_consent=False)` directly.
+    """
+    return make_user(ai_consent=True)
