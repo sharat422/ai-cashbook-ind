@@ -55,6 +55,12 @@ services:
         value: 3.11.9
       - key: JWT_SECRET
         generateValue: true
+      # Fernet key for application-level field encryption. Set manually in the
+      # dashboard (Render's generateValue is NOT a valid Fernet key). Generate:
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # Production refuses to boot without it.
+      - key: APP_ENCRYPTION_KEY
+        sync: false
       - key: JWT_EXPIRE_MINUTES
         value: "43200"
       - key: DATABASE_URL
@@ -103,6 +109,12 @@ services:
         value: 3.11.9
       - key: JWT_SECRET
         generateValue: true
+      # Fernet key for application-level field encryption. Set manually in the
+      # dashboard (Render's generateValue is NOT a valid Fernet key). Generate:
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # Production refuses to boot without it.
+      - key: APP_ENCRYPTION_KEY
+        sync: false
       - key: JWT_EXPIRE_MINUTES
         value: "43200"
       - key: DATABASE_URL
