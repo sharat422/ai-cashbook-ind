@@ -12,3 +12,5 @@ anthropic==0.42.0
 httpx==0.28.1
 # Optional — only needed when DATABASE_URL points at PostgreSQL.
 psycopg2-binary==2.9.10
+# Error/crash monitoring + real-time alerts (activated only when SENTRY_DSN set).
+sentry-sdk==2.20.0

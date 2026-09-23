@@ -68,6 +68,12 @@ services:
         value: "123456"
       - key: CORS_ORIGINS
         value: "*"
+      # Breach detection: Sentry DSN (real-time error/alert email) + an owner
+      # mobile for WhatsApp security alerts. Set both in the dashboard.
+      - key: SENTRY_DSN
+        sync: false
+      - key: OWNER_ALERT_MOBILE
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
@@ -117,6 +123,12 @@ services:
         value: "false"
       - key: CORS_ORIGINS
         value: "*"
+      # Breach detection: Sentry DSN (real-time error/alert email) + an owner
+      # mobile for WhatsApp security alerts. Set both in the dashboard.
+      - key: SENTRY_DSN
+        sync: false
+      - key: OWNER_ALERT_MOBILE
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
