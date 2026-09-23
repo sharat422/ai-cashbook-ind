@@ -34,6 +34,8 @@ import {HelpScreen} from '@features/support/presentation/screens/HelpScreen';
 import {FeedbackScreen} from '@features/support/presentation/screens/FeedbackScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
+import {BusinessEditScreen} from '@features/account/presentation/screens/BusinessEditScreen';
+import {DeleteAccountScreen} from '@features/account/presentation/screens/DeleteAccountScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
 import {QuickAddScreen} from '@features/transactions/presentation/screens/QuickAddScreen';
 import type {AppStackParamList} from './types';
@@ -46,6 +48,8 @@ export function AppNavigator(): React.JSX.Element {
     <Stack.Navigator screenOptions={{headerShown: false}}>
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="BusinessEdit" component={BusinessEditScreen} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="CustomerInsights" component={CustomerInsightsScreen} />
       <Stack.Screen name="CashCounter" component={CashCounterScreen} />

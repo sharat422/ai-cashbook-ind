@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
-from ..deps import get_current_membership
+from ..deps import get_current_membership, require
 from ..models import Business, BusinessMember, User
+from ..rbac import SETTINGS_MANAGE
 from ..security import create_access_token, get_current_user
 from ..serializers import business_dto
 from ..validation import validate_mobile
@@ -142,3 +143,35 @@ def my_business(
     business, role = membership
     # The caller's role drives client-side UI gating (server still enforces).
     return {**business_dto(business), "role": role}
+
+
+class UpdateBusinessInput(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    businessName: str | None = Field(default=None, min_length=1, max_length=200)
+    ownerName: str | None = Field(default=None, min_length=1, max_length=200)
+    businessType: str | None = Field(default=None, min_length=1, max_length=60)
+    state: str | None = Field(default=None, min_length=1, max_length=80)
+    gstRegistered: bool | None = None
+
+
+@router.patch("/businesses/me")
+def update_business(
+    body: UpdateBusinessInput,
+    business: Business = Depends(require(SETTINGS_MANAGE)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Let the owner correct their business/account details. Only provided
+    fields change."""
+    if body.businessName is not None:
+        business.business_name = body.businessName
+    if body.ownerName is not None:
+        business.owner_name = body.ownerName
+    if body.businessType is not None:
+        business.business_type = body.businessType
+    if body.state is not None:
+        business.state = body.state
+    if body.gstRegistered is not None:
+        business.gst_registered = body.gstRegistered
+    db.commit()
+    db.refresh(business)
+    return business_dto(business)

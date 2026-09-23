@@ -30,6 +30,8 @@ export type OnboardingStackParamList = {
 export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
+  BusinessEdit: undefined;
+  DeleteAccount: undefined;
   Business: undefined;
   Assistant: undefined;
   Reports: undefined;

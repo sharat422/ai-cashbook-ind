@@ -10,6 +10,7 @@ from .database import Base, engine
 from .errors import install_error_handlers
 from .migrations import run_startup_migrations
 from .routers import (
+    account,
     ai_routes,
     assistant,
     auth,
@@ -76,6 +77,7 @@ for module in (
     restore,
     team,
     feedback,
+    account,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 
