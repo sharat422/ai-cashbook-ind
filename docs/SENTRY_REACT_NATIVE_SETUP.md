@@ -1,11 +1,27 @@
 # React Native crash reporting (Sentry) — setup for Smart CashBook (India)
 
 Adds mobile crash/error reporting that alerts you, to match the backend Sentry
-already wired in `app/monitoring.py`. Do the native steps on a **Mac** (needs
-Xcode + `pod install`). ~20–30 minutes.
+already wired in `app/monitoring.py`. **This guide is for a Windows dev machine.**
+~20–30 minutes.
 
 Stack this is written for: **RN 0.76.5**, `react-native-config` for env, npm,
 react-navigation v7, iOS bundle id `com.syntaro.aismartcashbook`, Codemagic CI.
+
+### How this works on Windows (read first)
+You can't build iOS on Windows (no Xcode). That's fine — your Codemagic
+`ios-staging` / `ios-production` workflows already run `bundle exec pod install`
+and build the IPA on macOS. So:
+
+- **On Windows (local):** install the npm package, run the wizard (it patches the
+  JS + **Android** projects), make the JS edits below, and test on an **Android
+  emulator/device**. **Never run `pod install` locally** — it's a Mac-only step.
+- **iOS:** the wizard also edits the Xcode project files (adds the source-map
+  upload build phase + `sentry.properties`). **Commit those files** even though
+  you can't build iOS locally — Codemagic's `pod install` pulls in the Sentry pod
+  (auto-linked from the npm package) and the build phase uploads iOS source maps
+  in CI. You verify iOS via a TestFlight build, not on your machine.
+
+All commands below are PowerShell-friendly (npm/npx run the same on Windows).
 
 > India / DPDP note up front: Sentry SaaS stores data in the **US or EU — there
 > is no India region.** Crash reports can contain personal data, so this guide
@@ -25,21 +41,24 @@ react-navigation v7, iOS bundle id `com.syntaro.aismartcashbook`, Codemagic CI.
    **Settings → Notifications** (and add your phone via a Slack/Opsgenie/PagerDuty
    integration if you want push/SMS).
 
-## 2. Install the SDK
-From the repo root (Mac):
-```bash
+## 2. Install the SDK (Windows)
+From the repo root in PowerShell:
+```powershell
 npm install --save @sentry/react-native
 npx @sentry/wizard@latest -i reactNative
 ```
-The wizard patches the native projects (iOS `AppDelegate`, Android
-`build.gradle`), adds the Metro/Xcode/Gradle source-map upload hooks, and creates
-a `.sentryclirc` / `sentry.properties`. **Review its git diff** — in this repo you
-still need the manual tweaks below (DSN via env, PII scrubbing, NativeWind metro).
+The wizard patches the JS entry, the **Android** `build.gradle`, and the iOS Xcode
+project (source-map upload build phase), and creates `sentry.properties`. On
+Windows the iOS `pod install` step it may try will be skipped/fail — **that's
+expected and OK**; Codemagic runs pods in CI.
 
-Then iOS pods:
-```bash
-cd ios && pod install && cd ..
-```
+**Review the wizard's `git diff` and commit all of it, including the iOS/Xcode
+project changes** — Codemagic needs those. Then apply the manual tweaks below
+(DSN via env, PII scrubbing, NativeWind-composed metro), since the wizard doesn't
+know about them.
+
+> Do **not** run `cd ios; pod install` on Windows — it only works on macOS and
+> already runs in your Codemagic iOS workflow (`bundle exec pod install`).
 
 ## 3. Feed the DSN through react-native-config (don't hardcode it)
 The DSN isn't a secret, but keep it out of source like every other config value.
@@ -177,15 +196,24 @@ Without source maps, crash stacks are minified garbage. Add to **Codemagic**:
 - [ ] Confirm crash reports contain **no ledger amounts, names, or mobiles** by
       inspecting a real test event (§9).
 
-## 9. Test it
-Add a temporary throwaway button, or in a dev build run:
+## 9. Test it (Android on Windows; iOS via TestFlight)
+Add a temporary throwaway call somewhere that runs, e.g. in `App.tsx`:
 ```ts
 import * as Sentry from '@sentry/react-native';
 Sentry.captureException(new Error('Sentry mobile test — ignore'));
 ```
-Within a minute you should get a Sentry email and see the event (with a readable
-stack on a release build). Open the event and confirm no customer PII leaked,
+**On Windows, test on Android:**
+```powershell
+npm run android   # emulator or a USB device with a temporary SENTRY_DSN in .env
+```
+Within a minute you should get a Sentry email and see the event. Open it and
+confirm **no customer PII** (no mobile numbers, names, GSTINs, amounts) leaked,
 then remove the test call.
+
+**iOS:** you can't run it on Windows — push to `dev`, let Codemagic build
+`ios-staging` to TestFlight, install it, and confirm the iOS event appears with a
+readable (source-mapped) stack. Do this once to prove the CI source-map upload
+works.
 
 ---
 Result: the mobile app now reports crashes to the same Sentry org as the backend,
