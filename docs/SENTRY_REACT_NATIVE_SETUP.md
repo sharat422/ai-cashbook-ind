@@ -215,7 +215,81 @@ then remove the test call.
 readable (source-mapped) stack. Do this once to prove the CI source-map upload
 works.
 
+## 10. Android — crash reporting + end-to-end confirmation (you can do all of this on Windows)
+The wizard (§2) already added the Sentry Android Gradle plugin to
+`android/app/build.gradle` and `sentry.properties`. Two layers report:
+**JS errors** (source-mapped via Metro/Hermes) and **native crashes** (symbolicated
+via the ProGuard mapping + native symbols the Gradle plugin uploads on release).
+
+Make Gradle upload symbols on release builds — in `android/app/build.gradle`,
+inside the `sentry { }` block the wizard added, confirm:
+```gradle
+sentry {
+    autoUploadProguardMapping = true
+    includeNativeSources = true
+    // Auth token comes from the env var below (never commit it).
+}
+```
+Provide the token when building a release: set `SENTRY_AUTH_TOKEN` in your
+PowerShell session (or Codemagic env), then build:
+```powershell
+$env:SENTRY_AUTH_TOKEN = "<token from Sentry → Settings → Auth Tokens>"
+cd android; .\gradlew.bat assembleRelease; cd ..
+```
+
+**Confirm end-to-end (JS layer — quickest):**
+1. Put a temporary `SENTRY_DSN` in `.env`, then `npm run android` on an emulator/device.
+2. Trigger a JS error: `Sentry.captureException(new Error('android js test'))`.
+3. Within ~1 min the event appears in Sentry and you get an email. On a release
+   build the stack is source-mapped to your `.ts` lines.
+
+**Confirm the native layer (real crash + symbolication):**
+1. Build & install a **release** APK (`assembleRelease` above) so the ProGuard
+   mapping is uploaded.
+2. Add a temporary button that calls `Sentry.nativeCrash()`, tap it — the app
+   dies. Reopen it (native crashes flush on next launch).
+3. In Sentry the crash shows a **symbolicated native stack** (readable, not hex
+   addresses). If frames are unsymbolicated, the mapping upload didn't run —
+   re-check `SENTRY_AUTH_TOKEN` and the `sentry {}` block.
+4. Remove the test button + `captureException`, confirm no PII in the event.
+
+## 11. iOS — crash reporting + end-to-end confirmation (via Codemagic + TestFlight)
+You can't build iOS on Windows, so this loop runs through CI. iOS needs **two**
+uploads: **JS source maps** (Metro) and **dSYM debug symbols** (for native
+symbolication) — the wizard's Xcode "Upload Debug Symbols to Sentry" build phase
+does both when the auth token is present.
+
+**One-time setup:**
+1. Confirm you committed the wizard's iOS changes (the extra build phase in
+   `ios/AISmartCashBook.xcodeproj/project.pbxproj` + `ios/sentry.properties`).
+2. In `codemagic.yaml`, add to **both** `ios-staging` and `ios-production` the env
+   from §7 (`SENTRY_ORG`, `SENTRY_PROJECT`, secret `SENTRY_AUTH_TOKEN`) and the
+   baked `SENTRY_DSN`. Make sure the CocoaPods step still runs before the build
+   (it does: `bundle exec pod install`) so the Sentry pod is linked.
+
+**End-to-end test (do this once to prove it works):**
+1. Add a temporary `Sentry.nativeCrash()` button (or `captureException`) and
+   commit to `dev`.
+2. Codemagic builds `ios-staging` → TestFlight. Watch the build log for a
+   "Uploading dSYM"/"source maps" step succeeding.
+3. In Sentry → your RN project → **Settings → Debug Files**, confirm the build's
+   **dSYMs** are listed, and **Releases** shows the new build with artifacts.
+4. Install from TestFlight, tap the crash button, **reopen the app** (iOS sends
+   the crash on next launch).
+5. Confirm in Sentry: the event has `environment: staging`, a **symbolicated**
+   native stack (or source-mapped JS stack), and the matching release/build
+   number. Open it and verify **no PII** (mobiles/names/GSTINs/amounts).
+6. Remove the test crash, and repeat once for `ios-production` if you want prod
+   proven too.
+
+**If iOS frames aren't symbolicated:** the dSYM upload didn't run — the usual
+cause is a missing/invalid `SENTRY_AUTH_TOKEN` in the Codemagic iOS workflow, or
+the build phase wasn't committed from Windows (§2). You can also upload dSYMs
+manually later: download them from **App Store Connect → your build → dSYMs** and
+`sentry-cli debug-files upload`, but fixing the CI token is the durable fix.
+
 ---
 Result: the mobile app now reports crashes to the same Sentry org as the backend,
 alerts you by email in real time, and — with the scrubbing above — keeps
-customer personal data off a third-party service you don't control.
+customer personal data off a third-party service you don't control. Android you
+prove locally on Windows; iOS you prove once through Codemagic + TestFlight.
