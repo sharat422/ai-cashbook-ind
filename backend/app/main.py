@@ -17,6 +17,7 @@ from .monitoring import (
     record_export,
 )
 from .routers import (
+    account,
     ai_routes,
     assistant,
     auth,
@@ -105,6 +106,7 @@ for module in (
     restore,
     team,
     feedback,
+    account,
     consent,
 ):
     app.include_router(module.router, prefix=API_PREFIX)

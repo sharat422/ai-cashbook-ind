@@ -31,6 +31,7 @@ import {
   useAppLockStore,
 } from '@features/security/store/appLock.store';
 import {useRestoreStore} from '@features/restore/store/restore.store';
+import {downloadMyData} from '@features/account/presentation/downloadMyData';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
@@ -171,6 +172,24 @@ export function SettingsScreen({
         },
       ],
     );
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const onDownloadData = async () => {
+    setExporting(true);
+    try {
+      const shared = await downloadMyData();
+      if (shared) {
+        Alert.alert(t('account.exportReadyTitle'), t('account.exportReadyMsg'));
+      }
+    } catch (e) {
+      Alert.alert(
+        t('account.exportErrorTitle'),
+        e instanceof Error ? e.message : t('ai.tryAgain'),
+      );
+    } finally {
+      setExporting(false);
+    }
   };
 
   const onLogout = () => {
@@ -403,6 +422,31 @@ export function SettingsScreen({
             onPress={onRestoreData}
           />
         ) : null}
+
+        {/* Your data & privacy (self-service data rights) */}
+        <Text variant="label" className="mt-8 mb-3">
+          {t('account.section')}
+        </Text>
+        <Button
+          title={t('account.downloadData')}
+          variant="secondary"
+          className="mb-3"
+          loading={exporting}
+          onPress={onDownloadData}
+        />
+        {canManageSettings ? (
+          <Button
+            title={t('account.editBusiness')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('BusinessEdit')}
+          />
+        ) : null}
+        <Button
+          title={t('account.deleteAccount')}
+          variant="secondary"
+          onPress={() => navigation.navigate('DeleteAccount')}
+        />
 
         <Button
           title={t('common.logout')}

@@ -32,6 +32,8 @@ export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
   ConsentSettings: undefined;
+  BusinessEdit: undefined;
+  DeleteAccount: undefined;
   Business: undefined;
   Assistant: undefined;
   Reports: undefined;

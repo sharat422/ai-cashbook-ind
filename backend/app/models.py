@@ -264,3 +264,17 @@ class UserConsent(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "purpose", name="uq_consent_user_purpose"),
     )
+
+class AccountDeletionLog(Base):
+    """Compliance record that an account was deleted — deliberately holds NO
+    personal data. We keep the opaque user id (a random uuid, not PII), a masked
+    mobile (last 4 digits), the timestamp, and counts of what was removed, so we
+    can prove a deletion happened without retaining the data we just erased."""
+
+    __tablename__ = "account_deletion_log"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)  # opaque, not PII
+    mobile_masked: Mapped[str] = mapped_column(String(20))
+    requested_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    counts_json: Mapped[str] = mapped_column(Text)  # JSON: rows deleted per table
