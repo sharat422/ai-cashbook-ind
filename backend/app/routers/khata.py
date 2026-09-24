@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 from ..ai import generate_insights
 from ..calc import days_since, parse_date, today_iso
 from ..database import get_db
-from ..deps import require
+from ..deps import ai_consent_granted, require
 from ..rbac import DATA_VIEW
-from ..models import Business, Customer, LedgerEntry
+from ..models import Business, Customer, LedgerEntry, User
+from ..security import get_current_user
 
 router = APIRouter(tags=["khata"])
 
@@ -115,6 +116,7 @@ def khata_summary(
 @router.get("/khata/insights")
 def khata_insights(
     business: Business = Depends(require(DATA_VIEW)),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     today = today_iso()
@@ -135,4 +137,7 @@ def khata_insights(
     )
 
     stats = {**summary, "collection_change_pct": change_pct}
-    return {"insights": generate_insights(stats)}
+    # Only send data to the external model if the user opted in to AI; otherwise
+    # fall back to the local heuristic so nothing leaves the server.
+    allow_external = ai_consent_granted(db, user.id)
+    return {"insights": generate_insights(stats, allow_external=allow_external)}

@@ -2,10 +2,42 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .consent import PURPOSE_AI
 from .database import get_db
-from .models import Business, BusinessMember, User
+from .models import Business, BusinessMember, User, UserConsent
 from .rbac import role_can
 from .security import get_current_user
+
+
+def ai_consent_granted(db: Session, user_id: str) -> bool:
+    """True only if the user has explicitly granted AI-processing consent.
+
+    This is the gate that keeps a user's data from ever being sent to an
+    external AI provider without opt-in — no consent, no scraping.
+    """
+    row = db.scalars(
+        select(UserConsent).where(
+            UserConsent.user_id == user_id, UserConsent.purpose == PURPOSE_AI
+        )
+    ).first()
+    return bool(row and row.granted)
+
+
+def require_ai_consent(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Dependency for AI endpoints: 403 unless the caller has opted in to AI
+    processing. Use on every route that sends user data to an AI model."""
+    if not ai_consent_granted(db, user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "AI processing is turned off for your account. Turn on "
+                "'AI processing for insights' in Settings to use AI features — "
+                "your data is never sent to AI without your consent."
+            ),
+        )
 
 
 def _resolve_membership(db: Session, user: User) -> tuple[Business, str]:

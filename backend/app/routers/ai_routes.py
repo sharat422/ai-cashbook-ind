@@ -18,7 +18,7 @@ from ..ai import (
 )
 from ..config import settings
 from ..database import get_db
-from ..deps import require
+from ..deps import require, require_ai_consent
 from ..rbac import ENTRY_CREATE
 from ..models import AiDecision, Business
 
@@ -99,6 +99,7 @@ class ParseTransactionBody(BaseModel):
 def parse_transaction_route(
     body: ParseTransactionBody,
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """Turn a spoken/typed sentence (any of several Indian languages) into a
@@ -123,6 +124,7 @@ def voice_parse_route(
     today: str | None = Form(None),
     language: str | None = Form(None),
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """The multilingual voice 'agent': transcribe spoken audio (Whisper
@@ -174,6 +176,7 @@ def _log_expense_decision(db: Session, business: Business, transcript: str, resu
 def parse_expense_route(
     body: ParseExpenseBody,
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """Extract a structured expense from typed/spoken text (any language),
@@ -190,6 +193,7 @@ def voice_parse_expense_route(
     today: str | None = Form(None),
     language: str | None = Form(None),
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """Transcribe spoken audio then extract a structured expense. Returns the
@@ -206,6 +210,7 @@ def voice_parse_expense_route(
 def categorize(
     body: CategorizeBody,
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     category, confidence = categorize_text(body.text)
@@ -226,6 +231,7 @@ def categorize(
 def scan(
     receipt: UploadFile = File(...),
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     raw = receipt.file.read()

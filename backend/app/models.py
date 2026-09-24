@@ -236,3 +236,31 @@ class AiDecision(Base):
     output_json: Mapped[str] = mapped_column(Text)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
+class UserConsent(Base):
+    """One consent decision, for ONE purpose, per user.
+
+    Consent is stored granularly — one row per (user, purpose) — never as a
+    single combined "agreed" flag. Each row records what was decided (granted),
+    when (updated_at), and under which policy the decision was made
+    (policy_version), so every purpose can be granted or withdrawn
+    independently and the decision is auditable. created_at is the first
+    decision; updated_at moves on every change.
+    """
+
+    __tablename__ = "user_consents"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(40))  # core | marketing | ai
+    granted: Mapped[bool] = mapped_column(Boolean, default=False)
+    policy_version: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    updated_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "purpose", name="uq_consent_user_purpose"),
+    )

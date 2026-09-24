@@ -617,9 +617,14 @@ def _normalize_receipt(raw: dict) -> dict:
 # ---------------------------------------------------------------------------
 # OpenAI — khata insights
 # ---------------------------------------------------------------------------
-def generate_insights(stats: dict) -> list[dict]:
-    """Return a list of InsightDto dicts from aggregate khata stats."""
-    if not settings.openai_api_key:
+def generate_insights(stats: dict, allow_external: bool = True) -> list[dict]:
+    """Return a list of InsightDto dicts from aggregate khata stats.
+
+    `allow_external=False` (no AI consent) keeps everything on the local
+    heuristic so no data — including customer names in the stats — is ever sent
+    to an AI provider.
+    """
+    if not allow_external or not settings.openai_api_key:
         return _heuristic_insights(stats)
 
     try:
