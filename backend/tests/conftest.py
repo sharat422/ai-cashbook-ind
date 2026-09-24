@@ -21,8 +21,35 @@ import pytest
 # --- Point the app at an isolated test DB BEFORE importing it. --------------
 # The engine is created at import time from these env vars, so they must be set
 # first. DEBUG + MASTER_OTP let us log in with a fixed OTP and no SMS provider.
+#
+# By default the suite uses a throwaway on-disk SQLite file. To exercise the
+# real dialect (and concurrency semantics) set CASHBOOK_TEST_DATABASE_URL to a
+# DISPOSABLE Postgres database, e.g.
+#   postgresql+psycopg2://postgres:postgres@localhost:5432/cashbook_test
+# The suite drops and recreates every table (see the `client` fixture), so this
+# must NEVER point at a real/customer database. As a safety rail we refuse any
+# non-sqlite URL whose database name does not contain "test".
 _TEST_DB_PATH = os.path.join(os.path.dirname(__file__), "test_e2e.db")
-os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB_PATH}"
+
+
+def _resolve_test_db_url() -> str:
+    override = os.environ.get("CASHBOOK_TEST_DATABASE_URL", "").strip()
+    if not override:
+        return f"sqlite:///{_TEST_DB_PATH}"
+    if not override.startswith("sqlite"):
+        # Guard: the DB name (last path segment, minus query) must look like a
+        # test DB. This prevents a stray env var from dropping a real database.
+        name = override.split("/")[-1].split("?")[0].lower()
+        if "test" not in name:
+            raise RuntimeError(
+                "Refusing to run the destructive test suite against "
+                f"{override!r}: the database name must contain 'test'. "
+                "Point CASHBOOK_TEST_DATABASE_URL at a disposable DB."
+            )
+    return override
+
+
+os.environ["DATABASE_URL"] = _resolve_test_db_url()
 os.environ["DEBUG"] = "true"
 os.environ["MASTER_OTP"] = "123456"
 os.environ.setdefault("PUBLIC_BASE_URL", "http://testserver")
