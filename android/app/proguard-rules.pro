@@ -56,10 +56,6 @@
 # --- jail-monkey (root/jailbreak detection) ---
 -keep class com.gantman.reactnative.** { *; }
 
-# --- react-native-get-sms-android (bank SMS import) ---
--keep class com.centaurwarchief.smsandroid.** { *; }
--keep class com.react.SmsModule.** { *; }
-
 # --- react-native-audio-recorder-player (voice entry) ---
 -keep class com.dooboolab.** { *; }
 
