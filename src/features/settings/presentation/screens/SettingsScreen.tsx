@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Alert, View} from 'react-native';
+import {Alert, Linking, View} from 'react-native';
 
 import {
   Button,
@@ -16,6 +16,7 @@ import {
   useVoiceSettingsStore,
 } from '@features/settings/store/voiceSettings.store';
 import {TextField} from '@components/form';
+import {GRIEVANCE} from '@config/constants';
 import {isValidUpiId} from '@features/collections/domain/upi';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {
@@ -447,6 +448,35 @@ export function SettingsScreen({
           variant="secondary"
           onPress={() => navigation.navigate('DeleteAccount')}
         />
+
+        {/* Privacy & Grievances — the DPDP data-protection / grievance contact,
+            deliberately separate from generic customer support (Help). */}
+        <Text variant="label" className="mt-8 mb-3">
+          {t('grievance.section')}
+        </Text>
+        <View className="rounded-2xl border border-border bg-white p-4">
+          <Text className="text-base font-semibold text-slate-900">
+            {GRIEVANCE.officerName}
+          </Text>
+          <Text variant="caption" className="mt-1 leading-5">
+            {t('grievance.desc')}
+          </Text>
+          <Text className="mt-2 text-sm font-medium text-primary">
+            {GRIEVANCE.email}
+          </Text>
+          <Button
+            title={t('grievance.contact')}
+            variant="secondary"
+            className="mt-3"
+            onPress={() =>
+              Linking.openURL(
+                `mailto:${GRIEVANCE.email}?subject=${encodeURIComponent(
+                  'Privacy / grievance — Smart CashBook',
+                )}`,
+              ).catch(() => {})
+            }
+          />
+        </View>
 
         <Button
           title={t('common.logout')}

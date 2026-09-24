@@ -679,7 +679,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "gu": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -1361,7 +1364,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "hi": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2043,7 +2049,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "kn": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2725,7 +2734,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "ml": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -3407,7 +3419,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "mr": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -4089,7 +4104,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "pa": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -4771,7 +4789,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "ta": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -5453,7 +5474,10 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   },
   "te": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -6135,6 +6159,9 @@
     "account.exportReadyMsg": "70b13c711ff3",
     "account.exportReadyTitle": "7e4b5052559d",
     "account.section": "5b01d4b6ccbc",
-    "common.save": "efc007a393f6"
+    "common.save": "efc007a393f6",
+    "grievance.contact": "0bf0a98fa0d6",
+    "grievance.desc": "a09fca2ea119",
+    "grievance.section": "92c51001d398"
   }
 }

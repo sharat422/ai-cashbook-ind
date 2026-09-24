@@ -28,6 +28,20 @@ export const SUPPORT = {
   email: 'support@smartcashbook.example.com',
 } as const;
 
+/**
+ * Privacy / grievance contact — the person handling data-protection questions
+ * and grievances under India's DPDP Act. This is DELIBERATELY separate from
+ * generic customer support (SUPPORT above). Set these to a real named person +
+ * dedicated address before launch, and keep them IDENTICAL to what your Privacy
+ * Policy and Terms state.
+ */
+export const GRIEVANCE = {
+  /** Named grievance / data-protection officer (a person or role title). */
+  officerName: 'Grievance Officer',
+  /** Dedicated privacy/grievance mailbox (NOT the general support email). */
+  email: 'privacy@smartcashbook.example.com',
+} as const;
+
 /** Business types selectable on the Create Business screen. */
 export const BUSINESS_TYPES = [
   'Retail',
