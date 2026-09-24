@@ -19,6 +19,7 @@ export interface ExpensePrefill {
 export type AuthStackParamList = {
   Login: undefined;
   Otp: {verificationId: string; mobile: string};
+  LegalDoc: {doc: 'privacy' | 'terms'};
 };
 
 /** Screens shown after login but before onboarding is complete. */
@@ -34,6 +35,7 @@ export type AppStackParamList = {
   ConsentSettings: undefined;
   BusinessEdit: undefined;
   DeleteAccount: undefined;
+  LegalDoc: {doc: 'privacy' | 'terms'};
   Business: undefined;
   Assistant: undefined;
   Reports: undefined;

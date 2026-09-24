@@ -36,6 +36,7 @@ import {SettingsScreen} from '@features/settings/presentation/screens/SettingsSc
 import {ConsentSettingsScreen} from '@features/consent/presentation/screens/ConsentSettingsScreen';
 import {BusinessEditScreen} from '@features/account/presentation/screens/BusinessEditScreen';
 import {DeleteAccountScreen} from '@features/account/presentation/screens/DeleteAccountScreen';
+import {LegalDocScreen} from '@features/legal/presentation/screens/LegalDocScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
 import {QuickAddScreen} from '@features/transactions/presentation/screens/QuickAddScreen';
 import type {AppStackParamList} from './types';
@@ -51,6 +52,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="ConsentSettings" component={ConsentSettingsScreen} />
       <Stack.Screen name="BusinessEdit" component={BusinessEditScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="LegalDoc" component={LegalDocScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="CustomerInsights" component={CustomerInsightsScreen} />
       <Stack.Screen name="CashCounter" component={CashCounterScreen} />

@@ -477,6 +477,18 @@ export function SettingsScreen({
             }
           />
         </View>
+        <Button
+          title={t('auth.privacy')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('LegalDoc', {doc: 'privacy'})}
+        />
+        <Button
+          title={t('auth.terms')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('LegalDoc', {doc: 'terms'})}
+        />
 
         <Button
           title={t('common.logout')}
