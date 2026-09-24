@@ -224,12 +224,6 @@ export function DashboardScreen({
           onPress={() => navigation.navigate('AITransaction')}
         />
         <Button
-          title={t('dashboard.importSms')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('SmsImport')}
-        />
-        <Button
           title={t('dashboard.addTransaction')}
           className="mt-3"
           onPress={() => navigation.navigate('QuickAdd')}
