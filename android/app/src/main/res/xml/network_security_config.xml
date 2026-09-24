@@ -7,8 +7,26 @@
   system CA store is trusted here. The `debug` build variant overrides this file
   with a permissive version that allows the local dev backend over HTTP.
 
-  Certificate pinning, when enabled, is added as a <pin-set> under a
-  <domain-config> for the API host (see docs/ANDROID_RELEASE.md).
+  ── Certificate pinning (scaffold — DISABLED until real pins are filled) ──
+  To enable, UNCOMMENT the <domain-config> below and replace BOTH placeholder
+  digests with real base64 SHA-256 SPKI pins, then rebuild. See
+  docs/CERTIFICATE_PINNING.md for how to compute the pins and — importantly —
+  the Let's-Encrypt rotation strategy (pin the intermediate CA + keep a backup
+  pin) so an automatic Render cert renewal cannot brick the shipped app.
+
+  DO NOT ship the placeholder values: two wrong pins block ALL traffic to the
+  API. A <pin-set> must contain at least two pins (primary + backup).
+
+  <domain-config>
+      <domain includeSubdomains="true">YOUR-API-HOST.onrender.com</domain>
+      <pin-set expiration="2027-01-01">
+          <pin digest="SHA-256">PLACEHOLDER_PRIMARY_SPKI_SHA256_BASE64=</pin>
+          <pin digest="SHA-256">PLACEHOLDER_BACKUP_SPKI_SHA256_BASE64=</pin>
+      </pin-set>
+      <trust-anchors>
+          <certificates src="system" />
+      </trust-anchors>
+  </domain-config>
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">

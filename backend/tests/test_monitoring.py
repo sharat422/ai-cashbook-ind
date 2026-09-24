@@ -59,6 +59,55 @@ def test_export_volume_threshold(monkeypatch):
     assert [k for k, _ in fired] == ["export-volume"]
 
 
+# --- Rate limiting ----------------------------------------------------------
+
+def _reset_rl(monkeypatch):
+    """Fresh windows + enabled, not-debug, so the limiter actually runs."""
+    monkeypatch.setattr(mon, "_rl_ip", SlidingWindow(60))
+    monkeypatch.setattr(mon, "_rl_user", SlidingWindow(60))
+    monkeypatch.setattr(mon, "_rl_auth_ip", SlidingWindow(60))
+    monkeypatch.setattr(mon.settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(mon.settings, "debug", False)
+
+
+def test_rate_limit_noop_in_debug(monkeypatch):
+    _reset_rl(monkeypatch)
+    monkeypatch.setattr(mon.settings, "debug", True)  # debug disables limiting
+    monkeypatch.setattr(mon.settings, "rate_limit_per_ip", 1)
+    for _ in range(10):
+        assert mon.check_rate_limit("1.2.3.4", None, "/api/v1/customers") is None
+
+
+def test_rate_limit_per_ip(monkeypatch):
+    _reset_rl(monkeypatch)
+    monkeypatch.setattr(mon.settings, "rate_limit_per_ip", 3)
+    path = "/api/v1/customers"
+    assert [mon.check_rate_limit("9.9.9.9", None, path) for _ in range(3)] == [None, None, None]
+    # 4th request over budget → limited; a different IP is unaffected.
+    assert mon.check_rate_limit("9.9.9.9", None, path) == "ip"
+    assert mon.check_rate_limit("8.8.8.8", None, path) is None
+
+
+def test_rate_limit_per_user(monkeypatch):
+    _reset_rl(monkeypatch)
+    monkeypatch.setattr(mon.settings, "rate_limit_per_ip", 999)  # isolate per-user
+    monkeypatch.setattr(mon.settings, "rate_limit_per_user", 2)
+    path = "/api/v1/customers"
+    assert mon.check_rate_limit(None, "acct-1", path) is None
+    assert mon.check_rate_limit(None, "acct-1", path) is None
+    assert mon.check_rate_limit(None, "acct-1", path) == "user"
+
+
+def test_rate_limit_auth_path_is_stricter(monkeypatch):
+    _reset_rl(monkeypatch)
+    monkeypatch.setattr(mon.settings, "rate_limit_per_ip", 999)  # general budget high
+    monkeypatch.setattr(mon.settings, "rate_limit_auth_per_ip", 2)
+    auth_path = "/api/v1/auth/otp/request"
+    assert mon.check_rate_limit("7.7.7.7", None, auth_path) is None
+    assert mon.check_rate_limit("7.7.7.7", None, auth_path) is None
+    assert mon.check_rate_limit("7.7.7.7", None, auth_path) == "auth-ip"
+
+
 # --- peek_user_id -----------------------------------------------------------
 
 def test_peek_user_id():

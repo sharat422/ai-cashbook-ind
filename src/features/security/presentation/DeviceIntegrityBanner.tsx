@@ -2,15 +2,16 @@ import React, {useState} from 'react';
 import {Pressable, View} from 'react-native';
 
 import {Text} from '@components/ui';
-import {isDeviceCompromised} from '@features/security/data/deviceIntegrity';
+import {reportDeviceIntegrity} from '@features/security/data/deviceIntegrity';
 
 /**
  * Non-blocking warning shown when the device looks rooted/jailbroken. Dismissible
  * for the session; re-evaluated on next launch. Renders nothing on clean devices.
+ * Uses `reportDeviceIntegrity` so a detection is also logged once per session.
  */
 export function DeviceIntegrityBanner(): React.JSX.Element | null {
   const [dismissed, setDismissed] = useState(false);
-  if (dismissed || !isDeviceCompromised()) return null;
+  if (dismissed || !reportDeviceIntegrity()) return null;
 
   return (
     <View className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">

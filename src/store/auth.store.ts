@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
+import {secureAuthStorage} from '@features/security/data/secureAuthStorage';
 import type {Business, User} from '@features/auth/types';
 import {
   DEFAULT_APP_LANGUAGE,
@@ -69,7 +69,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      // Keychain/Keystore-backed, not AsyncStorage — the JWT never touches the
+      // plaintext file system. Migrates legacy AsyncStorage sessions on first read.
+      storage: createJSONStorage(() => secureAuthStorage),
       // Only persist durable session data, never the hydration flag.
       partialize: ({token, user, business, preferredLanguage}) => ({
         token,

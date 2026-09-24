@@ -170,6 +170,39 @@ def _mask(mobile: str) -> str:
     return f"***{mobile[-4:]}" if mobile and len(mobile) >= 4 else "***"
 
 
+# --- Request rate limiting --------------------------------------------------
+# Separate windows for per-IP, per-user and the stricter auth-path per-IP budget.
+_rl_ip = SlidingWindow(settings.rate_limit_window_s)
+_rl_user = SlidingWindow(settings.rate_limit_window_s)
+_rl_auth_ip = SlidingWindow(settings.rate_limit_window_s)
+
+# Auth/OTP paths get the stricter per-IP budget (brute-force / stuffing surface).
+_AUTH_MARKERS = ("/auth/",)
+
+
+def _is_auth_path(path: str) -> bool:
+    return any(marker in path for marker in _AUTH_MARKERS)
+
+
+def check_rate_limit(
+    ip: str | None, user_id: str | None, path: str
+) -> str | None:
+    """Record this request against the rolling windows and return a short reason
+    string if a budget is now exceeded, else None. Callers translate a non-None
+    result into an HTTP 429. No-op (always None) unless enabled and not in debug."""
+    if not settings.rate_limit_enabled or settings.debug:
+        return None
+
+    if _is_auth_path(path):
+        if ip and _rl_auth_ip.hit(f"auth:{ip}") > settings.rate_limit_auth_per_ip:
+            return "auth-ip"
+    if ip and _rl_ip.hit(ip) > settings.rate_limit_per_ip:
+        return "ip"
+    if user_id and _rl_user.hit(user_id) > settings.rate_limit_per_user:
+        return "user"
+    return None
+
+
 # --- Request-scoped helpers (used by the HTTP middleware) -------------------
 # Paths treated as data exports / bulk reads for the export-volume check.
 _EXPORT_MARKERS = ("/reports/summary", "/statement")

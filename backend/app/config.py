@@ -59,6 +59,16 @@ class Settings(BaseSettings):
     export_window_s: int = 3600
     export_threshold: int = 15                  # data exports from one account
 
+    # --- Request rate limiting (see app/monitoring.py + main.py middleware) ---
+    # Rejects (429) callers that exceed a rolling per-window budget. Auth/OTP
+    # paths get a stricter budget to blunt credential-stuffing / OTP brute force.
+    # Disabled automatically when DEBUG is on (local dev, tests, staging).
+    rate_limit_enabled: bool = True
+    rate_limit_window_s: int = 60
+    rate_limit_per_ip: int = 120        # general requests / window / IP
+    rate_limit_per_user: int = 240      # general requests / window / account
+    rate_limit_auth_per_ip: int = 15    # requests / window / IP on auth paths
+
     @model_validator(mode="after")
     def _production_secrets(self) -> "Settings":
         if not self.debug:
