@@ -617,16 +617,66 @@ def _normalize_receipt(raw: dict) -> dict:
 # ---------------------------------------------------------------------------
 # OpenAI — khata insights
 # ---------------------------------------------------------------------------
+def _anonymize_stats(stats: dict) -> tuple[dict, dict[str, str]]:
+    """Data minimisation: strip customer names/ids from the stats before they go
+    to the external model. Returns (safe_stats, token->name) so we can put the
+    real names back in the model's output afterwards. The model only ever sees
+    opaque labels like "Customer 1"."""
+    safe = dict(stats)
+    mapping: dict[str, str] = {}
+    safe_defaulters = []
+    for i, d in enumerate(stats.get("top_defaulters") or [], 1):
+        token = f"Customer {i}"
+        name = d.get("name")
+        if name:
+            mapping[token] = name
+        safe_defaulters.append({
+            "label": token,
+            "amount": d.get("amount"),
+            "days_overdue": d.get("days_overdue"),
+        })
+    safe["top_defaulters"] = safe_defaulters
+    return safe, mapping
+
+
+def _rehydrate_insights(insights: list, mapping: dict[str, str]) -> list:
+    """Swap the opaque labels in the model's output back to real customer names,
+    so the app still shows/searches by name."""
+    if not mapping:
+        return insights
+
+    def restore(text):
+        if not isinstance(text, str):
+            return text
+        for token, name in mapping.items():
+            text = text.replace(token, name)
+        return text
+
+    for ins in insights:
+        if not isinstance(ins, dict):
+            continue
+        for field in ("title", "detail", "metric"):
+            if field in ins:
+                ins[field] = restore(ins[field])
+        drill = ins.get("drill")
+        if isinstance(drill, dict) and drill.get("search"):
+            drill["search"] = restore(drill["search"])
+    return insights
+
+
 def generate_insights(stats: dict, allow_external: bool = True) -> list[dict]:
     """Return a list of InsightDto dicts from aggregate khata stats.
 
-    `allow_external=False` (no AI consent) keeps everything on the local
-    heuristic so no data — including customer names in the stats — is ever sent
-    to an AI provider.
+    - allow_external=False (no AI consent) keeps everything on the local
+      heuristic, so no data leaves the server at all.
+    - When external is allowed, customer names are STILL never sent: they're
+      replaced with opaque labels before the call and restored in the result
+      (see _anonymize_stats / _rehydrate_insights).
     """
     if not allow_external or not settings.openai_api_key:
         return _heuristic_insights(stats)
 
+    safe_stats, mapping = _anonymize_stats(stats)
     try:
         from openai import OpenAI
 
@@ -634,14 +684,16 @@ def generate_insights(stats: dict, allow_external: bool = True) -> list[dict]:
         prompt = (
             "You are a financial analyst for an Indian SMB khata (credit ledger). "
             "Given these aggregate stats, produce 3-6 concise, actionable insights.\n"
+            "Customers are identified only by an opaque label (e.g. 'Customer 1'); "
+            "refer to them by that exact label.\n"
             "Return JSON: {\"insights\": [{"
             "\"id\": str, \"type\": one of [collection,risk,behavior,concentration,general], "
             "\"sentiment\": one of [positive,neutral,warning,critical], "
             "\"title\": short headline, \"detail\": one sentence, "
             "\"metric\": short like '+12%' or '8 days' (optional), "
-            "\"drill\": {\"target\": one of [khata,customers,none], \"search\": optional customer name}"
+            "\"drill\": {\"target\": one of [khata,customers,none], \"search\": optional customer label}"
             "}]}.\n\n"
-            f"Stats: {json.dumps(stats)}"
+            f"Stats: {json.dumps(safe_stats)}"
         )
         resp = client.chat.completions.create(
             model=settings.openai_model,
@@ -650,7 +702,9 @@ def generate_insights(stats: dict, allow_external: bool = True) -> list[dict]:
         )
         data = json.loads(resp.choices[0].message.content or "{}")
         insights = data.get("insights", [])
-        return insights if isinstance(insights, list) else _heuristic_insights(stats)
+        if not isinstance(insights, list):
+            return _heuristic_insights(stats)
+        return _rehydrate_insights(insights, mapping)
     except Exception as exc:  # noqa: BLE001
         log.warning("OpenAI insights failed, using heuristic: %s", exc)
         return _heuristic_insights(stats)
