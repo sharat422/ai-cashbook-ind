@@ -12,3 +12,5 @@ anthropic==0.42.0
 httpx==0.28.1
 # Optional — only needed when DATABASE_URL points at PostgreSQL.
 psycopg2-binary==2.9.10
+# Application-level field encryption (Fernet) for sensitive columns.
+cryptography==43.0.3

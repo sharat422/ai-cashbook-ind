@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 30  # 30 days
 
+    # Fernet key(s) for application-level field encryption (see app/crypto.py).
+    # Comma-separated for rotation ("newkey,oldkey"). Required in production;
+    # a dev fallback is used when blank and DEBUG is on.
+    app_encryption_key: str = ""
+
     public_base_url: str = "http://10.0.2.2:8000"
 
     debug: bool = True
@@ -47,6 +52,12 @@ class Settings(BaseSettings):
                 raise ValueError("Production requires a JWT_SECRET of at least 32 characters")
             if self.jwt_algorithm != "HS256":
                 raise ValueError("This deployment supports HS256 tokens only")
+            if not self.app_encryption_key:
+                raise ValueError(
+                    "Production requires APP_ENCRYPTION_KEY (a Fernet key) for "
+                    "field-level encryption. Generate one with: python -c "
+                    "\"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+                )
         return self
 
     @model_validator(mode="after")
