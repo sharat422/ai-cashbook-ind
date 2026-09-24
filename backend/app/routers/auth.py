@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
+from ..monitoring import record_failed_login
 from ..deps import get_current_membership
 from ..models import Business, BusinessMember, User
 from ..security import create_access_token, get_current_user
@@ -80,10 +81,12 @@ def verify_otp(body: VerifyOtpInput, db: Session = Depends(get_db)) -> dict:
         if (record is None or record["mobile"] != mobile
                 or record["expires"] <= time.monotonic()
                 or record["attempts"] >= OTP_MAX_ATTEMPTS):
+            record_failed_login(mobile)
             raise HTTPException(400, "Invalid or expired OTP. Request a new code.")
         record["attempts"] += 1
         master_ok = settings.debug and secrets.compare_digest(body.otp, settings.master_otp)
         if not master_ok and not secrets.compare_digest(record["otp"], body.otp):
+            record_failed_login(mobile)
             raise HTTPException(400, "Invalid OTP. Please try again.")
         del _OTP_STORE[body.verificationId]
 

@@ -9,6 +9,13 @@ from .config import settings
 from .database import Base, engine
 from .errors import install_error_handlers
 from .migrations import run_startup_migrations
+from .monitoring import (
+    init_sentry,
+    is_export,
+    peek_user_id,
+    record_api_error,
+    record_export,
+)
 from .routers import (
     ai_routes,
     assistant,
@@ -42,10 +49,31 @@ logging.basicConfig(level=logging.INFO)
 Base.metadata.create_all(bind=engine)
 run_startup_migrations(engine)
 
+# Start error/crash monitoring before the app so unhandled exceptions are
+# captured and alerted (no-op unless SENTRY_DSN is set).
+init_sentry()
+
 app = FastAPI(title="Smart CashBook API", version="1.0.0")
 
 # Log every unhandled failure with its traceback + request context.
 install_error_handlers(app)
+
+
+@app.middleware("http")
+async def _breach_monitor(request, call_next):
+    """Feed anomaly detectors: per-account API errors and data-export volume.
+    Failure here must never affect the response."""
+    response = await call_next(request)
+    try:
+        account = peek_user_id(request.headers.get("authorization"))
+        if account:
+            if response.status_code >= 400:
+                record_api_error(account, response.status_code)
+            if request.method == "GET" and is_export(request.url.path):
+                record_export(account)
+    except Exception:  # noqa: BLE001
+        pass
+    return response
 
 app.add_middleware(
     CORSMiddleware,

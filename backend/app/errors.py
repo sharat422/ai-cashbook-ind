@@ -35,6 +35,10 @@ def install_error_handlers(app: FastAPI) -> None:
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
         # logger.exception attaches the full traceback at ERROR level.
         log.exception("Unhandled error on %s %s", request.method, request.url.path)
+        # Send to Sentry (email alert) — DB errors and other 500s surface here.
+        from .monitoring import capture_exception
+
+        capture_exception(exc)
         return JSONResponse(
             status_code=500,
             content={"detail": "Something went wrong on our side. Please try again."},

@@ -14,3 +14,5 @@ httpx==0.28.1
 psycopg2-binary==2.9.10
 # Application-level field encryption (Fernet) for sensitive columns.
 cryptography==43.0.3
+# Error/crash monitoring + real-time alerts (activated only when SENTRY_DSN set).
+sentry-sdk==2.20.0

@@ -45,6 +45,20 @@ class Settings(BaseSettings):
 
     cors_origins: str = "*"
 
+    # --- Breach detection & alerting (see app/monitoring.py) ---
+    # Sentry DSN → real-time email alerts for unhandled errors + security events.
+    sentry_dsn: str = ""
+    # Owner number for WhatsApp security alerts (SMS-like). Blank disables it.
+    owner_alert_mobile: str = ""
+    # Anomaly thresholds (count within window seconds → one alert per crossing).
+    failed_login_window_s: int = 300
+    failed_login_threshold: int = 20            # global spike (all accounts)
+    failed_login_per_mobile_threshold: int = 6  # targeted brute force
+    account_error_window_s: int = 300
+    account_error_threshold: int = 30           # 4xx/5xx from one account
+    export_window_s: int = 3600
+    export_threshold: int = 15                  # data exports from one account
+
     @model_validator(mode="after")
     def _production_secrets(self) -> "Settings":
         if not self.debug:
