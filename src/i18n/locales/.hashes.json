@@ -682,7 +682,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "gu": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -1367,7 +1368,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "hi": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2052,7 +2054,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "kn": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2737,7 +2740,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "ml": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -3422,7 +3426,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "mr": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -4107,7 +4112,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "pa": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -4792,7 +4798,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "ta": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -5477,7 +5484,8 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   },
   "te": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -6162,6 +6170,7 @@
     "common.save": "efc007a393f6",
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
-    "grievance.section": "92c51001d398"
+    "grievance.section": "92c51001d398",
+    "legal.language": "377a258a20bf"
   }
 }

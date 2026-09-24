@@ -1,12 +1,24 @@
 /**
- * Privacy Policy & Terms content (English), rendered by LegalDocScreen.
+ * Privacy Policy & Terms content, rendered by LegalDocScreen with a per-language
+ * selector.
  *
  * ⚠️ TEMPLATE — starting point, NOT legal advice. Before launch: have counsel
- * review it, fill the COMPANY / EFFECTIVE_DATE placeholders, and keep the
- * grievance contact IDENTICAL to constants.ts GRIEVANCE and the store listing.
- * Kept in English on purpose — don't machine-translate legal text.
+ * review the English source, fill the COMPANY / EFFECTIVE_DATE placeholders, and
+ * keep the grievance contact IDENTICAL to constants.ts GRIEVANCE and the store
+ * listing.
+ *
+ * ── Adding professional translations ──────────────────────────────────────
+ * English (EN below) is the source and the fallback. To add a language:
+ *   1. Have a professional translate each section's `heading` and `body`
+ *      strings for that locale.
+ *   2. KEEP the {tokens} verbatim (e.g. {grievanceEmail}) — they're filled at
+ *      runtime from constants, so contact/company details never drift.
+ *   3. Register it in LEGAL_TRANSLATIONS below, e.g. `hi: {privacy: {...},
+ *      terms: {...}}`.
+ * The language selector appears automatically once >1 language is registered.
  */
 import {GRIEVANCE, SUPPORT} from '@config/constants';
+import type {AppLanguage} from '@features/auth/utils/languagePreference';
 
 export type LegalKind = 'privacy' | 'terms';
 
@@ -27,17 +39,18 @@ export const COMPANY = {
 };
 export const EFFECTIVE_DATE = '[Effective date]';
 
-function privacyPolicy(): LegalDoc {
-  return {
+// English SOURCE. Tokens in {braces} are filled at runtime (see `fill`).
+const EN: Record<LegalKind, LegalDoc> = {
+  privacy: {
     title: 'Privacy Policy',
     sections: [
       {
         heading: 'Who we are',
         body: [
-          `${COMPANY.legalName} ("we", "us") operates the Smart CashBook app. ` +
-            `This policy explains what personal data we handle and your rights ` +
-            `under India's Digital Personal Data Protection Act, 2023 (DPDP Act).`,
-          `Registered address: ${COMPANY.address}. Effective date: ${EFFECTIVE_DATE}.`,
+          '{legalName} ("we", "us") operates the Smart CashBook app. This policy ' +
+            "explains what personal data we handle and your rights under India's " +
+            'Digital Personal Data Protection Act, 2023 (DPDP Act).',
+          'Registered address: {address}. Effective date: {effectiveDate}.',
         ],
       },
       {
@@ -107,9 +120,9 @@ function privacyPolicy(): LegalDoc {
       {
         heading: 'Grievance / Data Protection Officer',
         body: [
-          `${GRIEVANCE.officerName} — ${GRIEVANCE.email}. Contact this address for ` +
-            `any privacy question or grievance about your personal data. This is ` +
-            `separate from general support (${SUPPORT.email}).`,
+          '{officerName} — {grievanceEmail}. Contact this address for any privacy ' +
+            'question or grievance about your personal data. This is separate from ' +
+            'general support ({supportEmail}).',
         ],
       },
       {
@@ -120,18 +133,15 @@ function privacyPolicy(): LegalDoc {
         ],
       },
     ],
-  };
-}
-
-function terms(): LegalDoc {
-  return {
+  },
+  terms: {
     title: 'Terms of Service',
     sections: [
       {
         heading: 'Acceptance',
         body: [
-          `By using Smart CashBook you agree to these Terms with ${COMPANY.legalName}. ` +
-            `Effective date: ${EFFECTIVE_DATE}.`,
+          'By using Smart CashBook you agree to these Terms with {legalName}. ' +
+            'Effective date: {effectiveDate}.',
         ],
       },
       {
@@ -184,13 +194,50 @@ function terms(): LegalDoc {
         heading: 'Governing law & contact',
         body: [
           'These Terms are governed by the laws of India. Questions or grievances: ' +
-            `${GRIEVANCE.officerName}, ${GRIEVANCE.email}.`,
+            '{officerName}, {grievanceEmail}.',
         ],
       },
     ],
+  },
+};
+
+/**
+ * Professional translations. Same structure as EN, same {tokens}. Empty until
+ * translations are delivered. Example:
+ *   hi: { privacy: {title: '…', sections: [...] }, terms: {…} }
+ */
+const LEGAL_TRANSLATIONS: Partial<Record<AppLanguage, Record<LegalKind, LegalDoc>>> = {};
+
+function tokenValues(): Record<string, string> {
+  return {
+    legalName: COMPANY.legalName,
+    address: COMPANY.address,
+    effectiveDate: EFFECTIVE_DATE,
+    officerName: GRIEVANCE.officerName,
+    grievanceEmail: GRIEVANCE.email,
+    supportEmail: SUPPORT.email,
   };
 }
 
-export function getLegalDoc(kind: LegalKind): LegalDoc {
-  return kind === 'terms' ? terms() : privacyPolicy();
+function fill(text: string, values: Record<string, string>): string {
+  return text.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? `{${key}}`);
+}
+
+/** Languages a legal doc is available in — English always, plus any registered
+ * professional translations. Drives the on-screen language selector. */
+export function availableLegalLanguages(): AppLanguage[] {
+  return ['en', ...(Object.keys(LEGAL_TRANSLATIONS) as AppLanguage[])];
+}
+
+/** The doc for `kind` in `lang`, falling back to English, with tokens filled. */
+export function getLegalDoc(kind: LegalKind, lang: AppLanguage = 'en'): LegalDoc {
+  const raw = LEGAL_TRANSLATIONS[lang]?.[kind] ?? EN[kind];
+  const values = tokenValues();
+  return {
+    title: fill(raw.title, values),
+    sections: raw.sections.map(section => ({
+      heading: fill(section.heading, values),
+      body: section.body.map(paragraph => fill(paragraph, values)),
+    })),
+  };
 }
