@@ -20,13 +20,23 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
-// Some third-party native modules (e.g. react-native-audio-recorder-player) pin
-// their Kotlin jvmTarget to 1.8 while their Java compiles at 17 under this
-// toolchain, which Gradle rejects ("Inconsistent JVM-target compatibility").
-// Force every subproject's Kotlin compilation to jvmTarget 17 so it matches Java.
-subprojects {
-    afterEvaluate {
-        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+// react-native-audio-recorder-player pins its Kotlin jvmTarget to 1.8 but sets no
+// Java compileOptions, so its Java compiles at 17 under this toolchain — Gradle
+// rejects the pair ("Inconsistent JVM-target compatibility: Java 17 / Kotlin 1.8").
+// Bump ONLY its Kotlin target to 17 so it matches its Java.
+//
+// This is deliberately scoped to that one module: the other Kotlin libraries here
+// (reanimated, screens, netinfo, html-to-pdf) pin BOTH Java and Kotlin to 1.8 and
+// are already internally consistent — blanket-forcing Kotlin to 17 would give
+// them Java 1.8 / Kotlin 17, the same error in reverse.
+//
+// Configured lazily via configureEach (NOT afterEvaluate): the React Native
+// root-project plugin evaluates some subprojects eagerly, so afterEvaluate would
+// throw "project is already evaluated". configureEach also runs at task
+// realization — after the library sets its own 1.8 — so this override wins.
+subprojects { sp ->
+    if (sp.name == "react-native-audio-recorder-player") {
+        sp.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
             kotlinOptions {
                 jvmTarget = "17"
             }
