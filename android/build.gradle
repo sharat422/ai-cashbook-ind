@@ -19,3 +19,17 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// Some third-party native modules (e.g. react-native-audio-recorder-player) pin
+// their Kotlin jvmTarget to 1.8 while their Java compiles at 17 under this
+// toolchain, which Gradle rejects ("Inconsistent JVM-target compatibility").
+// Force every subproject's Kotlin compilation to jvmTarget 17 so it matches Java.
+subprojects {
+    afterEvaluate {
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+}
