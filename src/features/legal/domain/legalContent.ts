@@ -78,13 +78,15 @@ const EN: Record<LegalKind, LegalDoc> = {
         heading: 'AI processing & who we share data with',
         body: [
           'With your AI consent, transaction text, voice audio and receipt images ' +
-            'are sent to our AI providers (OpenAI and Anthropic) to extract the ' +
-            'details. We minimise this — for example, customer names are replaced ' +
-            'with opaque labels before insights are generated.',
-          'Processors who handle data on our behalf: OpenAI and Anthropic (AI), ' +
-            'Render (cloud hosting & database), and — if enabled — Meta/WhatsApp ' +
-            '(notifications you request) and Sentry (crash reporting). We do not ' +
-            'sell your data or use it for advertising.',
+            'are sent to our AI providers (OpenAI, Anthropic and Meta) to extract ' +
+            'the details — for example, voice recordings are transcribed by Meta. ' +
+            'We minimise this: customer names are replaced with opaque labels ' +
+            'before insights are generated.',
+          'Processors who handle data on our behalf: OpenAI, Anthropic and Meta ' +
+            '(AI, including voice transcription by Meta), Render (cloud hosting & ' +
+            'database), and — if enabled — Meta/WhatsApp (notifications you ' +
+            'request) and Sentry (crash reporting). We do not sell your data or ' +
+            'use it for advertising.',
         ],
       },
       {

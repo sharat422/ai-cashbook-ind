@@ -484,15 +484,83 @@ def transcribe_audio(
     language: str | None = None,
     prompt: str | None = None,
 ) -> str:
-    """Transcribe spoken audio to text via OpenAI Whisper.
+    """Transcribe spoken audio to text.
+
+    Uses **Meta Muse Voice Transcribe** as the primary provider (when
+    META_MODEL_API_KEY is set) and falls back to **OpenAI Whisper** if Muse is
+    unconfigured or errors. With neither configured, raises so the caller can
+    fall back to typing.
 
     - `language`: ISO-639-1 (e.g. 'hi', 'te'). Passing the language the customer
       actually speaks is more accurate than auto-detect; omit it to auto-detect.
-    - `prompt`: a vocabulary hint that biases the transcript (see
-      CASHBOOK_TRANSCRIBE_PROMPT) — most useful for getting amounts right.
+    - `prompt`: a vocabulary hint (see CASHBOOK_TRANSCRIBE_PROMPT). Applied to the
+      Whisper path; Muse biasing is not used here.
 
-    Raises (no offline fallback for audio) so the caller can fall back to typing.
+    An empty transcript is returned as-is (the caller retries with auto-detect);
+    only an actual Muse *error* triggers the Whisper fallback.
     """
+    if settings.meta_model_api_key:
+        try:
+            return _transcribe_muse(audio_bytes, filename, language=language)
+        except Exception:  # noqa: BLE001 — fall back to Whisper on any Muse failure
+            log.exception("Muse transcription failed; falling back to OpenAI Whisper")
+            if not settings.openai_api_key:
+                raise  # nothing to fall back to — surface the Muse error
+    return _transcribe_whisper(audio_bytes, filename, language=language, prompt=prompt)
+
+
+def _extract_transcript(payload: dict) -> str:
+    """Pull the transcript from a Muse ASR JSON response.
+
+    Prefers the top-level `text` (OpenAI-compatible `json` format); if absent,
+    joins the per-turn/segment `text` (verbose/diarized formats)."""
+    text = (payload.get("text") or "").strip()
+    if text:
+        return text
+    for key in ("turns", "segments"):
+        parts = payload.get(key)
+        if isinstance(parts, list):
+            joined = " ".join(
+                (p.get("text") or "").strip()
+                for p in parts
+                if isinstance(p, dict)
+            ).strip()
+            if joined:
+                return joined
+    return ""
+
+
+def _transcribe_muse(
+    audio_bytes: bytes,
+    filename: str = "audio.m4a",
+    language: str | None = None,
+) -> str:
+    """Transcribe via Meta Muse Voice Transcribe (Model API file endpoint).
+
+    Multipart POST to {base}/asr/transcribe with the OpenAI-compatible field
+    names (`file`, `model`, `language`) and Bearer auth. Response parsing is
+    defensive (see `_extract_transcript`)."""
+    import httpx
+
+    url = f"{settings.meta_model_base_url.rstrip('/')}/asr/transcribe"
+    files = {"file": (filename, audio_bytes)}
+    data = {"model": settings.muse_transcribe_model, "response_format": "json"}
+    if language:
+        data["language"] = language
+    headers = {"Authorization": f"Bearer {settings.meta_model_api_key}"}
+
+    resp = httpx.post(url, files=files, data=data, headers=headers, timeout=60.0)
+    resp.raise_for_status()
+    return _extract_transcript(resp.json())
+
+
+def _transcribe_whisper(
+    audio_bytes: bytes,
+    filename: str = "audio.m4a",
+    language: str | None = None,
+    prompt: str | None = None,
+) -> str:
+    """Transcribe via OpenAI Whisper (fallback provider)."""
     if not settings.openai_api_key:
         raise RuntimeError("Voice transcription requires OPENAI_API_KEY on the server.")
 

@@ -4,22 +4,25 @@ Every third-party SDK/library/service that could touch user data, what it likely
 handles, whether it's more than we need, its data-processing terms to review, and
 a keep/remove call. Verified against `package.json`, `backend/requirements.txt`,
 the Android/iOS native config, and the code that actually calls each one
-(as of 2026-09-23, `dev`).
+(as of 2026-09-28, `dev`).
 
 **Headline:** there are **no analytics, ad, payment-gateway, or push-notification
 SDKs**, and **no crash SDK in production yet**. The iOS privacy manifest declares
 `NSPrivacyTracking = false` and no collected data types. The only services that
-receive user data off-device are **OpenAI**, **Anthropic**, optionally **Meta
-(WhatsApp)**, and **Render** (hosting). That's a small, defensible surface.
+receive user data off-device are **OpenAI**, **Anthropic**, **Meta** (Muse Voice
+Transcribe via Model API; WhatsApp optional), and **Render** (hosting). That's a
+small, defensible surface.
 
 ---
 
 ## A. External services that RECEIVE user data
 
 ### 1. OpenAI (backend) — `openai==1.59.6`
-- **Used for:** voice transcription (Whisper), and GPT for transaction/expense
-  parsing, categorisation, khata insights.
-- **Data it receives:** the recorded **voice audio**; the **typed/spoken text**
+- **Used for:** voice transcription (Whisper) **as the fallback** when Meta Muse
+  is unconfigured or errors (see §3), and GPT for transaction/expense parsing,
+  categorisation, khata insights.
+- **Data it receives:** the recorded **voice audio** (only on the Whisper
+  fallback path); the **typed/spoken text**
   of a transaction; and for insights, **aggregate khata stats that include
   customer names** (top defaulters). Only sent when an API key is configured;
   otherwise the app falls back to on-device heuristics.
@@ -43,7 +46,21 @@ receive user data off-device are **OpenAI**, **Anthropic**, optionally **Meta
   used for training by default**. Sign the DPA before real user data.
 - **Keep/remove:** **Keep** (core feature). Sign the DPA.
 
-### 3. Meta — WhatsApp Cloud API (backend) — via `httpx`, no SDK
+### 3. Meta — Model API: Muse Voice Transcribe (backend) — via `httpx`, no SDK
+- **Used for:** the **primary** speech-to-text for voice entry
+  (`muse-voice-transcribe-1.0`, `POST /v1/asr/transcribe`). Whisper (§1) is the
+  fallback. Active only when `META_MODEL_API_KEY` is set; blank key ⇒ Whisper is
+  used directly.
+- **Data it receives:** the recorded **voice audio** and the spoken language
+  hint. Only sent with the user's AI-processing consent (server-gated).
+- **More than we need?** No — the audio is what's transcribed. Note it is
+  potential PII (a customer name + amount spoken aloud).
+- **Terms to review:** Meta **Model API terms + DPA**; confirm the **data-retention
+  and no-training-on-inputs** posture for Model API audio, and request
+  zero-retention if available. Sign the DPA before real user data.
+- **Keep/remove:** **Keep** (primary voice path). Sign the DPA before production.
+
+### 3b. Meta — WhatsApp Cloud API (backend) — via `httpx`, no SDK
 - **Used for:** sending notification messages. **Off by default**
   (`WHATSAPP_ENABLED=false`, and the endpoint 503s unless tokens are set).
 - **Data it receives (only if you enable it):** the **recipient's mobile number**
@@ -88,7 +105,7 @@ on to OpenAI/Anthropic). Listed because they drive permissions and store review.
 |---|---|---|
 | `react-native-get-sms-android` | **Reads SMS** (Android READ_SMS) | Parsed **on-device**; only entries the user saves reach your backend. No SMS text leaves the phone. |
 | `react-native-image-picker` | Camera / photo library | Chosen receipt image → your backend → Anthropic |
-| `react-native-audio-recorder-player` | Microphone | Recording → your backend → OpenAI Whisper |
+| `react-native-audio-recorder-player` | Microphone | Recording → your backend → Meta Muse (primary) / OpenAI Whisper (fallback) |
 | `react-native-keychain` | Secure keystore | Stays in the OS Keychain/Keystore (local) |
 | `@react-native-async-storage/async-storage` | Local app storage | On-device only |
 | `jail-monkey` | Root/jailbreak + device signals | On-device only |
@@ -117,8 +134,9 @@ on to OpenAI/Anthropic). Listed because they drive permissions and store review.
 ---
 
 ## D. Summary recommendations
-1. **Sign DPAs before real user data:** OpenAI, Anthropic, Render (and Sentry
-   before you enable it). These are your actual processors.
+1. **Sign DPAs before real user data:** OpenAI, Anthropic, **Meta (Model API —
+   Muse voice transcription)**, Render (and Sentry before you enable it). These
+   are your actual processors.
 2. **Minimise the OpenAI insights payload** — stop sending customer names; send
    ids/labels or keep insights on the local heuristic.
 3. **Decide on `react-native-get-sms-android`** — remove it unless SMS-import is a
@@ -126,5 +144,6 @@ on to OpenAI/Anthropic). Listed because they drive permissions and store review.
 4. **Keep WhatsApp/Meta disabled** until needed and covered by a DPA.
 5. **Nothing else to remove** — there are no analytics/ads/tracking SDKs to strip.
    Keep it that way; add tracking only with a clear need, consent, and a DPA.
-6. List OpenAI, Anthropic, Render (+ Sentry/Meta when live) as **sub-processors**
-   in your privacy policy, per the DPDP Act.
+6. List OpenAI, Anthropic, **Meta (Model API — voice transcription)**, Render
+   (+ Sentry and Meta/WhatsApp when live) as **sub-processors** in your privacy
+   policy, per the DPDP Act. (Privacy Policy already updated — see `legalContent.ts`.)

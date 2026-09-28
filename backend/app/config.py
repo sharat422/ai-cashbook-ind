@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
 
+    # --- Meta Model API — Muse Voice Transcribe (primary speech-to-text) ---
+    # Voice entry transcribes via Muse first, falling back to OpenAI Whisper
+    # (openai_transcribe_model) if Muse is unconfigured or errors. Blank key =
+    # Muse disabled → Whisper is used directly.
+    meta_model_api_key: str = ""
+    meta_model_base_url: str = "https://api.meta.ai/v1"
+    muse_transcribe_model: str = "muse-voice-transcribe-1.0"
+
     # --- WhatsApp Business Cloud API (server-side notification delivery) ---
     # Blank = feature disabled; the /notifications/whatsapp endpoint returns 503
     # and the app treats WhatsApp as unavailable (falls back to the in-app inbox).
