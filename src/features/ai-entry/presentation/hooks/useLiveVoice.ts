@@ -91,5 +91,7 @@ export function useLiveVoice(callbacks: {
       }
     }
   };
-  return {state, start, stop: () => session.current?.stop()};
+  // Manual Stop keeps the text already displayed and unlocks Read immediately.
+  // Invalidate callbacks so a late provider result cannot overwrite user edits.
+  return {state, start, stop: cancel};
 }

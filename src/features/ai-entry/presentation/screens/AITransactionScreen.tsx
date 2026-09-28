@@ -97,13 +97,7 @@ export function AITransactionScreen({
   const voice = useLiveVoice({
     language: voiceLanguage,
     onText: setText,
-    onComplete: transcript => {
-      setText(transcript);
-      parse.mutate(
-        {text: transcript, today: toISODate(new Date())},
-        {onSuccess: applyParsed, onError: onVoiceError},
-      );
-    },
+    onComplete: setText,
     onError: err => {
       logError('voice.live', err);
       onVoiceError(err);

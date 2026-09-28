@@ -59,9 +59,10 @@ AI Entry streams 24 kHz mono PCM16 through authenticated `WS /api/v1/voice/live`
 The first frame carries the user's session token and optional language code.
 The backend checks AI consent and entry permission before connecting to Muse.
 It waits for Muse's session acknowledgement before allowing capture, relays
-binary PCM, and replaces cumulative partials in the editable text area. Stop
-drains capture, sends `endStream`, and waits for `final: true` plus normal close.
-Only the final transcript goes to the existing transaction parser and review UI.
+binary PCM, and replaces cumulative partials in the editable text area. Manual
+Stop closes capture and keeps the currently displayed text, immediately enabling
+editing and Read. Late provider results cannot overwrite that text. Parsing only
+runs when the user taps Read; stopping never automatically parses the entry.
 An interrupted recording leaves the partial text available for manual editing;
 it never automatically saves or parses an incomplete result. Capture stops on
 navigation/backgrounding and automatically finishes after 115 seconds.
