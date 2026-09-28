@@ -2,9 +2,28 @@
 
 import openai
 import pytest
+import io
+import json
+import wave
 
 import app.ai as ai
 import app.routers.ai_routes as ai_routes
+
+
+@pytest.fixture(autouse=True)
+def isolated_providers(monkeypatch):
+    monkeypatch.setattr(ai.settings, "meta_model_api_key", "")
+    monkeypatch.setattr(ai.settings, "openai_api_key", "")
+
+
+def _wav():
+    out = io.BytesIO()
+    with wave.open(out, "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(24000)
+        audio.writeframes(b"\x00\x00" * 2400)
+    return out.getvalue()
 
 
 # --- transcribe_audio (the brain) -------------------------------------------
@@ -66,7 +85,7 @@ def test_transcribe_audio_requires_key(monkeypatch):
 
 def test_transcribe_prefers_muse_when_configured(monkeypatch):
     """With META_MODEL_API_KEY set, audio goes to Muse (not OpenAI), with the
-    OpenAI-compatible multipart fields and Bearer auth."""
+    documented WAV + JSON multipart fields and Bearer auth."""
     monkeypatch.setattr(ai.settings, "meta_model_api_key", "meta-key")
     monkeypatch.setattr(ai.settings, "openai_api_key", "sk-should-not-be-used")
     import httpx
@@ -78,7 +97,7 @@ def test_transcribe_prefers_muse_when_configured(monkeypatch):
             pass
 
         def json(self):
-            return {"text": "  ramesh ko 2500 diya  ", "language": "hi"}
+            return {"transcript": "  ramesh ko 2500 diya  ", "turns": []}
 
     def fake_post(url, **kw):
         captured["url"] = url
@@ -87,12 +106,19 @@ def test_transcribe_prefers_muse_when_configured(monkeypatch):
 
     monkeypatch.setattr(httpx, "post", fake_post)
 
-    out = ai.transcribe_audio(b"audio", "clip.m4a", language="hi", prompt="hint")
+    audio = _wav()
+    out = ai.transcribe_audio(audio, "clip.wav", language="hi", prompt="hint")
     assert out == "ramesh ko 2500 diya"  # trimmed
     assert captured["url"].endswith("/asr/transcribe")
-    assert captured["files"]["file"] == ("clip.m4a", b"audio")
-    assert captured["data"]["model"] == ai.settings.muse_transcribe_model
-    assert captured["data"]["language"] == "hi"
+    assert captured["files"]["audio"] == ("audio.wav", audio, "audio/wav")
+    request = json.loads(captured["files"]["request"][1])
+    assert request["model"] == ai.settings.muse_transcribe_model
+    assert request["languageBias"] == ["Hindi"]
+    assert request["mode"] == "PUSH_TO_TALK"
+    assert request["audioEncoding"] == "WAV"
+    assert "rupees" in request["keywords"]
+    assert captured["files"]["request"][2] == "application/json"
+    assert "data" not in captured
     assert captured["headers"]["Authorization"] == "Bearer meta-key"
 
 
@@ -112,7 +138,7 @@ def test_transcribe_falls_back_to_whisper_on_muse_error(monkeypatch):
             })()})()
 
     monkeypatch.setattr(openai, "OpenAI", FakeClient)
-    assert ai.transcribe_audio(b"x", "c.m4a", language="hi") == "whisper result"
+    assert ai.transcribe_audio(_wav(), "c.wav", language="hi") == "whisper result"
 
 
 def test_transcribe_reraises_muse_error_when_no_whisper_key(monkeypatch):
@@ -124,10 +150,13 @@ def test_transcribe_reraises_muse_error_when_no_whisper_key(monkeypatch):
         httpx, "post", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("muse down"))
     )
     with pytest.raises(RuntimeError, match="muse down"):
-        ai.transcribe_audio(b"x")
+        ai.transcribe_audio(_wav())
 
 
 def test_extract_transcript_prefers_text_then_turns_then_segments():
+    assert ai._extract_transcript({"transcript": " hello ", "text": "wrong"}) == "hello"
+    assert ai._extract_transcript({"transcript": "", "text": "wrong"}) == ""
+    assert ai._extract_transcript({"turns": [{"transcript": "hello"}, {"transcript": "world"}]}) == "hello world"
     assert ai._extract_transcript({"text": "hi"}) == "hi"
     assert ai._extract_transcript(
         {"text": "", "turns": [{"text": "a"}, {"text": "b"}]}
@@ -136,6 +165,27 @@ def test_extract_transcript_prefers_text_then_turns_then_segments():
         {"segments": [{"text": "x"}, {"text": "y"}]}
     ) == "x y"
     assert ai._extract_transcript({}) == ""
+
+
+def test_mobile_aac_is_converted_to_muse_pcm_wav(tmp_path):
+    import subprocess
+    from imageio_ffmpeg import get_ffmpeg_exe
+
+    source = tmp_path / "source.wav"
+    encoded = tmp_path / "mobile.m4a"
+    source.write_bytes(_wav())
+    subprocess.run([get_ffmpeg_exe(), "-v", "error", "-i", str(source),
+                    "-ar", "44100", "-ac", "2", "-c:a", "aac", str(encoded)], check=True)
+    converted = ai._muse_wav(encoded.read_bytes())
+    with wave.open(io.BytesIO(converted), "rb") as audio:
+        assert (audio.getnchannels(), audio.getsampwidth(), audio.getframerate()) == (1, 2, 24000)
+        assert audio.getnframes() > 0
+    assert ai._muse_wav(converted) == converted
+
+
+def test_invalid_audio_is_rejected():
+    with pytest.raises(ValueError, match="decoded"):
+        ai._muse_wav(b"not an audio file")
 
 
 # --- /voice/parse (transcribe → parse agent) --------------------------------

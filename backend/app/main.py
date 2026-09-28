@@ -21,6 +21,7 @@ from .monitoring import (
 from .routers import (
     account,
     ai_routes,
+    voice_live,
     assistant,
     auth,
     business,
@@ -126,6 +127,7 @@ for module in (
     summary_insights,
     khata,
     ai_routes,
+    voice_live,
     notifications,
     reports,
     items,

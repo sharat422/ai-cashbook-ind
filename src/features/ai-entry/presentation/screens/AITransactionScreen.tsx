@@ -21,18 +21,9 @@ import {
   exactMatch,
   findCustomerCandidates,
 } from '@features/ai-entry/domain/saveTransaction';
-import {
-  useParseTransaction,
-  useVoiceParse,
-} from '@features/ai-entry/presentation/hooks/useParseTransaction';
-import {
-  ensureMicPermission,
-  isVoiceAvailable,
-  MIN_RECORDING_MS,
-  SILENCE_PEAK_DB,
-  startRecording,
-  stopRecording,
-} from '@features/ai-entry/data/voiceRecorder';
+import {useParseTransaction} from '@features/ai-entry/presentation/hooks/useParseTransaction';
+import {isLiveVoiceAvailable} from '@features/ai-entry/data/liveVoice';
+import {useLiveVoice} from '@features/ai-entry/presentation/hooks/useLiveVoice';
 import {logError} from '@/services/diagnostics/errorLog.store';
 import type {Customer} from '@features/customers/domain/entities';
 import {
@@ -51,19 +42,19 @@ export function AITransactionScreen({
 }: AppScreenProps<'AITransaction'>): React.JSX.Element {
   const t = useT();
   const parse = useParseTransaction();
-  const voice = useVoiceParse();
-  const [recording, setRecording] = useState(false);
   const voiceLanguage = useVoiceSettingsStore(s => s.language);
   const setVoiceLanguage = useVoiceSettingsStore(s => s.setLanguage);
   // Voice needs the native audio module in the build; if absent, show type-only.
-  const voiceAvailable = isVoiceAvailable();
+  const voiceAvailable = isLiveVoiceAvailable();
 
   /** A voice/transcription error → friendly message + always allow typing. */
   const onVoiceError = (err: unknown) => {
     const emptyOrBadAudio = err instanceof ApiError && err.status === 422;
     Alert.alert(
       emptyOrBadAudio ? t('ai.didntCatch') : t('ai.voiceUnavailable'),
-      emptyOrBadAudio ? t('ai.didntCatchMsg') : t('ai.voiceUnavailableMsg'),
+      emptyOrBadAudio
+        ? t('ai.didntCatchMsg')
+        : err instanceof Error ? err.message : t('ai.voiceUnavailableMsg'),
     );
   };
 
@@ -103,72 +94,34 @@ export function AITransactionScreen({
     setDate(result.date || toISODate(new Date()));
   };
 
-  /** Mic: tap to record, tap again to stop → transcribe (any language) + parse. */
-  const onMic = async () => {
-    if (voice.isPending) return;
-    if (recording) {
-      let audio;
-      try {
-        audio = await stopRecording();
-      } catch (e) {
-        setRecording(false);
-        // Capture the real native error so we're not guessing (Settings → Error log).
-        logError('voice.stopRecorder', e instanceof Error ? e : new Error(String(e)));
-        return Alert.alert(t('ai.couldNotRead'), t('ai.tryAgain'));
-      }
-      setRecording(false);
-      // Guard accidental short taps: too brief to hold real speech, so skip the
-      // round-trip and nudge the user to hold the mic and speak.
-      if (audio.durationMs > 0 && audio.durationMs < MIN_RECORDING_MS) {
-        return Alert.alert(t('ai.tooShortTitle'), t('ai.tooShortMsg'));
-      }
-      // The mic reported near-silence (metering worked but heard nothing) — no
-      // engine can transcribe that, so tell the user before the round-trip.
-      if (audio.peakDb !== null && audio.peakDb < SILENCE_PEAK_DB) {
-        logError(
-          'voice.silent',
-          new Error(`silent capture · peakDb=${audio.peakDb} · durMs=${audio.durationMs}`),
-        );
-        return Alert.alert(t('ai.didntCatch'), t('ai.didntCatchMsg'));
-      }
-      setError(null);
-      setCandidates(null);
-      const captured = audio;
-      voice.mutate(
-        {
-          audio: captured,
-          today: toISODate(new Date()),
-          language: voiceLanguage ?? undefined, // explicit code, or auto-detect
-        },
-        {
-          onSuccess: result => {
-            setText(result.transcript); // show what was heard — editable
-            applyParsed(result);
-          },
-          onError: err => {
-            // Record the server's real reason + our capture stats, so a single
-            // repro tells us exactly what failed.
-            logError(
-              'voice.parse',
-              err instanceof Error ? err : new Error(String(err)),
-              `peakDb=${captured.peakDb} · durMs=${captured.durationMs}`,
-            );
-            onVoiceError(err);
-          },
-        },
+  const voice = useLiveVoice({
+    language: voiceLanguage,
+    onText: setText,
+    onComplete: transcript => {
+      setText(transcript);
+      parse.mutate(
+        {text: transcript, today: toISODate(new Date())},
+        {onSuccess: applyParsed, onError: onVoiceError},
       );
+    },
+    onError: err => {
+      logError('voice.live', err);
+      onVoiceError(err);
+    },
+  });
+  const recording = voice.state === 'recording';
+  const voiceBusy = voice.state === 'connecting' || voice.state === 'finishing' || parse.isPending;
+  const voiceActive = voice.state !== 'idle';
+  const onMic = () => {
+    if (voiceBusy) return;
+    if (recording) {
+      voice.stop();
       return;
     }
-    if (!(await ensureMicPermission())) {
-      return Alert.alert(t('ai.micNeededTitle'), t('ai.micNeededMsg'));
-    }
-    try {
-      await startRecording();
-      setRecording(true);
-    } catch (e) {
-      logError('voice.startRecorder', e instanceof Error ? e : new Error(String(e)));
-      Alert.alert(t('ai.couldNotRead'), t('ai.tryAgain'));
-    }
+    setError(null);
+    setCandidates(null);
+    setParsed(null);
+    voice.start();
   };
 
   const onParse = () => {
@@ -279,7 +232,9 @@ export function AITransactionScreen({
           {voiceAvailable ? (
             <>
               {/* Voice language — pass the customer's language for best accuracy */}
-              <View className="mt-5">
+              <View className="mt-5" pointerEvents={voiceActive ? 'none' : 'auto'}
+                accessibilityElementsHidden={voiceActive}
+                importantForAccessibility={voiceActive ? 'no-hide-descendants' : 'auto'}>
                 <Select
                   label={t('ai.voiceLanguage')}
                   value={voiceLanguageLabel(voiceLanguage)}
@@ -292,14 +247,16 @@ export function AITransactionScreen({
               <Pressable
                 accessibilityRole="button"
                 onPress={onMic}
-                disabled={voice.isPending}
+                disabled={voiceBusy}
                 className={`mt-3 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
                   recording ? 'bg-danger' : 'bg-primary'
                 }`}
-                style={{gap: 10, opacity: voice.isPending ? 0.6 : 1}}>
+                style={{gap: 10, opacity: voiceBusy ? 0.6 : 1}}>
                 <Text className="text-2xl">{recording ? '⏹' : '🎤'}</Text>
                 <Text className="text-base font-semibold text-white">
-                  {voice.isPending
+                  {voice.state === 'connecting'
+                    ? t('common.loading')
+                    : voiceBusy
                     ? t('ai.transcribing')
                     : recording
                     ? t('ai.listening')
@@ -314,6 +271,7 @@ export function AITransactionScreen({
             <TextInput
               className="min-h-[72px] p-0 text-base text-slate-900"
               value={text}
+              editable={!voiceActive}
               onChangeText={setText}
               placeholder={t('ai.inputPlaceholder')}
               placeholderTextColor={colors.muted}
@@ -330,6 +288,7 @@ export function AITransactionScreen({
             {EXAMPLES.map(ex => (
               <Pressable
                 key={ex}
+                disabled={voiceActive || parse.isPending}
                 onPress={() => setText(ex)}
                 className="rounded-full border border-border bg-white px-3 py-1.5">
                 <Text className="text-xs text-slate-700">{ex}</Text>
@@ -341,7 +300,7 @@ export function AITransactionScreen({
             title={t('ai.read')}
             className="mt-4"
             loading={parse.isPending}
-            disabled={!text.trim()}
+            disabled={!text.trim() || voiceActive || parse.isPending}
             onPress={onParse}
           />
 

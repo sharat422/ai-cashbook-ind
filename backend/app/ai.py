@@ -11,6 +11,11 @@ return a usable 200 and the app stays functional offline of a provider.
 
 import json
 import logging
+import io
+import subprocess
+import tempfile
+import wave
+from pathlib import Path
 
 from .config import settings
 
@@ -464,7 +469,7 @@ def parse_expense(text: str, today: str, language: str | None = None) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# OpenAI — speech-to-text (multilingual voice entry)
+# Muse / OpenAI — speech-to-text (multilingual voice entry)
 # ---------------------------------------------------------------------------
 
 # Whisper's `prompt` biases the decoder toward the vocabulary it expects. For a
@@ -476,6 +481,17 @@ CASHBOOK_TRANSCRIBE_PROMPT = (
     "1 lakh, teen hazaar, do sau, paanch sau, dedh hazaar. Common words: paid, "
     "received, sale, udhaar, diya, mila, jama, baaki, rupees."
 )
+
+# Muse accepts language names, not Whisper's ISO codes. Unsupported hints are
+# omitted so automatic language detection remains available.
+MUSE_LANGUAGES = {
+    "ar": "Arabic", "bn": "Bengali", "nl": "Dutch", "en": "English",
+    "fr": "French", "de": "German", "he": "Hebrew", "hi": "Hindi",
+    "id": "Indonesian", "it": "Italian", "ja": "Japanese", "kn": "Kannada",
+    "ko": "Korean", "ms": "Malay", "zh": "Mandarin Chinese", "mr": "Marathi",
+    "pl": "Polish", "pt": "Portuguese", "es": "Spanish", "tl": "Tagalog",
+    "ta": "Tamil", "te": "Telugu", "th": "Thai", "tr": "Turkish", "vi": "Vietnamese",
+}
 
 
 def transcribe_audio(
@@ -493,8 +509,8 @@ def transcribe_audio(
 
     - `language`: ISO-639-1 (e.g. 'hi', 'te'). Passing the language the customer
       actually speaks is more accurate than auto-detect; omit it to auto-detect.
-    - `prompt`: a vocabulary hint (see CASHBOOK_TRANSCRIBE_PROMPT). Applied to the
-      Whisper path; Muse biasing is not used here.
+    - `prompt`: a vocabulary hint for Whisper. Muse uses cashbook keywords and
+      documented language-name hints instead.
 
     An empty transcript is returned as-is (the caller retries with auto-detect);
     only an actual Muse *error* triggers the Whisper fallback.
@@ -510,10 +526,9 @@ def transcribe_audio(
 
 
 def _extract_transcript(payload: dict) -> str:
-    """Pull the transcript from a Muse ASR JSON response.
-
-    Prefers the top-level `text` (OpenAI-compatible `json` format); if absent,
-    joins the per-turn/segment `text` (verbose/diarized formats)."""
+    """Read Muse's documented transcript, retaining legacy response support."""
+    if "transcript" in payload:
+        return (payload["transcript"] or "").strip()
     text = (payload.get("text") or "").strip()
     if text:
         return text
@@ -521,7 +536,7 @@ def _extract_transcript(payload: dict) -> str:
         parts = payload.get(key)
         if isinstance(parts, list):
             joined = " ".join(
-                (p.get("text") or "").strip()
+                (p.get("transcript") or p.get("text") or "").strip()
                 for p in parts
                 if isinstance(p, dict)
             ).strip()
@@ -530,26 +545,70 @@ def _extract_transcript(payload: dict) -> str:
     return ""
 
 
+def _muse_wav(audio_bytes: bytes) -> bytes:
+    """Normalize mobile AAC to Muse's mono PCM WAV; delete temporary files."""
+    def supported_wav(data: bytes) -> bool:
+        try:
+            with wave.open(io.BytesIO(data), "rb") as audio:
+                return (
+                    audio.getnchannels() == 1 and audio.getsampwidth() == 2
+                    and audio.getframerate() in (16000, 24000)
+                    and 0 < audio.getnframes() <= audio.getframerate() * 600
+                    and len(audio.readframes(audio.getnframes())) == audio.getnframes() * 2
+                )
+        except (wave.Error, EOFError):
+            return False
+
+    if supported_wav(audio_bytes):
+        return audio_bytes
+
+    from imageio_ffmpeg import get_ffmpeg_exe
+
+    # A seekable output produces a proper RIFF length (unlike ffmpeg stdout).
+    # Decode at most 601 seconds, then reject over-limit clips without truncating.
+    with tempfile.TemporaryDirectory(prefix="cashbook-voice-") as directory:
+        source = Path(directory) / "input"
+        target = Path(directory) / "audio.wav"
+        source.write_bytes(audio_bytes)
+        result = subprocess.run(
+            [get_ffmpeg_exe(), "-nostdin", "-v", "error", "-protocol_whitelist", "file,pipe",
+             "-format_whitelist", "mov,wav,mp3,aac,flac,ogg",
+             "-i", str(source), "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "24000",
+             "-c:a", "pcm_s16le", "-map_metadata", "-1", "-t", "601", str(target)],
+            capture_output=True, timeout=30, check=False,
+        )
+        if result.returncode:
+            raise ValueError("Audio could not be decoded for Muse transcription.")
+        wav = target.read_bytes()
+    if not supported_wav(wav):
+        raise ValueError("Muse requires nonempty audio of at most 10 minutes.")
+    return wav
+
+
 def _transcribe_muse(
     audio_bytes: bytes,
     filename: str = "audio.m4a",
     language: str | None = None,
 ) -> str:
-    """Transcribe via Meta Muse Voice Transcribe (Model API file endpoint).
-
-    Multipart POST to {base}/asr/transcribe with the OpenAI-compatible field
-    names (`file`, `model`, `language`) and Bearer auth. Response parsing is
-    defensive (see `_extract_transcript`)."""
+    """Use Muse's WAV + JSON multipart contract in single-turn mode."""
     import httpx
 
     url = f"{settings.meta_model_base_url.rstrip('/')}/asr/transcribe"
-    files = {"file": (filename, audio_bytes)}
-    data = {"model": settings.muse_transcribe_model, "response_format": "json"}
-    if language:
-        data["language"] = language
-    headers = {"Authorization": f"Bearer {settings.meta_model_api_key}"}
+    request = {
+        "model": settings.muse_transcribe_model,
+        "audioEncoding": "WAV",
+        "mode": "PUSH_TO_TALK",
+        "keywords": ["rupees", "lakh", "hazaar", "udhaar", "jama", "baaki"],
+    }
+    if language in MUSE_LANGUAGES:
+        request["languageBias"] = [MUSE_LANGUAGES[language]]
+    files = {
+        "request": (None, json.dumps(request), "application/json"),
+        "audio": ("audio.wav", _muse_wav(audio_bytes), "audio/wav"),
+    }
+    headers = {"Authorization": f"Bearer {settings.meta_model_api_key}", "Accept": "application/json"}
 
-    resp = httpx.post(url, files=files, data=data, headers=headers, timeout=60.0)
+    resp = httpx.post(url, files=files, headers=headers, timeout=httpx.Timeout(60.0, connect=10.0))
     resp.raise_for_status()
     return _extract_transcript(resp.json())
 
