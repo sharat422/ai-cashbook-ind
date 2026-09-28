@@ -62,6 +62,82 @@ def test_transcribe_audio_requires_key(monkeypatch):
         ai.transcribe_audio(b"x")
 
 
+# --- Muse Voice Transcribe (primary) + Whisper fallback ---------------------
+
+def test_transcribe_prefers_muse_when_configured(monkeypatch):
+    """With META_MODEL_API_KEY set, audio goes to Muse (not OpenAI), with the
+    OpenAI-compatible multipart fields and Bearer auth."""
+    monkeypatch.setattr(ai.settings, "meta_model_api_key", "meta-key")
+    monkeypatch.setattr(ai.settings, "openai_api_key", "sk-should-not-be-used")
+    import httpx
+
+    captured = {}
+
+    class FakeResp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"text": "  ramesh ko 2500 diya  ", "language": "hi"}
+
+    def fake_post(url, **kw):
+        captured["url"] = url
+        captured.update(kw)
+        return FakeResp()
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    out = ai.transcribe_audio(b"audio", "clip.m4a", language="hi", prompt="hint")
+    assert out == "ramesh ko 2500 diya"  # trimmed
+    assert captured["url"].endswith("/asr/transcribe")
+    assert captured["files"]["file"] == ("clip.m4a", b"audio")
+    assert captured["data"]["model"] == ai.settings.muse_transcribe_model
+    assert captured["data"]["language"] == "hi"
+    assert captured["headers"]["Authorization"] == "Bearer meta-key"
+
+
+def test_transcribe_falls_back_to_whisper_on_muse_error(monkeypatch):
+    monkeypatch.setattr(ai.settings, "meta_model_api_key", "meta-key")
+    monkeypatch.setattr(ai.settings, "openai_api_key", "sk-key")
+    import httpx
+
+    monkeypatch.setattr(
+        httpx, "post", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("muse down"))
+    )
+
+    class FakeClient:
+        def __init__(self, **_):
+            self.audio = type("A", (), {"transcriptions": type("T", (), {
+                "create": lambda _s, **kw: type("R", (), {"text": "whisper result"})()
+            })()})()
+
+    monkeypatch.setattr(openai, "OpenAI", FakeClient)
+    assert ai.transcribe_audio(b"x", "c.m4a", language="hi") == "whisper result"
+
+
+def test_transcribe_reraises_muse_error_when_no_whisper_key(monkeypatch):
+    monkeypatch.setattr(ai.settings, "meta_model_api_key", "meta-key")
+    monkeypatch.setattr(ai.settings, "openai_api_key", "")
+    import httpx
+
+    monkeypatch.setattr(
+        httpx, "post", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("muse down"))
+    )
+    with pytest.raises(RuntimeError, match="muse down"):
+        ai.transcribe_audio(b"x")
+
+
+def test_extract_transcript_prefers_text_then_turns_then_segments():
+    assert ai._extract_transcript({"text": "hi"}) == "hi"
+    assert ai._extract_transcript(
+        {"text": "", "turns": [{"text": "a"}, {"text": "b"}]}
+    ) == "a b"
+    assert ai._extract_transcript(
+        {"segments": [{"text": "x"}, {"text": "y"}]}
+    ) == "x y"
+    assert ai._extract_transcript({}) == ""
+
+
 # --- /voice/parse (transcribe → parse agent) --------------------------------
 
 def _post_audio(client, headers, **data):
