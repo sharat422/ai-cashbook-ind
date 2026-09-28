@@ -116,10 +116,12 @@ workflows:
       java: 17
       vars:
         API_BASE_URL: "https://smart-cashbook-api.onrender.com"
-    cache:
-      cache_paths:
-        - $HOME/.gradle/caches
-        - node_modules
+    # No caching: a stale $HOME/.gradle / node_modules cache intermittently caused
+    # React Native autolinking to drop react-native-config (its Android platform is
+    # only detected via the repo's react-native.config.js), which then failed the
+    # build at app/build.gradle:7 (":react-native-config could not be found"). A
+    # clean autolink every run is deterministic. Re-add caching only if builds are
+    # too slow AND this is confirmed fixed.
     scripts:
       - name: Install npm dependencies
         script: npm ci
@@ -162,10 +164,8 @@ workflows:
         - android_release_keystore
       vars:
         API_BASE_URL: "https://smart-cashbook-api-prod.onrender.com"
-    cache:
-      cache_paths:
-        - $HOME/.gradle/caches
-        - node_modules
+    # No caching — see the note on the `android` workflow (stale cache broke
+    # react-native-config autolinking). Clean autolink every run is deterministic.
     scripts:
       - name: Install npm dependencies
         script: npm ci
