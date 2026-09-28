@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Smart CashBook</string>
+    <!-- react-native-config finds BuildConfig via getPackageName() (= applicationId
+         com.syntaro.aismartcashbook) unless this points it at the namespace, where
+         BuildConfig actually lives. Without it, Config.* is empty at runtime and the
+         app falls back to http://10.0.2.2:8000 (unreachable on a real phone). -->
+    <string name="build_config_package" translatable="false">com.aismartcashbook</string>
 </resources>
