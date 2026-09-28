@@ -49,7 +49,41 @@ keys unset, every AI endpoint still returns 200 via a deterministic fallback
 (keyword categorization, heuristic insights, empty receipt draft) so the app is
 fully usable without spending tokens.
 
+## Live voice in AI Entry
+
+Set `META_MODEL_API_KEY` on the backend, install `requirements.txt`, and rebuild
+the Android/iOS app (the `VoicePcm` microphone module is native). No provider key
+belongs in the mobile `.env`. Render services must have this secret set separately.
+
+AI Entry streams 24 kHz mono PCM16 through authenticated `WS /api/v1/voice/live`.
+The first frame carries the user's session token and optional language code.
+The backend checks AI consent and entry permission before connecting to Muse.
+It waits for Muse's session acknowledgement before allowing capture, relays
+binary PCM, and replaces cumulative partials in the editable text area. Stop
+drains capture, sends `endStream`, and waits for `final: true` plus normal close.
+Only the final transcript goes to the existing transaction parser and review UI.
+An interrupted recording leaves the partial text available for manual editing;
+it never automatically saves or parses an incomplete result. Capture stops on
+navigation/backgrounding and automatically finishes after 115 seconds.
+
+The existing upload endpoints (including expense voice) use Muse's documented
+`request` JSON + `audio` WAV multipart contract. Bundled ffmpeg converts the
+mobile AAC clip to mono PCM WAV; temporary files are removed afterwards.
+OpenAI Whisper remains the upload fallback. Live streaming requires Muse and
+does not silently substitute a different provider. Language hints use Muse's
+supported language names; unrecognized hints are omitted for auto-detection.
+
+Protocol references: [Muse speech-to-text guide](https://dev.meta.ai/docs/speech-to-text)
+and [voice cookbook](https://dev.meta.ai/docs/cookbook/voice-api-fundamentals).
+Local checks: `python -m pytest tests/test_voice.py tests/test_voice_live.py`
+from `backend`, plus `npm test -- --runInBand src/features/ai-entry/data`.
+For device acceptance, test Hindi/English code-switching, selected regional
+languages, microphone denial, airplane mode mid-recording, and navigation away.
+Compare time to first visible word separately from the transaction parsing time.
+Hosting cold starts and network travel time remain part of end-to-end latency.
+
 ## Endpoints (all under `/api/v1`)
+
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/auth/otp/request`, `/auth/otp/verify` | OTP login |
