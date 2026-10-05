@@ -204,3 +204,27 @@ cd android
 ./gradlew bundleRelease      # -> app/build/outputs/bundle/release/app-release.aab
 ./gradlew assembleRelease    # APK for sideload testing
 ```
+
+`bundleRelease` now **fails fast** if `android/keystore.properties` is missing (build.gradle
+guard) so a Play-bound AAB can't be debug-signed by accident. `assembleRelease` is left
+debug-signable on purpose — it's the staging QA APK.
+
+## Upload-key custody
+
+The Play **upload key** (Google holds the final app-signing key via Play App Signing; this is
+the key you sign AABs with before upload).
+
+| | |
+|---|---|
+| Keystore file | `~/.bolcash-secrets/bolcash-upload.jks` (outside the repo, chmod 600) |
+| Secrets file | `~/.bolcash-secrets/upload-key.env` (the 4 `CM_*` values, chmod 600) |
+| Alias | `bolcash-upload` |
+| Storetype | PKCS12 (store & key passwords are identical — a PKCS12 requirement) |
+| Key / validity | RSA 2048, SHA256withRSA, 25 years |
+
+- **Never** commit the keystore or passwords — `.gitignore` blocks `*.jks` / `keystore.properties`
+  / `.env`, and the keystore lives outside the repo.
+- **Back it up** to two separate secure places (encrypted USB + password manager). Losing the
+  upload key means a slow Play-support key-reset.
+- The 4 CI values go into a Codemagic **Secure env group** named `android_release_keystore`
+  (see the table above) — read them with `cat ~/.bolcash-secrets/upload-key.env`.

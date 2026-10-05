@@ -140,6 +140,16 @@ android {
     }
 }
 
+// Fail a Play-bound AAB build if the real upload key is missing, instead of
+// silently debug-signing. assembleRelease (the staging QA APK) stays debug-signable.
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.name == 'bundleRelease' } && !hasReleaseKeystore) {
+        throw new GradleException(
+            "bundleRelease needs android/keystore.properties (release upload key). " +
+            "Refusing to debug-sign a Play artifact. See docs/ANDROID_RELEASE.md.")
+    }
+}
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
