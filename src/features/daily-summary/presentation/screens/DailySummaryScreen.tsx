@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {apiRequest} from '@api/client';
 import {Alert, Pressable, View} from 'react-native';
 
 import {
@@ -47,6 +48,21 @@ export function DailySummaryScreen({
   const setTime = useSummarySettingsStore(state => state.setTime);
 
   const [sending, setSending] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [insight, setInsight] = useState<string | null>(null);
+  const generateInsight = async () => {
+    setGenerating(true);
+    try {
+      const result = await apiRequest<{narrative: string; source: string}>(
+        '/summary/daily/insights', {method: 'POST', body: {date: today}},
+      );
+      setInsight(`${result.source === 'ai' ? 'AI summary' : 'Recorded totals'}: ${result.narrative}`);
+    } catch (e) {
+      Alert.alert(t('daily.loadError'), e instanceof Error ? e.message : t('ai.tryAgain'));
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const onSendNow = async () => {
     setSending(true);
@@ -102,6 +118,10 @@ export function DailySummaryScreen({
             </>
           ) : null}
         </View>
+
+        <Button title="Summarize my day" className="mt-5"
+          loading={generating} onPress={generateInsight} />
+        {insight ? <Text className="mt-3">{insight}</Text> : null}
 
         {/* Notification settings */}
         <View className="mt-8 rounded-2xl border border-border bg-white p-4">

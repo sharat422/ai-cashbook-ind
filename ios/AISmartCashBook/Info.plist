@@ -33,6 +33,35 @@
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<!--
+		  Certificate pinning (scaffold — DISABLED until real pins are filled).
+		  To enable, UNCOMMENT the NSPinnedDomains block below and replace BOTH
+		  placeholder digests with real base64 SHA-256 SPKI pins. Ship at least
+		  two (primary + backup). See docs/CERTIFICATE_PINNING.md — especially the
+		  Let's-Encrypt rotation strategy, so a Render cert renewal can't brick
+		  the shipped app. DO NOT ship placeholder values: wrong pins block ALL
+		  API traffic. (NSPinnedDomains requires iOS 14+.)
+
+		<key>NSPinnedDomains</key>
+		<dict>
+			<key>YOUR-API-HOST.onrender.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSPinnedCAIdentities</key>
+				<array>
+					<dict>
+						<key>SPKI-SHA256-BASE64</key>
+						<string>PLACEHOLDER_PRIMARY_SPKI_SHA256_BASE64=</string>
+					</dict>
+					<dict>
+						<key>SPKI-SHA256-BASE64</key>
+						<string>PLACEHOLDER_BACKUP_SPKI_SHA256_BASE64=</string>
+					</dict>
+				</array>
+			</dict>
+		</dict>
+		-->
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Smart CashBook needs camera access to scan receipts and attach photos to your transactions.</string>

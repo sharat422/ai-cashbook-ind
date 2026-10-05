@@ -12,6 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .crypto import EncryptedText
 from .database import Base
 
 
@@ -88,7 +89,7 @@ class Income(Base):
     amount: Mapped[float] = mapped_column(Float)
     category: Mapped[str] = mapped_column(String(60))
     date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     attachment_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
@@ -105,7 +106,7 @@ class Expense(Base):
     category: Mapped[str] = mapped_column(String(60))
     vendor: Mapped[str] = mapped_column(String(200))
     date: Mapped[str] = mapped_column(String(10), index=True)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     attachment_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
@@ -148,10 +149,10 @@ class Customer(Base):
     )
     full_name: Mapped[str] = mapped_column(String(200), index=True)
     mobile: Mapped[str] = mapped_column(String(20), index=True)
-    gst_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    gst_number: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     business_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    address: Mapped[str | None] = mapped_column(Text, nullable=True)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    address: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    notes: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     outstanding_amount: Mapped[float] = mapped_column(Float, default=0.0)
     last_transaction_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     is_overdue: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -178,9 +179,9 @@ class LedgerEntry(Base):
     amount: Mapped[float] = mapped_column(Float)
     date: Mapped[str] = mapped_column(String(10), index=True)
     invoice_number: Mapped[str | None] = mapped_column(String(80), nullable=True)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    payment_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    reference_number: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    notes: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    payment_method: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    reference_number: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     attachment_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
@@ -235,3 +236,45 @@ class AiDecision(Base):
     output_json: Mapped[str] = mapped_column(Text)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
+class UserConsent(Base):
+    """One consent decision, for ONE purpose, per user.
+
+    Consent is stored granularly — one row per (user, purpose) — never as a
+    single combined "agreed" flag. Each row records what was decided (granted),
+    when (updated_at), and under which policy the decision was made
+    (policy_version), so every purpose can be granted or withdrawn
+    independently and the decision is auditable. created_at is the first
+    decision; updated_at moves on every change.
+    """
+
+    __tablename__ = "user_consents"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(40))  # core | marketing | ai
+    granted: Mapped[bool] = mapped_column(Boolean, default=False)
+    policy_version: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    updated_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "purpose", name="uq_consent_user_purpose"),
+    )
+
+class AccountDeletionLog(Base):
+    """Compliance record that an account was deleted — deliberately holds NO
+    personal data. We keep the opaque user id (a random uuid, not PII), a masked
+    mobile (last 4 digits), the timestamp, and counts of what was removed, so we
+    can prove a deletion happened without retaining the data we just erased."""
+
+    __tablename__ = "account_deletion_log"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)  # opaque, not PII
+    mobile_masked: Mapped[str] = mapped_column(String(20))
+    requested_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    counts_json: Mapped[str] = mapped_column(Text)  # JSON: rows deleted per table

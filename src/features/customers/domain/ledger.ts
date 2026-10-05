@@ -44,6 +44,7 @@ export type LedgerSyncStatus = 'synced' | 'pending';
 
 /** A raw ledger entry as stored/returned by the backend. */
 export interface LedgerEntry {
+  clientId?: string;
   id: string;
   type: LedgerEntryType;
   /** Always positive; the type decides the sign. */

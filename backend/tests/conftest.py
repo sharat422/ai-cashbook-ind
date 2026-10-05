@@ -21,8 +21,35 @@ import pytest
 # --- Point the app at an isolated test DB BEFORE importing it. --------------
 # The engine is created at import time from these env vars, so they must be set
 # first. DEBUG + MASTER_OTP let us log in with a fixed OTP and no SMS provider.
+#
+# By default the suite uses a throwaway on-disk SQLite file. To exercise the
+# real dialect (and concurrency semantics) set CASHBOOK_TEST_DATABASE_URL to a
+# DISPOSABLE Postgres database, e.g.
+#   postgresql+psycopg2://postgres:postgres@localhost:5432/cashbook_test
+# The suite drops and recreates every table (see the `client` fixture), so this
+# must NEVER point at a real/customer database. As a safety rail we refuse any
+# non-sqlite URL whose database name does not contain "test".
 _TEST_DB_PATH = os.path.join(os.path.dirname(__file__), "test_e2e.db")
-os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB_PATH}"
+
+
+def _resolve_test_db_url() -> str:
+    override = os.environ.get("CASHBOOK_TEST_DATABASE_URL", "").strip()
+    if not override:
+        return f"sqlite:///{_TEST_DB_PATH}"
+    if not override.startswith("sqlite"):
+        # Guard: the DB name (last path segment, minus query) must look like a
+        # test DB. This prevents a stray env var from dropping a real database.
+        name = override.split("/")[-1].split("?")[0].lower()
+        if "test" not in name:
+            raise RuntimeError(
+                "Refusing to run the destructive test suite against "
+                f"{override!r}: the database name must contain 'test'. "
+                "Point CASHBOOK_TEST_DATABASE_URL at a disposable DB."
+            )
+    return override
+
+
+os.environ["DATABASE_URL"] = _resolve_test_db_url()
 os.environ["DEBUG"] = "true"
 os.environ["MASTER_OTP"] = "123456"
 os.environ.setdefault("PUBLIC_BASE_URL", "http://testserver")
@@ -88,7 +115,12 @@ def make_user(client):
     as many independent tenants as they need.
     """
 
-    def _make(*, with_business: bool = True, business_name: str = "Test Traders"):
+    def _make(
+        *,
+        with_business: bool = True,
+        business_name: str = "Test Traders",
+        ai_consent: bool = False,
+    ):
         mobile = _unique_mobile()
         headers = _login(client, mobile)
         business = None
@@ -106,6 +138,16 @@ def make_user(client):
             )
             assert r.status_code == 200, r.text
             business = r.json()
+        # AI endpoints are gated on AI-processing consent; opt in when asked so
+        # AI tests exercise the real paths. Off by default so consent/gate tests
+        # start from the real (un-consented) state.
+        if ai_consent:
+            cr = client.put(
+                "/api/v1/consents",
+                headers=headers,
+                json={"choices": [{"purpose": "ai", "granted": True}]},
+            )
+            assert cr.status_code == 200, cr.text
         return SimpleNamespace(mobile=mobile, headers=headers, business=business)
 
     return _make
@@ -113,5 +155,9 @@ def make_user(client):
 
 @pytest.fixture
 def user(make_user):
-    """The common case: one authenticated user with one onboarded business."""
-    return make_user()
+    """The common case: one authenticated user with one onboarded business.
+
+    Grants AI consent so AI-powered endpoints (gated on it) work; tests that
+    need the un-consented state call `make_user(ai_consent=False)` directly.
+    """
+    return make_user(ai_consent=True)

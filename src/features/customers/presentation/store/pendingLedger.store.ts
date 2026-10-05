@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 
-import type {LedgerEntryDraft} from '@features/customers/domain/ledger';
+import type {Customer} from '@features/customers/domain/entities';
+import type {LedgerEntry, LedgerEntryDraft} from '@features/customers/domain/ledger';
 
 /** A ledger entry queued locally because it couldn't reach the backend. */
 export interface PendingLedgerEntry {
@@ -16,6 +17,10 @@ export interface PendingLedgerEntry {
 
 interface PendingLedgerState {
   entries: PendingLedgerEntry[];
+  cached: Record<string, LedgerEntry[]>;
+  customers: Record<string, Customer>;
+  cacheCustomers: (customers: Customer[]) => void;
+  cache: (customerId: string, entries: LedgerEntry[]) => void;
   enqueue: (entry: PendingLedgerEntry) => void;
   remove: (localId: string) => void;
   markFailed: (localId: string, error: string) => void;
@@ -26,6 +31,10 @@ export const usePendingLedgerStore = create<PendingLedgerState>()(
   persist(
     set => ({
       entries: [],
+      cached: {},
+      customers: {},
+      cacheCustomers: customers => set(s => ({customers: {...s.customers, ...Object.fromEntries(customers.map(c => [c.id, c]))}})),
+      cache: (customerId, entries) => set(s => ({cached: {...s.cached, [customerId]: entries}})),
       enqueue: entry => set(s => ({entries: [...s.entries, entry]})),
       remove: localId =>
         set(s => ({entries: s.entries.filter(e => e.localId !== localId)})),
@@ -41,7 +50,7 @@ export const usePendingLedgerStore = create<PendingLedgerState>()(
     {
       name: 'pending-ledger',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({entries}) => ({entries}),
+      partialize: ({entries, cached, customers}) => ({entries, cached, customers}),
     },
   ),
 );

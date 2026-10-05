@@ -27,13 +27,16 @@ import {ItemListScreen} from '@features/items/presentation/screens/ItemListScree
 import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScreen';
 import {RecurringListScreen} from '@features/recurring/presentation/screens/RecurringListScreen';
 import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
-import {SmsImportScreen} from '@features/sms-import/presentation/screens/SmsImportScreen';
 import {TeamScreen} from '@features/team/presentation/screens/TeamScreen';
 import {DiagnosticsScreen} from '@features/diagnostics/presentation/screens/DiagnosticsScreen';
 import {HelpScreen} from '@features/support/presentation/screens/HelpScreen';
 import {FeedbackScreen} from '@features/support/presentation/screens/FeedbackScreen';
 import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScreen';
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
+import {ConsentSettingsScreen} from '@features/consent/presentation/screens/ConsentSettingsScreen';
+import {BusinessEditScreen} from '@features/account/presentation/screens/BusinessEditScreen';
+import {DeleteAccountScreen} from '@features/account/presentation/screens/DeleteAccountScreen';
+import {LegalDocScreen} from '@features/legal/presentation/screens/LegalDocScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
 import {QuickAddScreen} from '@features/transactions/presentation/screens/QuickAddScreen';
 import type {AppStackParamList} from './types';
@@ -46,6 +49,10 @@ export function AppNavigator(): React.JSX.Element {
     <Stack.Navigator screenOptions={{headerShown: false}}>
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="ConsentSettings" component={ConsentSettingsScreen} />
+      <Stack.Screen name="BusinessEdit" component={BusinessEditScreen} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="LegalDoc" component={LegalDocScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="CustomerInsights" component={CustomerInsightsScreen} />
       <Stack.Screen name="CashCounter" component={CashCounterScreen} />
@@ -68,7 +75,6 @@ export function AppNavigator(): React.JSX.Element {
         component={RecurringFormScreen}
         options={{presentation: 'modal'}}
       />
-      <Stack.Screen name="SmsImport" component={SmsImportScreen} />
       <Stack.Screen name="Team" component={TeamScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
