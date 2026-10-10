@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     debug: bool = True
     master_otp: str = "123456"
 
+    # --- SMS OTP delivery --------------------------------------------------
+    # "stub" logs the OTP and sends nothing (dev/test). "msg91" sends a real
+    # SMS via the MSG91 v5 flow API (see app/sms.py). Anything else raises at
+    # request time. When "msg91" is selected but a credential below is blank,
+    # the provider raises instead of silently pretending the SMS was sent.
+    sms_provider: str = "stub"
+    msg91_api_key: str = ""
+    msg91_sender_id: str = ""
+    msg91_flow_id: str = ""
+
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     # Speech-to-text model for voice entry. whisper-1 auto-detects the spoken

@@ -1,7 +1,9 @@
 import React, {useState} from 'react';
 import {FlatList, Modal, Pressable, View} from 'react-native';
 
+import {Icon} from './Icon';
 import {Text} from './Text';
+import {colors} from '@theme/colors';
 
 export interface SelectProps<T extends string> {
   label?: string;
@@ -88,7 +90,9 @@ export function Select<T extends string>({
                       }`}>
                       {item}
                     </Text>
-                    {selected ? <Text className="text-primary">✓</Text> : null}
+                    {selected ? (
+                      <Icon name="check" size={18} color={colors.primary} />
+                    ) : null}
                   </Pressable>
                 );
               }}

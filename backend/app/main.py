@@ -29,6 +29,7 @@ from .routers import (
     restore,
     team,
     transactions,
+    users,
 )
 from .storage import UPLOAD_DIR
 
@@ -74,6 +75,7 @@ for module in (
     restore,
     team,
     feedback,
+    users,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

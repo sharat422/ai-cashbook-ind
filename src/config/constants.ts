@@ -4,7 +4,7 @@
  */
 
 export const APP_CONFIG = {
-  name: 'Smart CashBook',
+  name: 'BolCash',
   /** User-facing app version (keep in step with the iOS/Android build number). */
   version: '1.0.0',
   /** How long the splash screen stays visible while bootstrapping (ms). */
@@ -25,7 +25,17 @@ export const APP_CONFIG = {
 export const SUPPORT = {
   /** WhatsApp support number in international format, no +/spaces (e.g. 9198…). */
   whatsapp: '919000000000',
-  email: 'support@smartcashbook.example.com',
+  email: 'support@bolcash.example.com',
+} as const;
+
+/**
+ * Public legal pages, hosted at bolcash.com. Opened in the system browser via
+ * `openExternalUrl` (src/utils/openUrl.ts) — never hard-code these URLs in
+ * components; import LEGAL instead.
+ */
+export const LEGAL = {
+  privacyUrl: 'https://bolcash.com/privacy',
+  termsUrl: 'https://bolcash.com/terms',
 } as const;
 
 /** Business types selectable on the Create Business screen. */

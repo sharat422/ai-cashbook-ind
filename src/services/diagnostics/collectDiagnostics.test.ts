@@ -23,7 +23,7 @@ describe('collectDiagnostics', () => {
 
   it('formatDiagnostics renders a readable block for the email fallback', () => {
     const text = formatDiagnostics(collectDiagnostics());
-    expect(text).toContain('Smart CashBook');
+    expect(text).toContain('BolCash');
     expect(text).toContain('Platform:');
   });
 });

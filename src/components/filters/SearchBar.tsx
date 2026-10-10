@@ -1,7 +1,7 @@
 import React from 'react';
 import {Pressable, TextInput, View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, Text} from '@components/ui';
 import {colors} from '@theme/colors';
 
 export interface SearchBarProps {
@@ -20,7 +20,7 @@ export function SearchBar({
 }: SearchBarProps): React.JSX.Element {
   return (
     <View className="h-12 flex-row items-center rounded-xl border border-border bg-white px-3">
-      <Text className="mr-2 text-base text-muted">🔍</Text>
+      <Icon name="search" size={18} color={colors.muted} />
       <TextInput
         className="flex-1 p-0 text-base text-slate-900"
         value={value}
@@ -42,7 +42,7 @@ export function SearchBar({
             onClear?.();
           }}
           className="ml-2 h-6 w-6 items-center justify-center rounded-full bg-slate-200">
-          <Text className="text-xs text-slate-600">✕</Text>
+          <Icon name="x" size={12} color={colors.muted} />
         </Pressable>
       ) : null}
     </View>

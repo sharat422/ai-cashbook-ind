@@ -60,3 +60,16 @@ export function createBusiness(
 export function getMyBusiness(): Promise<Business> {
   return apiRequest<Business>('/businesses/me', {method: 'GET'});
 }
+
+/**
+ * Permanently delete the authenticated user's account and all its data.
+ *
+ *   DELETE /api/v1/users/me -> 204 (Bearer <redacted>)
+ *
+ * Contract: auth required; 204 on success with an empty body. Callers must
+ * wipe local session/data stores after a 204 and route back to the login
+ * stack (RootNavigator does this automatically once the token clears).
+ */
+export function deleteAccount(): Promise<void> {
+  return apiRequest<void>('/users/me', {method: 'DELETE'});
+}

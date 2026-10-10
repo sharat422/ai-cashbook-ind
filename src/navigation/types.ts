@@ -61,6 +61,7 @@ export type AppStackParamList = {
   Customers: {search?: string} | undefined;
   CustomerProfile: {customer: Customer};
   CustomerForm: {customer?: Customer} | undefined;
+  DeleteAccount: undefined;
   AddCredit: {customer: Customer};
   CustomerStatement: {customer: Customer};
   RequestPayment: {customer: Customer};

@@ -1,7 +1,7 @@
 import React from 'react';
 import {Alert, FlatList, Pressable, RefreshControl, View} from 'react-native';
 
-import {Button, EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
+import {Button, EmptyState, ErrorState, Screen, Skeleton, Text, Icon} from '@components/ui';
 import {
   frequencyLabel,
   type RecurringExpense,
@@ -103,7 +103,7 @@ export function RecurringListScreen({
         ) : showEmpty ? (
           <View className="flex-1 justify-center">
             <EmptyState
-              icon="🔁"
+              icon={<Icon name="refresh" size={44} color={colors.muted} />}
               title={t('recurring.emptyTitle')}
               message={t('recurring.emptyMsg')}
               actionLabel={t('recurring.addFirst')}

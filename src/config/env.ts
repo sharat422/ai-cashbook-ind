@@ -52,6 +52,11 @@ export const ENV = {
    */
   whatsappEnabled:
     (Config.WHATSAPP_ENABLED ?? 'false').toLowerCase() === 'true',
+  /**
+   * Sentry DSN for crash reporting. Empty string = Sentry stays disabled
+   * (dev/staging builds). Set per environment in `.env`; never commit it.
+   */
+  sentryDsn: Config.SENTRY_DSN ?? '',
 } as const;
 
 /** Fully-qualified API root, e.g. http://10.0.2.2:8000/api/v1 */

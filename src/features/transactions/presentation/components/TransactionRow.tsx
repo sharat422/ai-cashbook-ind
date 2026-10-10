@@ -1,7 +1,8 @@
 import React from 'react';
 import {View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 import type {Transaction} from '@features/transactions/domain/entities';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
@@ -25,7 +26,11 @@ function TransactionRowBase({tx}: {tx: Transaction}): React.JSX.Element {
           className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
             isIncome ? 'bg-green-50' : 'bg-red-50'
           }`}>
-          <Text className="text-base">{isIncome ? '💰' : '🧾'}</Text>
+          <Icon
+            name={isIncome ? 'coins' : 'receipt'}
+            size={18}
+            color={isIncome ? colors.success : colors.danger}
+          />
         </View>
 
         <View className="flex-1 pr-3">

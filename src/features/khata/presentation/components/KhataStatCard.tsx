@@ -1,7 +1,8 @@
 import React from 'react';
 import {View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, type IconName, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
 
 type Accent = 'receivable' | 'payable' | 'overdue' | 'collections';
@@ -11,6 +12,12 @@ const ICON_BG: Record<Accent, string> = {
   payable: 'bg-red-50',
   overdue: 'bg-amber-50',
   collections: 'bg-indigo-50',
+};
+const ICON_COLOR: Record<Accent, string> = {
+  receivable: colors.success,
+  payable: colors.danger,
+  overdue: '#B45309',
+  collections: colors.primary,
 };
 const VALUE_COLOR: Record<Accent, string> = {
   receivable: 'text-success',
@@ -22,7 +29,7 @@ const VALUE_COLOR: Record<Accent, string> = {
 export interface KhataStatCardProps {
   label: string;
   amount: number;
-  icon: string;
+  icon: IconName;
   accent: Accent;
   hero?: boolean;
 }
@@ -47,7 +54,7 @@ function KhataStatCardBase({
       }}>
       <View
         className={`h-9 w-9 items-center justify-center rounded-full ${ICON_BG[accent]}`}>
-        <Text className="text-base">{icon}</Text>
+        <Icon name={icon} size={18} color={ICON_COLOR[accent]} />
       </View>
       <Text variant="caption" className="mt-3" numberOfLines={1}>
         {label}

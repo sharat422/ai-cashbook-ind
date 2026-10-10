@@ -1,7 +1,8 @@
 import React, {useEffect} from 'react';
+import {colors} from '@theme/colors';
 import {FlatList, Pressable, View} from 'react-native';
 
-import {EmptyState, Screen, Text} from '@components/ui';
+import {EmptyState, Screen, Text, Icon} from '@components/ui';
 import {useInboxStore, type AppNotification} from '@/services/notifications';
 import {useT} from '@/i18n';
 import {formatDisplayDate} from '@utils/date';
@@ -60,7 +61,7 @@ export function NotificationsScreen(): React.JSX.Element {
           ListEmptyComponent={
             <View className="mt-16">
               <EmptyState
-                icon="🔔"
+                icon={<Icon name="bell" size={44} color={colors.muted} />}
                 title={t('notifications.emptyTitle')}
                 message={t('notifications.emptyMsg')}
               />

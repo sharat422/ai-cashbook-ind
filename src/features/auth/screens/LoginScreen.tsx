@@ -6,6 +6,8 @@ import {AuthShell} from '@features/auth/components/AuthShell';
 import {useRequestOtp} from '@features/auth/hooks';
 import {useT} from '@/i18n';
 import type {AuthScreenProps} from '@navigation/types';
+import {LEGAL} from '@config/constants';
+import {openExternalUrl} from '@utils/openUrl';
 import {onlyDigits, validateMobile} from '@utils/validation';
 
 /** Step 1: collect + validate the mobile number, then request an OTP. */
@@ -42,11 +44,17 @@ export function LoginScreen({
       footer={
         <Text className="text-center text-xs leading-5 text-muted">
           {t('auth.login.agreePrefix')}
-          <Text className="text-xs font-semibold text-primary">
+          <Text
+            className="text-xs font-semibold text-primary"
+            accessibilityRole="link"
+            onPress={() => openExternalUrl(LEGAL.termsUrl)}>
             {t('auth.terms')}
           </Text>
           {t('auth.login.and')}
-          <Text className="text-xs font-semibold text-primary">
+          <Text
+            className="text-xs font-semibold text-primary"
+            accessibilityRole="link"
+            onPress={() => openExternalUrl(LEGAL.privacyUrl)}>
             {t('auth.privacy')}
           </Text>
           .

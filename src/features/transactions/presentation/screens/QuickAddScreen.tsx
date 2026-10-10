@@ -12,6 +12,7 @@ import {
   TextField,
 } from '@components/form';
 import {Button, Screen, SegmentedControl, Select, Text} from '@components/ui';
+import type {IconName} from '@components/ui';
 import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
@@ -46,15 +47,15 @@ type TxnType = 'income' | 'expense';
 const DEFAULT_INCOME_CATEGORY: IncomeCategory = 'Other';
 const DEFAULT_EXPENSE_CATEGORY: ExpenseCategory = 'Miscellaneous';
 
-/** Emoji per expense category for friendlier chips (mirrors Add Expense). */
-const EXPENSE_ICONS: Record<string, string> = {
-  Rent: '🏠',
-  Salary: '👤',
-  Fuel: '⛽',
-  Food: '🍽️',
-  Travel: '✈️',
-  Utilities: '💡',
-  Miscellaneous: '📦',
+/** Vector icon per expense category for friendlier chips (mirrors Add Expense). */
+const EXPENSE_ICONS: Record<string, IconName> = {
+  Rent: 'home',
+  Salary: 'briefcase',
+  Fuel: 'truck',
+  Food: 'cloche',
+  Travel: 'map',
+  Utilities: 'bulb',
+  Miscellaneous: 'package',
 };
 const EXPENSE_OPTIONS: ChipOption<string>[] = EXPENSE_CATEGORIES.map(value => ({
   value,

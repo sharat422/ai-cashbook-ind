@@ -1,7 +1,8 @@
 import React, {useCallback, useMemo} from 'react';
 import {Alert, Pressable, RefreshControl, ScrollView, View} from 'react-native';
 
-import {Button, EmptyState, ErrorState, Screen, Text} from '@components/ui';
+import {Button, EmptyState, ErrorState, Icon, Screen, Text} from '@components/ui';
+import type {IconName} from '@components/ui';
 import {isSummaryEmpty} from '@features/dashboard/domain/entities';
 import {
   StaffHome,
@@ -34,6 +35,56 @@ interface ActivityItem {
   amount: number;
   createdAt: string;
   syncStatus: SyncStatus;
+}
+
+interface QuickTile {
+  icon: IconName;
+  label: string;
+  tint: string;
+  fg: string;
+  route: TileRoute;
+}
+
+/** Dashboard destinations reachable from the quick-action grid (all param-less). */
+type TileRoute =
+  | 'QuickAdd'
+  | 'Business'
+  | 'Assistant'
+  | 'SmsImport'
+  | 'ReceiptCapture'
+  | 'Categorize'
+  | 'DailySummary'
+  | 'Customers'
+  | 'KhataDashboard'
+  | 'Reports'
+  | 'Recurring'
+  | 'CashCounter';
+
+function QuickActionTile({
+  tile,
+  onPress,
+}: {
+  tile: QuickTile;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={tile.label}
+      onPress={onPress}
+      className="items-center px-1 py-2.5"
+      style={{width: '25%'}}>
+      <View
+        className={`h-[52px] w-[52px] items-center justify-center rounded-2xl ${tile.tint}`}>
+        <Icon name={tile.icon} size={23} color={tile.fg} />
+      </View>
+      <Text
+        className="mt-1.5 text-center text-[11px] font-medium text-slate-600"
+        numberOfLines={2}>
+        {tile.label}
+      </Text>
+    </Pressable>
+  );
 }
 
 /**
@@ -100,6 +151,93 @@ export function DashboardScreen({
   const showEmpty =
     !!data && isSummaryEmpty(data) && activity.length === 0;
 
+  const tiles: QuickTile[] = [
+    {
+      icon: 'plus',
+      label: t('dashboard.addTransaction'),
+      tint: 'bg-blue-50',
+      fg: colors.primary,
+      route: 'QuickAdd',
+    },
+    {
+      icon: 'briefcase',
+      label: t('dashboard.business'),
+      tint: 'bg-slate-100',
+      fg: '#475569',
+      route: 'Business',
+    },
+    {
+      icon: 'sparkles',
+      label: t('dashboard.askAi'),
+      tint: 'bg-violet-50',
+      fg: '#7C3AED',
+      route: 'Assistant',
+    },
+    {
+      icon: 'message',
+      label: t('dashboard.importSms'),
+      tint: 'bg-green-50',
+      fg: colors.success,
+      route: 'SmsImport',
+    },
+    {
+      icon: 'camera',
+      label: t('dashboard.scanReceipt'),
+      tint: 'bg-amber-50',
+      fg: '#D97706',
+      route: 'ReceiptCapture',
+    },
+    {
+      icon: 'zap',
+      label: t('dashboard.categorize'),
+      tint: 'bg-orange-50',
+      fg: '#EA580C',
+      route: 'Categorize',
+    },
+    {
+      icon: 'calendar',
+      label: t('dashboard.dailySummary'),
+      tint: 'bg-teal-50',
+      fg: '#0D9488',
+      route: 'DailySummary',
+    },
+    {
+      icon: 'users',
+      label: t('dashboard.customers'),
+      tint: 'bg-indigo-50',
+      fg: '#4F46E5',
+      route: 'Customers',
+    },
+    {
+      icon: 'book',
+      label: t('dashboard.khata'),
+      tint: 'bg-yellow-50',
+      fg: '#CA8A04',
+      route: 'KhataDashboard',
+    },
+    {
+      icon: 'bar-chart',
+      label: t('dashboard.reports'),
+      tint: 'bg-sky-50',
+      fg: '#0284C7',
+      route: 'Reports',
+    },
+    {
+      icon: 'refresh',
+      label: t('dashboard.recurring'),
+      tint: 'bg-slate-100',
+      fg: colors.muted,
+      route: 'Recurring',
+    },
+    {
+      icon: 'coins',
+      label: t('dashboard.cashCounter'),
+      tint: 'bg-emerald-50',
+      fg: '#059669',
+      route: 'CashCounter',
+    },
+  ];
+
   // Staff are add-only: no dashboard, lists, reports or settings. Render a
   // focused home instead. (Hooks above still run — no conditional hooks.)
   if (role === 'staff') {
@@ -134,7 +272,7 @@ export function DashboardScreen({
               accessibilityLabel="Notifications"
               onPress={() => navigation.navigate('Notifications')}
               className="h-10 w-10 items-center justify-center rounded-full border border-border bg-white">
-              <Text className="text-lg">🔔</Text>
+              <Icon name="bell" size={19} color={colors.text} />
               {unreadCount > 0 ? (
                 <View className="absolute -right-1 -top-1 h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1">
                   <Text className="text-[10px] font-bold text-white">
@@ -148,17 +286,20 @@ export function DashboardScreen({
               accessibilityLabel="Settings"
               onPress={() => navigation.navigate('Settings')}
               className="h-10 w-10 items-center justify-center rounded-full border border-border bg-white">
-              <Text className="text-lg">⚙️</Text>
+              <Icon name="settings" size={19} color={colors.text} />
             </Pressable>
           </View>
         </View>
         {!online ? (
-          <Text className="mt-2 text-sm font-medium text-amber-700">
-            {t('dashboard.offline')}
-            {pendingCount > 0
-              ? t('dashboard.pendingSyncSuffix', {count: pendingCount})
-              : ''}
-          </Text>
+          <View className="mt-3 flex-row items-center rounded-xl bg-amber-50 px-3 py-2.5">
+            <Icon name="wifi-off" size={16} color="#B45309" />
+            <Text className="ml-2 flex-1 text-sm font-medium text-amber-700">
+              {t('dashboard.offline')}
+              {pendingCount > 0
+                ? t('dashboard.pendingSyncSuffix', {count: pendingCount})
+                : ''}
+            </Text>
+          </View>
         ) : pendingCount > 0 ? (
           <Text className="mt-2 text-sm font-medium text-muted">
             {t('dashboard.syncing', {count: pendingCount})}
@@ -182,10 +323,12 @@ export function DashboardScreen({
             />
           ) : showEmpty ? (
             <EmptyState
-              icon="📊"
+              icon={
+                <Icon name="bar-chart" size={44} color={colors.muted} />
+              }
               title="No activity yet"
               message="Record your first income or expense to see your numbers here."
-              actionLabel="+ Add transaction"
+              actionLabel={t('dashboard.addTransaction')}
               onAction={() => navigation.navigate('QuickAdd', {type: 'income'})}
             />
           ) : data ? (
@@ -201,102 +344,32 @@ export function DashboardScreen({
           ) : null}
         </View>
 
-        {/* Quick actions */}
-        <View className="mt-6 flex-row" style={{gap: 12}}>
-          <Button
-            title={t('dashboard.business')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('Business')}
-          />
-          <Button
-            title={t('dashboard.askAi')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('Assistant')}
-          />
-        </View>
-        <Button
-          title={t('dashboard.aiEntry')}
-          className="mt-3"
+        {/* Hero: voice entry */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('dashboard.aiEntry')}
           onPress={() => navigation.navigate('AITransaction')}
-        />
-        <Button
-          title={t('dashboard.importSms')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('SmsImport')}
-        />
-        <Button
-          title={t('dashboard.addTransaction')}
-          className="mt-3"
-          onPress={() => navigation.navigate('QuickAdd')}
-        />
-        <View className="mt-3 flex-row" style={{gap: 12}}>
-          <Button
-            title={t('dashboard.scanReceipt')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('ReceiptCapture')}
-          />
-          <Button
-            title={t('dashboard.categorize')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('Categorize')}
-          />
-        </View>
-        <View className="mt-3 flex-row" style={{gap: 12}}>
-          <Button
-            title={t('dashboard.dailySummary')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('DailySummary')}
-          />
-          <Button
-            title={t('dashboard.customers')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('Customers')}
-          />
-        </View>
-        <View className="mt-3 flex-row" style={{gap: 12}}>
-          <Button
-            title={t('dashboard.khata')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('KhataDashboard')}
-          />
-          <Button
-            title={t('dashboard.reports')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('Reports')}
-          />
-        </View>
-        <View className="mt-3 flex-row" style={{gap: 12}}>
-          <Button
-            title={t('dashboard.recurring')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('Recurring')}
-          />
-          <Button
-            title={t('dashboard.cashCounter')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('CashCounter')}
-          />
+          className="mt-6 flex-row items-center rounded-2xl bg-primary px-4 py-3.5">
+          <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
+            <Icon name="mic" size={22} color="#FFFFFF" />
+          </View>
+          <Text className="ml-3 flex-1 text-base font-bold text-white">
+            {t('dashboard.aiEntry')}
+          </Text>
+          <Icon name="chevron-right" size={20} color="#FFFFFF" />
+        </Pressable>
+
+        {/* Quick actions */}
+        <View className="mt-6 rounded-2xl border border-border bg-white px-2 py-2">
+          <View className="flex-row flex-wrap">
+            {tiles.map(tile => (
+              <QuickActionTile
+                key={tile.route}
+                tile={tile}
+                onPress={() => navigation.navigate(tile.route)}
+              />
+            ))}
+          </View>
         </View>
 
         {/* Recent activity */}
@@ -336,6 +409,16 @@ function ActivityRow({item}: {item: ActivityItem}): React.JSX.Element {
   const isIncome = item.kind === 'income';
   return (
     <View className="flex-row items-center justify-between rounded-xl border border-border bg-white px-4 py-3">
+      <View
+        className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
+          isIncome ? 'bg-green-50' : 'bg-red-50'
+        }`}>
+        <Icon
+          name={isIncome ? 'coins' : 'receipt'}
+          size={18}
+          color={isIncome ? colors.success : colors.danger}
+        />
+      </View>
       <View className="flex-1 pr-3">
         <Text className="font-semibold text-slate-900" numberOfLines={1}>
           {item.title}

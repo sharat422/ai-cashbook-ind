@@ -2,14 +2,7 @@ import React, {useMemo, useState} from 'react';
 import {Alert, RefreshControl, ScrollView, View} from 'react-native';
 
 import {DateRangeField, FilterChip} from '@components/filters';
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  Screen,
-  Skeleton,
-  Text,
-} from '@components/ui';
+import {Button, EmptyState, ErrorState, Screen, Skeleton, Text, Icon} from '@components/ui';
 import {isReportEmpty} from '@features/reports/domain/entities';
 import {
   exportReportPdf,
@@ -146,7 +139,7 @@ export function ReportsScreen(): React.JSX.Element {
             />
           ) : data && isReportEmpty(data) ? (
             <EmptyState
-              icon="📊"
+              icon={<Icon name="pie-chart" size={44} color={colors.muted} />}
               title={t('reports.emptyTitle')}
               message={t('reports.emptyMsg')}
             />

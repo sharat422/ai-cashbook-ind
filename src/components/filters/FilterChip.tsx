@@ -1,12 +1,13 @@
 import React from 'react';
-import {Pressable} from 'react-native';
+import {Pressable, View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 
 export interface FilterChipProps {
   label: string;
   selected?: boolean;
-  /** Show a trailing ✕ to signal the chip clears a filter when tapped. */
+  /** Show a trailing × to signal the chip clears a filter when tapped. */
   removable?: boolean;
   onPress: () => void;
 }
@@ -33,12 +34,13 @@ function FilterChipBase({
         {label}
       </Text>
       {removable ? (
-        <Text
-          className={`ml-1.5 text-xs ${
-            selected ? 'text-white' : 'text-muted'
-          }`}>
-          ✕
-        </Text>
+        <View className="ml-1.5">
+          <Icon
+            name="x"
+            size={12}
+            color={selected ? '#FFFFFF' : colors.muted}
+          />
+        </View>
       ) : null}
     </Pressable>
   );

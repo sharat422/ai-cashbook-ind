@@ -2,7 +2,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import React, {useState} from 'react';
 import {Modal, Platform, Pressable, StyleSheet, View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 import {useT} from '@/i18n';
 import {formatDisplayDate, toISODate} from '@utils/date';
 
@@ -52,7 +53,7 @@ export function DateField({
         <Text className={value ? 'text-base text-slate-900' : 'text-base text-muted'}>
           {value ? formatDisplayDate(value) : t('common.selectDate')}
         </Text>
-        <Text className="text-muted">📅</Text>
+        <Icon name="calendar" size={20} color={colors.muted} />
       </Pressable>
 
       {Platform.OS === 'ios' ? (

@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {FlatList, Pressable, RefreshControl, View} from 'react-native';
 
 import {SearchBar} from '@components/filters';
-import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
+import {EmptyState, ErrorState, Screen, Skeleton, Text, Icon} from '@components/ui';
 import type {Item} from '@features/items/domain/entities';
 import {useItems} from '@features/items/presentation/hooks/useItems';
 import {useDebouncedValue} from '@/shared/hooks/useDebouncedValue';
@@ -76,7 +76,7 @@ export function ItemListScreen({
         ) : showEmpty ? (
           <View className="flex-1 justify-center">
             <EmptyState
-              icon={hasSearch ? '🔎' : '🏷️'}
+              icon={hasSearch ? <Icon name="search" size={44} color={colors.muted} /> : <Icon name="package" size={44} color={colors.muted} />}
               title={
                 hasSearch ? t('items.emptySearchTitle') : t('items.emptyTitle')
               }

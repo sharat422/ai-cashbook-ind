@@ -40,7 +40,7 @@ export function AuthShell({
             <Text className="text-xl font-black text-white">₹</Text>
           </View>
           <Text className="ml-2.5 text-xl font-extrabold tracking-tight text-slate-900">
-            Smart CashBook
+            BolCash
           </Text>
         </View>
 

@@ -1,15 +1,8 @@
 import React, {useState} from 'react';
+import {colors} from '@theme/colors';
 import {Alert, Pressable, View} from 'react-native';
 
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  Screen,
-  SegmentedControl,
-  Skeleton,
-  Text,
-} from '@components/ui';
+import {Button, EmptyState, ErrorState, Screen, SegmentedControl, Skeleton, Text, Icon} from '@components/ui';
 import {isSummaryEmpty} from '@features/daily-summary/domain/entities';
 import {
   ProfitHeroCard,
@@ -88,7 +81,7 @@ export function DailySummaryScreen({
             />
           ) : data && isSummaryEmpty(data) ? (
             <EmptyState
-              icon="🗓️"
+              icon={<Icon name="calendar" size={44} color={colors.muted} />}
               title={t('daily.emptyTitle')}
               message={t('daily.emptyMsg')}
             />

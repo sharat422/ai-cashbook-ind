@@ -1,12 +1,13 @@
 import React from 'react';
 import {Pressable, View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 
 export interface RadioOption<K extends string> {
   key: K;
   label: string;
-  icon?: string;
+  icon?: React.ReactNode;
 }
 
 export interface RadioListProps<K extends string> {
@@ -34,7 +35,7 @@ export function RadioList<K extends string>({
             className="flex-row items-center justify-between py-3.5">
             <View className="flex-row items-center">
               {option.icon ? (
-                <Text className="mr-2 text-base">{option.icon}</Text>
+                <View className="mr-2">{option.icon}</View>
               ) : null}
               <Text
                 className={`text-base ${
@@ -43,7 +44,9 @@ export function RadioList<K extends string>({
                 {option.label}
               </Text>
             </View>
-            {selected ? <Text className="text-primary">✓</Text> : null}
+            {selected ? (
+              <Icon name="check" size={18} color={colors.primary} />
+            ) : null}
           </Pressable>
         );
       })}

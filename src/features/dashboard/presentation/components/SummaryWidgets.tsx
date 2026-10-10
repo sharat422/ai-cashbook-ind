@@ -28,13 +28,13 @@ export function SummaryWidgets({
         <SummaryCard
           label={t('dashboard.todayIncome')}
           amount={summary.todayIncome}
-          icon="💰"
+          icon="coins"
           accent="income"
         />
         <SummaryCard
           label={t('dashboard.todayExpense')}
           amount={summary.todayExpense}
-          icon="🧾"
+          icon="receipt"
           accent="expense"
         />
       </View>
@@ -43,13 +43,13 @@ export function SummaryWidgets({
         <SummaryCard
           label={t('dashboard.monthlyRevenue')}
           amount={summary.monthRevenue}
-          icon="📈"
+          icon="trending-up"
           accent="income"
         />
         <SummaryCard
           label={t('dashboard.monthlyExpense')}
           amount={summary.monthExpense}
-          icon="📉"
+          icon="trending-down"
           accent="expense"
         />
       </View>

@@ -34,6 +34,8 @@ import {useRestoreStore} from '@features/restore/store/restore.store';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
+import {LEGAL} from '@config/constants';
+import {openExternalUrl} from '@utils/openUrl';
 
 const ENABLED_OPTIONS = [
   {label: 'On', value: true},
@@ -384,6 +386,12 @@ export function SettingsScreen({
           onPress={() => navigation.navigate('Help')}
         />
         <Button
+          title={t('auth.privacy')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => openExternalUrl(LEGAL.privacyUrl)}
+        />
+        <Button
           title={t('settings.diagnostics')}
           variant="secondary"
           className="mt-3"
@@ -403,6 +411,16 @@ export function SettingsScreen({
           variant="secondary"
           className="mt-3"
           onPress={onLogout}
+        />
+
+        {/* Danger zone */}
+        <Text variant="label" className="mt-8 mb-3 text-danger">
+          {t('settings.dangerZone')}
+        </Text>
+        <Button
+          title={t('settings.deleteAccount')}
+          variant="danger"
+          onPress={() => navigation.navigate('DeleteAccount')}
         />
       </View>
     </Screen>

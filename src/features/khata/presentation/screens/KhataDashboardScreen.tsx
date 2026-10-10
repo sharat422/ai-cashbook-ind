@@ -2,14 +2,7 @@ import React, {useMemo, useState} from 'react';
 import {Pressable, RefreshControl, ScrollView, View} from 'react-native';
 
 import {DateRangeField, FilterChip} from '@components/filters';
-import {
-  EmptyState,
-  ErrorState,
-  Screen,
-  Select,
-  Skeleton,
-  Text,
-} from '@components/ui';
+import {EmptyState, ErrorState, Screen, Select, Skeleton, Text, Icon} from '@components/ui';
 import {isKhataEmpty, type KhataFilters} from '@features/khata/domain/entities';
 import {
   KhataStatCard,
@@ -200,7 +193,7 @@ export function KhataDashboardScreen({
             />
           ) : data && isKhataEmpty(data) ? (
             <EmptyState
-              icon="📒"
+              icon={<Icon name="book" size={44} color={colors.muted} />}
               title={t('khata.emptyTitle')}
               message={t('khata.emptyMsg')}
             />
@@ -217,14 +210,14 @@ export function KhataDashboardScreen({
                 <KhataStatCard
                   label={t('khata.totalReceivable')}
                   amount={data.totalReceivable}
-                  icon="📥"
+                  icon="arrow-down-right"
                   accent="receivable"
                   hero
                 />
                 <KhataStatCard
                   label={t('khata.totalPayable')}
                   amount={data.totalPayable}
-                  icon="📤"
+                  icon="arrow-up-right"
                   accent="payable"
                   hero
                 />
@@ -235,13 +228,13 @@ export function KhataDashboardScreen({
                 <KhataStatCard
                   label={t('khata.overdueAmount')}
                   amount={data.overdueAmount}
-                  icon="⏰"
+                  icon="clock"
                   accent="overdue"
                 />
                 <KhataStatCard
                   label={t('khata.todayCollections')}
                   amount={data.todayCollections}
-                  icon="💸"
+                  icon="coins"
                   accent="collections"
                 />
               </View>

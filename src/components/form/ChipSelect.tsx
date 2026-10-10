@@ -1,12 +1,13 @@
 import React from 'react';
 import {Pressable, View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, type IconName, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 
 export interface ChipOption<T extends string> {
   value: T;
-  /** Optional leading emoji/icon for a friendlier look. */
-  icon?: string;
+  /** Optional leading vector icon for a friendlier look. */
+  icon?: IconName;
 }
 
 export interface ChipSelectProps<T extends string> {
@@ -51,12 +52,16 @@ export function ChipSelect<T extends string>({
                   : 'border-border bg-white'
               }`}>
               {option.icon ? (
-                <Text className="mr-1.5 text-base">{option.icon}</Text>
+                <Icon
+                  name={option.icon}
+                  size={15}
+                  color={selected ? '#FFFFFF' : colors.muted}
+                />
               ) : null}
               <Text
                 className={`text-sm font-medium ${
                   selected ? 'text-white' : 'text-slate-700'
-                }`}>
+                } ${option.icon ? 'ml-1.5' : ''}`}>
                 {option.value}
               </Text>
             </Pressable>

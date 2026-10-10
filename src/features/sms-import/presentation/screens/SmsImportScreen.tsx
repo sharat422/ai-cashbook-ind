@@ -2,14 +2,7 @@ import React, {useState} from 'react';
 import {Alert, Linking, Pressable, ScrollView, TextInput, View} from 'react-native';
 
 import {AmountInput, DateField, FormField, TextField} from '@components/form';
-import {
-  Button,
-  EmptyState,
-  Screen,
-  SegmentedControl,
-  Select,
-  Text,
-} from '@components/ui';
+import {Button, EmptyState, Screen, SegmentedControl, Select, Text, Icon} from '@components/ui';
 import {EXPENSE_CATEGORIES} from '@features/expense/domain/entities';
 import {useCreateExpense} from '@features/expense/presentation/hooks';
 import {INCOME_CATEGORIES} from '@features/income/domain/entities';
@@ -167,7 +160,7 @@ export function SmsImportScreen({
         {candidates.length === 0 ? (
           <View className="mt-8">
             <EmptyState
-              icon="💬"
+              icon={<Icon name="message" size={44} color={colors.muted} />}
               title={t('sms.emptyTitle')}
               message={scanSupported ? t('sms.emptyScan') : t('sms.emptyPaste')}
             />
@@ -318,9 +311,12 @@ function CandidateCard({
         </FormField>
       </View>
 
-      <Text variant="caption" className="mt-3" numberOfLines={2}>
-        💬 {candidate.rawText}
-      </Text>
+      <View className="mt-3 flex-row items-start">
+        <Icon name="message" size={15} color={colors.muted} />
+        <Text variant="caption" className="ml-1.5 flex-1" numberOfLines={2}>
+          {candidate.rawText}
+        </Text>
+      </View>
 
       <View className="mt-3 flex-row" style={{gap: 12}}>
         <Button

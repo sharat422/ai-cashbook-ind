@@ -6,6 +6,7 @@ export * from './Confetti';
 export * from './EmptyState';
 export * from './ErrorBoundary';
 export * from './ErrorState';
+export * from './Icon';
 export * from './Input';
 export * from './OtpInput';
 export * from './Screen';

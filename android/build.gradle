@@ -1,9 +1,9 @@
 buildscript {
     ext {
-        buildToolsVersion = "35.0.0"
+        buildToolsVersion = "36.0.0"
         minSdkVersion = 24
-        compileSdkVersion = 35
-        targetSdkVersion = 34
+        compileSdkVersion = 36
+        targetSdkVersion = 36
         ndkVersion = "26.1.10909125"
         kotlinVersion = "1.9.24"
     }
@@ -15,7 +15,25 @@ buildscript {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        // Sentry — uploads mapping.txt + native symbols for de-obfuscated
+        // crash reports. Pairs with @sentry/react-native ^8.29.0.
+        classpath("io.sentry:sentry-android-gradle-plugin:5.8.0")
     }
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// react-native-audio-recorder-player pins its Kotlin jvmTarget to 1.8 but its
+// Java compiles at 17 under this toolchain — Gradle rejects the mismatch. Bump
+// only its Kotlin target to 17 (configureEach, not afterEvaluate, since the RN
+// root plugin evaluates some subprojects eagerly). Other Kotlin libs pin BOTH to
+// 1.8 and are already consistent, so this is scoped to that one module.
+subprojects { sp ->
+    if (sp.name == "react-native-audio-recorder-player") {
+        sp.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+}

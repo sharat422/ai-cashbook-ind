@@ -356,7 +356,7 @@
   "feedback.failedOffline": "நீங்கள் ஆஃப்லைனில் இருக்கிறீர்கள் என்று தோன்றுகிறது. மாறாக ইமேல் மூலம் அனுப்பவுமா?",
   "feedback.failedTitle": "அனுப்ப முடியவில்லை",
   "feedback.idea": "💡 கருத்து",
-  "feedback.ideaPlaceholder": "Smart CashBook ஐ உங்களுக்கு எப்படி சிறந்ததாக வைப்பது?",
+  "feedback.ideaPlaceholder": "BolCash ஐ உங்களுக்கு எப்படி சிறந்ததாக வைப்பது?",
   "feedback.send": "அனுப்பவும்",
   "feedback.subtitle": "நடந்தது என்ன என்பதை சொல்லவும் — சற்று விவரம் நாங்கள் அதை வேகமாக சரிசெய்ய உதவுகிறது.",
   "feedback.thanksMsg": "நாங்கள் உங்கள் বার்த்தைப் பெற்றுவிட்டோம் மற்றும் அதை பரிசோதிப்போம்.",
@@ -386,7 +386,7 @@
   "help.reportProblem": "🐞 சிக்கலைப் பதிவு செய்யவும்",
   "help.subtitle": "விரைவு பதிलளவுகள் அல்லது நேரடியாக எங்களை அடையவும்.",
   "help.title": "உதவி மற்றும் ஆதரவு",
-  "help.waPrefill": "வணக்கம், Smart CashBook உடன் உதவி தேவை.",
+  "help.waPrefill": "வணக்கம், BolCash உடன் உதவி தேவை.",
   "income.addedMsg": "உங்கள் வருமான நுழைவு பதிவு செய்யப்பட்டுள்ளது.",
   "income.addedTitle": "வருமானம் சேர்க்கப்பட்டது",
   "income.attachmentHint": "விருப்பம் — ரசீது புகைப்படத்தை இணைக்கவும்",
@@ -666,7 +666,7 @@
   "txn.vendorLabel": "விற்பனையாளர் / பெறுபவர்",
   "txn.vendorPlaceholder": "யாருக்கு பணம் கொடுத்தீர்? (விரும்பினால்)",
   "unlock.incorrect": "PIN தவறு. மீண்டும் முயலுங்கள்.",
-  "unlock.subtitle": "Smart CashBook பூட்டப்பட்டுள்ளது. தொடர {n}-இலக்க PIN உள்ளிடவும்.",
+  "unlock.subtitle": "BolCash பூட்டப்பட்டுள்ளது. தொடர {n}-இலக்க PIN உள்ளிடவும்.",
   "unlock.title": "PIN உள்ளிடவும்",
   "unlock.useBiometrics": "உயிரியல் அங்கீகாரம் பயன்படுத்தவும்"
 }

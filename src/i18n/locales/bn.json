@@ -356,7 +356,7 @@
   "feedback.failedOffline": "মনে হচ্ছে আপনি অফলাইন আছেন। ইমেইলে পাঠাব?",
   "feedback.failedTitle": "পাঠাতে পারেনি",
   "feedback.idea": "💡 প্রতিক্রিয়া",
-  "feedback.ideaPlaceholder": "স্মার্ট ক্যাশবুক আপনার জন্য আরও ভালো করার জন্য কী করা যায়?",
+  "feedback.ideaPlaceholder": "BolCash আপনার জন্য আরও ভালো করার জন্য কী করা যায়?",
   "feedback.send": "পাঠান",
   "feedback.subtitle": "আমাদের বলুন কী হয়েছে — বিস্তারিত জানলে আমরা দ্রুত ঠিক করতে পারি।",
   "feedback.thanksMsg": "আমরা আপনার বার্তা পেয়েছি এবং এটি দেখব।",
@@ -386,7 +386,7 @@
   "help.reportProblem": "🐞 একটি সমস্যা রিপোর্ট করুন",
   "help.subtitle": "দ্রুত উত্তর, বা সরাসরি আমাদের কাছে পৌঁছান।",
   "help.title": "সহায়তা এবং সমর্থন",
-  "help.waPrefill": "হাই, আমার Smart CashBook নিয়ে সাহায্য দরকার।",
+  "help.waPrefill": "হাই, আমার BolCash নিয়ে সাহায্য দরকার।",
   "income.addedMsg": "আপনার আয়ের এন্ট্রি রেকর্ড হয়েছে।",
   "income.addedTitle": "আয় যোগ হয়েছে",
   "income.attachmentHint": "ঐচ্ছিক — রসিদ ফটো সংযুক্ত করুন",
@@ -666,7 +666,7 @@
   "txn.vendorLabel": "বিক্রেতা / প্রাপক",
   "txn.vendorPlaceholder": "কাকে টাকা দিয়েছেন? (ঐচ্ছিক)",
   "unlock.incorrect": "PIN ভুল। আবার চেষ্টা করুন।",
-  "unlock.subtitle": "Smart CashBook লক করা আছে। চলতে থাকতে আপনার {n}-অঙ্কের PIN দিন।",
+  "unlock.subtitle": "BolCash লক করা আছে। চলতে থাকতে আপনার {n}-অঙ্কের PIN দিন।",
   "unlock.title": "আপনার PIN দিন",
   "unlock.useBiometrics": "বায়োমেট্রিক্স ব্যবহার করুন"
 }

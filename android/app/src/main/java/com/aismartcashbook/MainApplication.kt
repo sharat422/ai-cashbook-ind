@@ -11,6 +11,8 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
+import com.lugg.RNCConfig.RNCConfigPackage
+import com.reactcommunity.rndatetimepicker.RNDateTimePickerPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -18,8 +20,12 @@ class MainApplication : Application(), ReactApplication {
       object : DefaultReactNativeHost(this) {
         override fun getPackages(): List<ReactPackage> =
             PackageList(this).packages.apply {
-              // Packages that cannot be autolinked yet can be added manually here, for example:
-              // add(MyReactNativePackage())
+              // Manual linking: RNCConfigPackage and RNDateTimePickerPackage extend
+              // BaseReactPackage, which @react-native-community/cli@15 autolinking
+              // doesn't detect. Without these, env config (API URLs, Sentry DSN)
+              // and date pickers break at runtime (native modules not registered).
+              add(RNCConfigPackage())
+              add(RNDateTimePickerPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

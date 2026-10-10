@@ -48,7 +48,7 @@ export async function requestSmsPermission(): Promise<SmsPermissionResult> {
     {
       title: 'Read bank SMS',
       message:
-        'Smart CashBook reads bank transaction SMS on this device to suggest ' +
+        'BolCash reads bank transaction SMS on this device to suggest ' +
         'transactions. Messages are processed on your phone and never uploaded.',
       buttonPositive: 'Allow',
       buttonNegative: 'Not now',

@@ -13,6 +13,7 @@ from ..deps import get_current_membership
 from ..models import Business, BusinessMember, User
 from ..security import create_access_token, get_current_user
 from ..serializers import business_dto
+from ..sms import get_sms_provider
 from ..validation import validate_mobile
 
 log = logging.getLogger("cashbook.auth")
@@ -48,7 +49,10 @@ def request_otp(body: RequestOtpInput) -> dict:
     _OTP_STORE[verification_id] = {"mobile": mobile, "otp": otp}
     if settings.debug:
         log.info("OTP for %s -> %s (verificationId=%s)", mobile, otp, verification_id)
-    # TODO: send `otp` via SMS provider here.
+    # Sends the OTP via the configured provider (stub in dev/test, MSG91 in
+    # prod). Raises SmsConfigurationError (→ HTTP 500, traceback in the logs)
+    # when the provider is misconfigured — never silently skip the SMS.
+    get_sms_provider().send_otp(mobile, otp)
     return {"verificationId": verification_id, "mobile": mobile}
 
 

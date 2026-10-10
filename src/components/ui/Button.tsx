@@ -8,7 +8,7 @@ import {
 
 import {colors} from '@theme/colors';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 export interface ButtonProps extends Omit<PressableProps, 'children'> {
   title: string;
@@ -22,12 +22,14 @@ const CONTAINER: Record<Variant, string> = {
   primary: 'bg-primary',
   secondary: 'bg-white border border-border',
   ghost: 'bg-transparent',
+  danger: 'bg-white border border-danger',
 };
 
 const LABEL: Record<Variant, string> = {
   primary: 'text-white',
   secondary: 'text-slate-900',
   ghost: 'text-primary',
+  danger: 'text-danger',
 };
 
 /** App-wide pressable button with loading + disabled states. */

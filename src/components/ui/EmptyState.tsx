@@ -2,10 +2,13 @@ import React from 'react';
 import {View} from 'react-native';
 
 import {Button} from './Button';
+import {Icon} from './Icon';
 import {Text} from './Text';
+import {colors} from '@theme/colors';
 
 export interface EmptyStateProps {
-  icon?: string;
+  /** Leading visual — pass an <Icon/> (preferred) or any custom node. */
+  icon?: React.ReactNode;
   title: string;
   message?: string;
   actionLabel?: string;
@@ -14,7 +17,7 @@ export interface EmptyStateProps {
 
 /** Reusable empty-state block: icon, message, and an optional CTA. */
 export function EmptyState({
-  icon = '📭',
+  icon = <Icon name="inbox" size={44} color={colors.muted} />,
   title,
   message,
   actionLabel,
@@ -22,7 +25,7 @@ export function EmptyState({
 }: EmptyStateProps): React.JSX.Element {
   return (
     <View className="items-center rounded-2xl border border-border bg-white px-6 py-10">
-      <Text className="text-4xl">{icon}</Text>
+      {icon}
       <Text variant="label" className="mt-3 text-center text-base">
         {title}
       </Text>

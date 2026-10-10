@@ -35,7 +35,7 @@ export function FeedbackScreen({
 
   /** If the API submit fails, offer to send the same content by email. */
   const emailFallback = () => {
-    const subject = `${kind === 'bug' ? 'Bug' : 'Feedback'} — Smart CashBook`;
+    const subject = `${kind === 'bug' ? 'Bug' : 'Feedback'} — BolCash`;
     const body = `${message}\n\n---\n${diagText}`;
     const url = `mailto:${SUPPORT.email}?subject=${encodeURIComponent(
       subject,

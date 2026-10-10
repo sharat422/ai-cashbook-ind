@@ -3,4 +3,15 @@ plugins { id("com.facebook.react.settings") }
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
 rootProject.name = 'AISmartCashBook'
 include ':app'
+
+// Manual linking: react-native-config@1.6.1 and
+// @react-native-community/datetimepicker@8.6.0 extend BaseReactPackage, which
+// @react-native-community/cli@15's autolinker does not detect (it only matches
+// `implements ReactPackage` / `extends TurboReactPackage`). Without these
+// explicit includes, Gradle cannot resolve project(':react-native-config')
+// referenced by app/build.gradle (dotenv.gradle).
+include ':react-native-config'
+project(':react-native-config').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-config/android')
+include ':react-native-community-datetimepicker'
+project(':react-native-community-datetimepicker').projectDir = new File(rootProject.projectDir, '../node_modules/@react-native-community/datetimepicker/android')
 includeBuild('../node_modules/@react-native/gradle-plugin')

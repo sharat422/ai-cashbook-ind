@@ -59,6 +59,14 @@ definitions:
           awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
           echo "Building against API_BASE_URL=$API_BASE_URL"
         fi
+        # Sentry DSN (P12): Codemagic-encrypted SENTRY_DSN overrides the
+        # .env placeholder. Empty/absent = Sentry stays disabled in-app.
+        if [ -n "$SENTRY_DSN" ]; then
+          awk -v dsn="$SENTRY_DSN" '/^SENTRY_DSN=/{print "SENTRY_DSN=" dsn; found=1; next} {print} END{if(!found) print "SENTRY_DSN=" dsn}' .env > .env.tmp && mv .env.tmp .env
+          echo "SENTRY_DSN baked into build (value redacted)."
+        else
+          echo "No SENTRY_DSN — crash reporting disabled in this build."
+        fi
 
     - name: Install CocoaPods dependencies
       script: |
@@ -130,6 +138,15 @@ workflows:
             awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
             echo "Building against API_BASE_URL=$API_BASE_URL"
           fi
+          # Sentry DSN (P12): Codemagic-encrypted SENTRY_DSN overrides the
+          # .env placeholder. Empty/absent = Sentry stays disabled in-app.
+          # (Kept in sync with the iOS shared Seed step above.)
+          if [ -n "$SENTRY_DSN" ]; then
+            awk -v dsn="$SENTRY_DSN" '/^SENTRY_DSN=/{print "SENTRY_DSN=" dsn; found=1; next} {print} END{if(!found) print "SENTRY_DSN=" dsn}' .env > .env.tmp && mv .env.tmp .env
+            echo "SENTRY_DSN baked into build (value redacted)."
+          else
+            echo "No SENTRY_DSN — crash reporting disabled in this build."
+          fi
       - name: Make gradlew executable
         script: chmod +x android/gradlew
       - name: Build Android release APK
@@ -180,6 +197,15 @@ workflows:
           if [ -n "$API_BASE_URL" ]; then
             awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
             echo "Building against API_BASE_URL=$API_BASE_URL"
+          fi
+          # Sentry DSN (P12): Codemagic-encrypted SENTRY_DSN overrides the
+          # .env placeholder. Empty/absent = Sentry stays disabled in-app.
+          # (Kept in sync with the iOS shared Seed step above.)
+          if [ -n "$SENTRY_DSN" ]; then
+            awk -v dsn="$SENTRY_DSN" '/^SENTRY_DSN=/{print "SENTRY_DSN=" dsn; found=1; next} {print} END{if(!found) print "SENTRY_DSN=" dsn}' .env > .env.tmp && mv .env.tmp .env
+            echo "SENTRY_DSN baked into build (value redacted)."
+          else
+            echo "No SENTRY_DSN — crash reporting disabled in this build."
           fi
       - name: Materialize the release keystore + signing properties
         script: |

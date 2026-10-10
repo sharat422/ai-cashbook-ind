@@ -1,7 +1,8 @@
 import React from 'react';
 import {View} from 'react-native';
 
-import {Text} from '@components/ui';
+import {Icon, type IconName, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
 
 export type CardAccent = 'income' | 'expense' | 'neutral';
@@ -9,7 +10,7 @@ export type CardAccent = 'income' | 'expense' | 'neutral';
 export interface SummaryCardProps {
   label: string;
   amount: number;
-  icon: string;
+  icon: IconName;
   accent?: CardAccent;
   subtitle?: string;
 }
@@ -18,6 +19,12 @@ const ICON_BG: Record<CardAccent, string> = {
   income: 'bg-green-50',
   expense: 'bg-red-50',
   neutral: 'bg-slate-100',
+};
+
+const ICON_COLOR: Record<CardAccent, string> = {
+  income: colors.success,
+  expense: colors.danger,
+  neutral: colors.muted,
 };
 
 const AMOUNT_COLOR: Record<CardAccent, string> = {
@@ -42,7 +49,7 @@ function SummaryCardBase({
     <View className="flex-1 rounded-2xl border border-border bg-white p-4">
       <View
         className={`h-9 w-9 items-center justify-center rounded-full ${ICON_BG[accent]}`}>
-        <Text className="text-base">{icon}</Text>
+        <Icon name={icon} size={18} color={ICON_COLOR[accent]} />
       </View>
       <Text variant="caption" className="mt-3" numberOfLines={1}>
         {label}

@@ -83,7 +83,7 @@ export const useAppLockStore = create<AppLockState>()(
 
       unlockWithBiometrics: async () => {
         if (!get().biometricEnabled) return false;
-        const ok = await authenticateBiometric('Unlock Smart CashBook');
+        const ok = await authenticateBiometric('Unlock BolCash');
         if (ok) set({locked: false});
         return ok;
       },

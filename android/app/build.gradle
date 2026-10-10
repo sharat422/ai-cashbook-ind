@@ -1,6 +1,9 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+// Sentry — uploads mapping.txt + Hermes sourcemaps on release builds so
+// dashboard stack traces are de-obfuscated. No-op without SENTRY_AUTH_TOKEN.
+apply plugin: "io.sentry.android.gradle"
 
 // react-native-config — reads the project's `.env` and exposes values via
 // BuildConfig and Android resources at build time.
@@ -101,8 +104,9 @@ android {
     defaultConfig {
         applicationId "com.syntaro.aismartcashbook"
         minSdkVersion rootProject.ext.minSdkVersion
-        // Play requires targetSdk 35 for new/updated apps as of Aug 2025.
-        targetSdkVersion 35
+        // Play requires targetSdk 36 (Android 16) for new apps and all updates
+        // as of Aug 31, 2026; a targetSdk 35 upload is rejected at submission.
+        targetSdkVersion 36
         // CI overrides these per build so every Play upload gets a unique,
         // increasing versionCode (pass -PversionCodeOverride / -PversionNameOverride).
         versionCode project.hasProperty('versionCodeOverride') ? project.property('versionCodeOverride').toString().toInteger() : 1
@@ -144,9 +148,29 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // Manually-linked native modules (see settings.gradle + MainApplication.kt):
+    // @react-native-community/cli@15 can't autolink these BaseReactPackage libs.
+    implementation project(':react-native-config')
+    implementation project(':react-native-community-datetimepicker')
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
     }
+}
+
+// Sentry Gradle plugin config (P12). Uploads ProGuard mapping.txt and Hermes
+// sourcemaps for release builds so crash stack traces de-obfuscate in the
+// dashboard. Auth comes from android/sentry.properties + SENTRY_AUTH_TOKEN
+// env var (Codemagic, encrypted). Builds without a token simply skip upload.
+sentry {
+    // Only upload symbols when an auth token is present (CI). Local/token-less
+    // builds skip the upload instead of failing — uploadSentry*Release otherwise
+    // errors "Auth token is required for this request".
+    def sentryToken = System.getenv("SENTRY_AUTH_TOKEN")
+    def hasSentryToken = sentryToken != null && !sentryToken.trim().isEmpty()
+    autoUploadProguardMapping = hasSentryToken
+    uploadNativeSymbols = hasSentryToken
+    includeProguardMapping = true
 }

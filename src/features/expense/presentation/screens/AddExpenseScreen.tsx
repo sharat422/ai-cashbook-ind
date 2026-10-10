@@ -11,7 +11,8 @@ import {
   NotesInput,
   TextField,
 } from '@components/form';
-import {Button, Screen, Text} from '@components/ui';
+import {Button, Icon, Screen, Text} from '@components/ui';
+import type {IconName} from '@components/ui';
 import type {ParsedExpense} from '@features/expense/data/expenseParse.remote';
 import {EXPENSE_CATEGORIES} from '@features/expense/domain/entities';
 import {
@@ -32,15 +33,15 @@ import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {toISODate} from '@utils/date';
 
-/** Emoji per category for friendlier chips. */
-const CATEGORY_ICONS: Record<string, string> = {
-  Rent: '🏠',
-  Salary: '👤',
-  Fuel: '⛽',
-  Food: '🍽️',
-  Travel: '✈️',
-  Utilities: '💡',
-  Miscellaneous: '📦',
+/** Vector icon per category for friendlier chips. */
+const CATEGORY_ICONS: Record<string, IconName> = {
+  Rent: 'home',
+  Salary: 'briefcase',
+  Fuel: 'truck',
+  Food: 'cloche',
+  Travel: 'map',
+  Utilities: 'bulb',
+  Miscellaneous: 'package',
 };
 
 const CATEGORY_OPTIONS = EXPENSE_CATEGORIES.map(value => ({
@@ -161,7 +162,11 @@ export function AddExpenseScreen({
                 recording ? 'bg-danger' : 'bg-primary'
               }`}
               style={{gap: 10, opacity: voice.isPending ? 0.6 : 1}}>
-              <Text className="text-xl">{recording ? '⏹' : '🎤'}</Text>
+              <Icon
+                name={recording ? 'square' : 'mic'}
+                size={20}
+                color="#FFFFFF"
+              />
               <Text className="text-base font-semibold text-white">
                 {voice.isPending
                   ? t('expense.voiceReading')

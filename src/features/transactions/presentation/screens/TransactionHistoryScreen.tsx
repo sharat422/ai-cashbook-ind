@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 
 import {FilterChip, SearchBar} from '@components/filters';
-import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
+import {EmptyState, ErrorState, Screen, Skeleton, Text, Icon} from '@components/ui';
 import type {Transaction} from '@features/transactions/domain/entities';
 import {
   FilterSheet,
@@ -141,8 +141,9 @@ export function TransactionHistoryScreen(): React.JSX.Element {
             accessibilityRole="button"
             onPress={() => setSheetOpen(true)}
             className="flex-row items-center rounded-xl border border-border bg-white px-3 py-2">
-            <Text className="text-sm font-semibold text-slate-800">
-              ⚙︎ Filters
+            <Icon name="filter" size={15} color={colors.text} />
+            <Text className="ml-1.5 text-sm font-semibold text-slate-800">
+              Filters
             </Text>
             {activeCount > 0 ? (
               <View className="ml-2 h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5">
@@ -201,7 +202,7 @@ export function TransactionHistoryScreen(): React.JSX.Element {
       ) : showEmpty ? (
         <View className="flex-1 justify-center">
           <EmptyState
-            icon="🔎"
+            icon={<Icon name="search" size={44} color={colors.muted} />}
             title="No transactions found"
             message={
               hasActiveQuery

@@ -87,7 +87,7 @@ export async function ensureMicPermission(): Promise<boolean> {
     {
       title: 'Microphone access',
       message:
-        'Smart CashBook uses the microphone to hear your transaction and turn ' +
+        'BolCash uses the microphone to hear your transaction and turn ' +
         'it into an entry. Audio is processed for transcription, not stored.',
       buttonPositive: 'Allow',
       buttonNegative: 'Not now',

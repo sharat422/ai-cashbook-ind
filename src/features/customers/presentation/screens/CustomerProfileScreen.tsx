@@ -9,15 +9,7 @@ import {
 } from 'react-native';
 
 import {FilterChip} from '@components/filters';
-import {
-  Avatar,
-  EmptyState,
-  ErrorBoundary,
-  ErrorState,
-  Screen,
-  SuccessOverlay,
-  Text,
-} from '@components/ui';
+import {Avatar, EmptyState, ErrorBoundary, ErrorState, Screen, SuccessOverlay, Text, Icon} from '@components/ui';
 import type {LedgerEntryView} from '@features/customers/domain/ledger';
 import {
   ReceivePaymentSheet,
@@ -352,7 +344,7 @@ export function CustomerProfileScreen({
             />
           ) : (
             <EmptyState
-              icon="🧾"
+              icon={<Icon name="receipt" size={44} color={colors.muted} />}
               title={t('customers.noTxnTitle')}
               message={t('customers.noTxnMsg')}
             />

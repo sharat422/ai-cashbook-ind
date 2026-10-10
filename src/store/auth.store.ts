@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Business, User} from '@features/auth/types';
@@ -6,6 +5,8 @@ import {
   DEFAULT_APP_LANGUAGE,
   type AppLanguage,
 } from '@features/auth/utils/languagePreference';
+
+import {keychainStorage} from './keychainStorage';
 
 /**
  * Where the user is in the authentication lifecycle. Drives which navigator
@@ -69,7 +70,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      // JWT lives in the OS secure store (Keychain/Keystore), never in
+      // plaintext AsyncStorage. See keychainStorage.ts for the failure and
+      // legacy-migration contract.
+      storage: createJSONStorage(() => keychainStorage),
       // Only persist durable session data, never the hydration flag.
       partialize: ({token, user, business, preferredLanguage}) => ({
         token,

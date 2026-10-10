@@ -1,8 +1,10 @@
 import React from 'react';
+import {colors} from '@theme/colors';
 import {Alert, ScrollView, View} from 'react-native';
 import Share from 'react-native-share';
+import * as Sentry from '@sentry/react-native';
 
-import {Button, EmptyState, Screen, Text} from '@components/ui';
+import {Button, EmptyState, Screen, Text, Icon} from '@components/ui';
 import {
   formatErrorLog,
   useErrorLogStore,
@@ -43,6 +45,20 @@ export function DiagnosticsScreen(): React.JSX.Element {
       {text: t('diagnostics.clear'), style: 'destructive', onPress: clear},
     ]);
 
+  const onTestCrash = () =>
+    Alert.alert(
+      'Send test crash?',
+      'The app will crash immediately to verify Sentry reporting. Only use in QA builds.',
+      [
+        {text: t('common.cancel'), style: 'cancel'},
+        {
+          text: 'Crash now',
+          style: 'destructive',
+          onPress: () => Sentry.nativeCrash(),
+        },
+      ],
+    );
+
   return (
     <Screen scroll={false} edges={['top']}>
       <ScrollView
@@ -56,7 +72,7 @@ export function DiagnosticsScreen(): React.JSX.Element {
         {entries.length === 0 ? (
           <View className="mt-10">
             <EmptyState
-              icon="✅"
+              icon={<Icon name="check" size={44} color={colors.muted} />}
               title={t('diagnostics.emptyTitle')}
               message={t('diagnostics.emptyMsg')}
             />
@@ -96,6 +112,17 @@ export function DiagnosticsScreen(): React.JSX.Element {
             </View>
           </>
         )}
+
+        <View className="mt-8">
+          <Text variant="caption" className="mb-2 uppercase tracking-wide">
+            QA tools
+          </Text>
+          <Button
+            title="Send test crash (Sentry)"
+            variant="secondary"
+            onPress={onTestCrash}
+          />
+        </View>
       </ScrollView>
     </Screen>
   );
