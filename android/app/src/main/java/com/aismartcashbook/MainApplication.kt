@@ -26,6 +26,8 @@ class MainApplication : Application(), ReactApplication {
               // and date pickers break at runtime (native modules not registered).
               add(RNCConfigPackage())
               add(RNDateTimePickerPackage())
+              // VoicePcmPackage: native PCM mic capture for voice entry.
+              add(VoicePcmPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

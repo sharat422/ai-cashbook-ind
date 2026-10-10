@@ -4,7 +4,7 @@ Two suites cover the app end-to-end: the FastAPI backend (pytest) and the
 React Native app's logic layers (Jest). Both run locally with no device or
 deployed server.
 
-## Backend — 45 E2E tests (pytest)
+## Backend — 214 E2E tests (pytest)
 
 Drives the FastAPI app in-process via Starlette's `TestClient` against a
 throwaway SQLite DB — real routers, auth, models. See
@@ -23,7 +23,7 @@ khata ledger (recompute, overdue), the unified transactions feed
 (filter/search/sort/paginate), dashboard/daily/khata aggregates, AI fallback
 paths, and multi-tenant isolation.
 
-## Frontend — 43 tests (Jest)
+## Frontend — 162 tests (Jest)
 
 Tests the app's real logic — utilities, domain rules, Zustand stores, use
 cases and repositories — with only the true boundaries mocked (network via

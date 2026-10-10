@@ -57,14 +57,24 @@ export function deriveRiskFeatures(
   const credits = asc.filter(e => e.type === 'credit');
   const payments = asc.filter(e => e.type === 'payment');
 
-  // Average payment delay: for each credit, days until the next payment (or
-  // days outstanding so far if not yet paid).
-  let delaySum = 0;
+  // FIFO allocation: a small payment must not settle every earlier credit.
+  // Weight the delay by value and include the still-unpaid balance's age.
+  const remaining = payments.map(p => ({...p, available: p.amount}));
+  let weightedDelay = 0;
+  let creditValue = 0;
   for (const c of credits) {
-    const next = payments.find(p => p.date >= c.date);
-    delaySum += Math.max(0, daysBetween(c.date, next ? next.date : today));
+    let unpaid = c.amount;
+    creditValue += c.amount;
+    for (const p of remaining) {
+      if (unpaid <= 0) { break; }
+      const applied = Math.min(unpaid, p.available);
+      weightedDelay += applied * Math.max(0, daysBetween(c.date, p.date));
+      unpaid -= applied;
+      p.available -= applied;
+    }
+    weightedDelay += unpaid * Math.max(0, daysBetween(c.date, today));
   }
-  const avgPaymentDelayDays = credits.length ? delaySum / credits.length : 0;
+  const avgPaymentDelayDays = creditValue ? weightedDelay / creditValue : 0;
 
   // Transaction frequency per month.
   const spanDays =

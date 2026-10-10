@@ -50,7 +50,6 @@ type TileRoute =
   | 'QuickAdd'
   | 'Business'
   | 'Assistant'
-  | 'SmsImport'
   | 'ReceiptCapture'
   | 'Categorize'
   | 'DailySummary'
@@ -172,13 +171,6 @@ export function DashboardScreen({
       tint: 'bg-violet-50',
       fg: '#7C3AED',
       route: 'Assistant',
-    },
-    {
-      icon: 'message',
-      label: t('dashboard.importSms'),
-      tint: 'bg-green-50',
-      fg: colors.success,
-      route: 'SmsImport',
     },
     {
       icon: 'camera',

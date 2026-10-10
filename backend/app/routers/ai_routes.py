@@ -3,7 +3,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from datetime import datetime, timezone
@@ -18,7 +18,7 @@ from ..ai import (
 )
 from ..config import settings
 from ..database import get_db
-from ..deps import require
+from ..deps import require, require_ai_consent
 from ..rbac import ENTRY_CREATE
 from ..models import AiDecision, Business
 
@@ -32,7 +32,9 @@ def _transcribe_or_raise(audio: UploadFile, language: str | None) -> str:
     Shared by the khata (/voice/parse) and expense (/voice/parse-expense) voice
     endpoints so both surface the same friendly errors and log the real reason.
     """
-    audio_bytes = audio.file.read()
+    audio_bytes = audio.file.read(20 * 1024 * 1024 + 1)
+    if len(audio_bytes) > 20 * 1024 * 1024:
+        raise HTTPException(413, "Audio must be 20 MB or smaller.")
     if not audio_bytes:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Empty audio.")
 
@@ -84,11 +86,11 @@ def _transcribe_or_raise(audio: UploadFile, language: str | None) -> str:
 
 
 class CategorizeBody(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=5000)
 
 
 class ParseTransactionBody(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=5000)
     # Client's local date (YYYY-MM-DD); defaults to server UTC today.
     today: str | None = None
 
@@ -97,6 +99,7 @@ class ParseTransactionBody(BaseModel):
 def parse_transaction_route(
     body: ParseTransactionBody,
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """Turn a spoken/typed sentence (any of several Indian languages) into a
@@ -121,6 +124,7 @@ def voice_parse_route(
     today: str | None = Form(None),
     language: str | None = Form(None),
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """The multilingual voice 'agent': transcribe spoken audio (Whisper
@@ -147,7 +151,7 @@ def voice_parse_route(
 # --- Expense voice/text parser (separate from the khata transaction parser) ---
 
 class ParseExpenseBody(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=5000)
     today: str | None = None
     language: str | None = None
 
@@ -172,6 +176,7 @@ def _log_expense_decision(db: Session, business: Business, transcript: str, resu
 def parse_expense_route(
     body: ParseExpenseBody,
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """Extract a structured expense from typed/spoken text (any language),
@@ -188,6 +193,7 @@ def voice_parse_expense_route(
     today: str | None = Form(None),
     language: str | None = Form(None),
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     """Transcribe spoken audio then extract a structured expense. Returns the
@@ -204,6 +210,7 @@ def voice_parse_expense_route(
 def categorize(
     body: CategorizeBody,
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     category, confidence = categorize_text(body.text)
@@ -224,6 +231,7 @@ def categorize(
 def scan(
     receipt: UploadFile = File(...),
     business: Business = Depends(require(ENTRY_CREATE)),
+    _ai: None = Depends(require_ai_consent),
     db: Session = Depends(get_db),
 ) -> dict:
     raw = receipt.file.read()

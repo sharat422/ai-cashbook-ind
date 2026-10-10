@@ -35,8 +35,6 @@
 -keep public class com.horcrux.svg.** { *; }
 
 # --- react-native-config (BuildConfig fields read reflectively) ---
-# NOTE: the package here is the gradle `namespace` (com.aismartcashbook),
-# not the applicationId (com.syntaro.aismartcashbook) — this is correct.
 -keep class com.aismartcashbook.BuildConfig { *; }
 
 # --- react-native-image-picker ---
@@ -57,14 +55,6 @@
 
 # --- jail-monkey (root/jailbreak detection) ---
 -keep class com.gantman.reactnative.** { *; }
-
-# --- react-native-get-sms-android (bank SMS import) ---
--keep class com.centaurwarchief.smsandroid.** { *; }
-
-# --- react-native-audio-recorder-player (voice recording; ships no consumer
-#      ProGuard rules of its own, bridges via @ReactMethod) ---
--keep class com.dooboolab.audiorecorderplayer.** { *; }
--keep class com.react.SmsModule.** { *; }
 
 # --- react-native-audio-recorder-player (voice entry) ---
 -keep class com.dooboolab.** { *; }

@@ -52,11 +52,6 @@ export function StaffHome({
             variant="secondary"
             onPress={() => navigation.navigate('ReceiptCapture')}
           />
-          <Button
-            title={t('dashboard.importSms')}
-            variant="secondary"
-            onPress={() => navigation.navigate('SmsImport')}
-          />
         </View>
 
         <View className="mt-10">

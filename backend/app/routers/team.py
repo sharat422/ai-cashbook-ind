@@ -40,8 +40,26 @@ def _members(db: Session, business_id: str) -> list[BusinessMember]:
     ).all()
 
 
-def _owner_count(db: Session, business_id: str) -> int:
-    return sum(1 for m in _members(db, business_id) if m.role == "owner")
+def _active_owner_count(db: Session, business_id: str) -> int:
+    """Number of *active* owners. Inactive owner rows (invited-but-never-joined,
+    soft-removed) must NOT count toward the last-owner guard — otherwise a
+    lingering inactive owner lets the sole active owner be demoted/removed,
+    leaving the business with zero owners who can actually manage it."""
+    return sum(
+        1
+        for m in _members(db, business_id)
+        if m.role == "owner" and m.status == "active"
+    )
+
+
+def _is_last_active_owner(db: Session, business_id: str, member: BusinessMember) -> bool:
+    """True if removing/demoting `member` would drop the business to zero active
+    owners — i.e. it is itself an active owner and the only one left."""
+    return (
+        member.role == "owner"
+        and member.status == "active"
+        and _active_owner_count(db, business_id) <= 1
+    )
 
 
 @router.get("/team")
@@ -131,8 +149,9 @@ def update_member_role(
             f"Role must be one of {', '.join(ROLES)}",
         )
     member = _owned_member(db, business.id, user_id)
-    # Guard: don't let the last owner demote themselves and lock the business out.
-    if member.role == "owner" and body.role != "owner" and _owner_count(db, business.id) <= 1:
+    # Guard: don't let the last active owner demote themselves and lock the
+    # business out (inactive owner rows don't count — see _active_owner_count).
+    if body.role != "owner" and _is_last_active_owner(db, business.id, member):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "This is the only owner — promote someone else to owner first.",
@@ -151,7 +170,7 @@ def remove_member(
     db: Session = Depends(get_db),
 ) -> None:
     member = _owned_member(db, business.id, user_id)
-    if member.role == "owner" and _owner_count(db, business.id) <= 1:
+    if _is_last_active_owner(db, business.id, member):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Can't remove the only owner. Assign another owner first.",

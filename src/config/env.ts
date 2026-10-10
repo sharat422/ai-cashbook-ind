@@ -9,6 +9,29 @@ import RNConfig from 'react-native-config';
  */
 const Config = RNConfig as Record<string, string | undefined>;
 
+const MOBILE_SECRET_KEYS = new Set([
+  'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY',
+  'JWT_SECRET',
+  'WHATSAPP_ACCESS_TOKEN',
+  'WHATSAPP_PHONE_NUMBER_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'APPLE_AUTH_KEY',
+]);
+
+function assertNoBundledSecrets(): void {
+  const leaked = Object.keys(Config).filter((key) => MOBILE_SECRET_KEYS.has(key));
+  if (leaked.length > 0) {
+    throw new Error(
+      'Service secrets must never be bundled into the React Native app. Remove these keys from the mobile build env: ' +
+        leaked.join(', ') +
+        '. Keep privileged credentials on the authenticated backend instead.',
+    );
+  }
+}
+
+assertNoBundledSecrets();
+
 function required(key: string, fallback?: string): string {
   const value = Config[key] ?? fallback;
   if (value === undefined || value === '') {

@@ -11,6 +11,11 @@ return a usable 200 and the app stays functional offline of a provider.
 
 import json
 import logging
+import io
+import subprocess
+import tempfile
+import wave
+from pathlib import Path
 
 from .config import settings
 
@@ -464,7 +469,7 @@ def parse_expense(text: str, today: str, language: str | None = None) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# OpenAI — speech-to-text (multilingual voice entry)
+# Muse / OpenAI — speech-to-text (multilingual voice entry)
 # ---------------------------------------------------------------------------
 
 # Whisper's `prompt` biases the decoder toward the vocabulary it expects. For a
@@ -477,6 +482,17 @@ CASHBOOK_TRANSCRIBE_PROMPT = (
     "received, sale, udhaar, diya, mila, jama, baaki, rupees."
 )
 
+# Muse accepts language names, not Whisper's ISO codes. Unsupported hints are
+# omitted so automatic language detection remains available.
+MUSE_LANGUAGES = {
+    "ar": "Arabic", "bn": "Bengali", "nl": "Dutch", "en": "English",
+    "fr": "French", "de": "German", "he": "Hebrew", "hi": "Hindi",
+    "id": "Indonesian", "it": "Italian", "ja": "Japanese", "kn": "Kannada",
+    "ko": "Korean", "ms": "Malay", "zh": "Mandarin Chinese", "mr": "Marathi",
+    "pl": "Polish", "pt": "Portuguese", "es": "Spanish", "tl": "Tagalog",
+    "ta": "Tamil", "te": "Telugu", "th": "Thai", "tr": "Turkish", "vi": "Vietnamese",
+}
+
 
 def transcribe_audio(
     audio_bytes: bytes,
@@ -484,15 +500,126 @@ def transcribe_audio(
     language: str | None = None,
     prompt: str | None = None,
 ) -> str:
-    """Transcribe spoken audio to text via OpenAI Whisper.
+    """Transcribe spoken audio to text.
+
+    Uses **Meta Muse Voice Transcribe** as the primary provider (when
+    META_MODEL_API_KEY is set) and falls back to **OpenAI Whisper** if Muse is
+    unconfigured or errors. With neither configured, raises so the caller can
+    fall back to typing.
 
     - `language`: ISO-639-1 (e.g. 'hi', 'te'). Passing the language the customer
       actually speaks is more accurate than auto-detect; omit it to auto-detect.
-    - `prompt`: a vocabulary hint that biases the transcript (see
-      CASHBOOK_TRANSCRIBE_PROMPT) — most useful for getting amounts right.
+    - `prompt`: a vocabulary hint for Whisper. Muse uses cashbook keywords and
+      documented language-name hints instead.
 
-    Raises (no offline fallback for audio) so the caller can fall back to typing.
+    An empty transcript is returned as-is (the caller retries with auto-detect);
+    only an actual Muse *error* triggers the Whisper fallback.
     """
+    if settings.meta_model_api_key:
+        try:
+            return _transcribe_muse(audio_bytes, filename, language=language)
+        except Exception:  # noqa: BLE001 — fall back to Whisper on any Muse failure
+            log.exception("Muse transcription failed; falling back to OpenAI Whisper")
+            if not settings.openai_api_key:
+                raise  # nothing to fall back to — surface the Muse error
+    return _transcribe_whisper(audio_bytes, filename, language=language, prompt=prompt)
+
+
+def _extract_transcript(payload: dict) -> str:
+    """Read Muse's documented transcript, retaining legacy response support."""
+    if "transcript" in payload:
+        return (payload["transcript"] or "").strip()
+    text = (payload.get("text") or "").strip()
+    if text:
+        return text
+    for key in ("turns", "segments"):
+        parts = payload.get(key)
+        if isinstance(parts, list):
+            joined = " ".join(
+                (p.get("transcript") or p.get("text") or "").strip()
+                for p in parts
+                if isinstance(p, dict)
+            ).strip()
+            if joined:
+                return joined
+    return ""
+
+
+def _muse_wav(audio_bytes: bytes) -> bytes:
+    """Normalize mobile AAC to Muse's mono PCM WAV; delete temporary files."""
+    def supported_wav(data: bytes) -> bool:
+        try:
+            with wave.open(io.BytesIO(data), "rb") as audio:
+                return (
+                    audio.getnchannels() == 1 and audio.getsampwidth() == 2
+                    and audio.getframerate() in (16000, 24000)
+                    and 0 < audio.getnframes() <= audio.getframerate() * 600
+                    and len(audio.readframes(audio.getnframes())) == audio.getnframes() * 2
+                )
+        except (wave.Error, EOFError):
+            return False
+
+    if supported_wav(audio_bytes):
+        return audio_bytes
+
+    from imageio_ffmpeg import get_ffmpeg_exe
+
+    # A seekable output produces a proper RIFF length (unlike ffmpeg stdout).
+    # Decode at most 601 seconds, then reject over-limit clips without truncating.
+    with tempfile.TemporaryDirectory(prefix="cashbook-voice-") as directory:
+        source = Path(directory) / "input"
+        target = Path(directory) / "audio.wav"
+        source.write_bytes(audio_bytes)
+        result = subprocess.run(
+            [get_ffmpeg_exe(), "-nostdin", "-v", "error", "-protocol_whitelist", "file,pipe",
+             "-format_whitelist", "mov,wav,mp3,aac,flac,ogg",
+             "-i", str(source), "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "24000",
+             "-c:a", "pcm_s16le", "-map_metadata", "-1", "-t", "601", str(target)],
+            capture_output=True, timeout=30, check=False,
+        )
+        if result.returncode:
+            raise ValueError("Audio could not be decoded for Muse transcription.")
+        wav = target.read_bytes()
+    if not supported_wav(wav):
+        raise ValueError("Muse requires nonempty audio of at most 10 minutes.")
+    return wav
+
+
+def _transcribe_muse(
+    audio_bytes: bytes,
+    filename: str = "audio.m4a",
+    language: str | None = None,
+) -> str:
+    """Use Muse's WAV + JSON multipart contract in single-turn mode."""
+    import httpx
+
+    url = f"{settings.meta_model_base_url.rstrip('/')}/asr/transcribe"
+    request = {
+        "model": settings.muse_transcribe_model,
+        "audioEncoding": "WAV",
+        "mode": "PUSH_TO_TALK",
+        "keywords": ["rupees", "lakh", "hazaar", "udhaar", "jama", "baaki"],
+    }
+    if language in MUSE_LANGUAGES:
+        request["languageBias"] = [MUSE_LANGUAGES[language]]
+    files = {
+        "request": (None, json.dumps(request), "application/json"),
+        "audio": ("audio.wav", _muse_wav(audio_bytes), "audio/wav"),
+    }
+    headers = {"Authorization": f"Bearer {settings.meta_model_api_key}", "Accept": "application/json"}
+
+    resp = httpx.post(url, files=files, headers=headers, timeout=httpx.Timeout(60.0, connect=10.0))
+    resp.raise_for_status()
+    return _extract_transcript(resp.json())
+
+
+def _transcribe_whisper(
+    audio_bytes: bytes,
+    filename: str = "audio.m4a",
+    language: str | None = None,
+    prompt: str | None = None,
+) -> str:
+    """Transcribe via OpenAI Whisper (fallback provider)."""
     if not settings.openai_api_key:
         raise RuntimeError("Voice transcription requires OPENAI_API_KEY on the server.")
 
@@ -617,11 +744,66 @@ def _normalize_receipt(raw: dict) -> dict:
 # ---------------------------------------------------------------------------
 # OpenAI — khata insights
 # ---------------------------------------------------------------------------
-def generate_insights(stats: dict) -> list[dict]:
-    """Return a list of InsightDto dicts from aggregate khata stats."""
-    if not settings.openai_api_key:
+def _anonymize_stats(stats: dict) -> tuple[dict, dict[str, str]]:
+    """Data minimisation: strip customer names/ids from the stats before they go
+    to the external model. Returns (safe_stats, token->name) so we can put the
+    real names back in the model's output afterwards. The model only ever sees
+    opaque labels like "Customer 1"."""
+    safe = dict(stats)
+    mapping: dict[str, str] = {}
+    safe_defaulters = []
+    for i, d in enumerate(stats.get("top_defaulters") or [], 1):
+        token = f"Customer {i}"
+        name = d.get("name")
+        if name:
+            mapping[token] = name
+        safe_defaulters.append({
+            "label": token,
+            "amount": d.get("amount"),
+            "days_overdue": d.get("days_overdue"),
+        })
+    safe["top_defaulters"] = safe_defaulters
+    return safe, mapping
+
+
+def _rehydrate_insights(insights: list, mapping: dict[str, str]) -> list:
+    """Swap the opaque labels in the model's output back to real customer names,
+    so the app still shows/searches by name."""
+    if not mapping:
+        return insights
+
+    def restore(text):
+        if not isinstance(text, str):
+            return text
+        for token, name in mapping.items():
+            text = text.replace(token, name)
+        return text
+
+    for ins in insights:
+        if not isinstance(ins, dict):
+            continue
+        for field in ("title", "detail", "metric"):
+            if field in ins:
+                ins[field] = restore(ins[field])
+        drill = ins.get("drill")
+        if isinstance(drill, dict) and drill.get("search"):
+            drill["search"] = restore(drill["search"])
+    return insights
+
+
+def generate_insights(stats: dict, allow_external: bool = True) -> list[dict]:
+    """Return a list of InsightDto dicts from aggregate khata stats.
+
+    - allow_external=False (no AI consent) keeps everything on the local
+      heuristic, so no data leaves the server at all.
+    - When external is allowed, customer names are STILL never sent: they're
+      replaced with opaque labels before the call and restored in the result
+      (see _anonymize_stats / _rehydrate_insights).
+    """
+    if not allow_external or not settings.openai_api_key:
         return _heuristic_insights(stats)
 
+    safe_stats, mapping = _anonymize_stats(stats)
     try:
         from openai import OpenAI
 
@@ -629,14 +811,16 @@ def generate_insights(stats: dict) -> list[dict]:
         prompt = (
             "You are a financial analyst for an Indian SMB khata (credit ledger). "
             "Given these aggregate stats, produce 3-6 concise, actionable insights.\n"
+            "Customers are identified only by an opaque label (e.g. 'Customer 1'); "
+            "refer to them by that exact label.\n"
             "Return JSON: {\"insights\": [{"
             "\"id\": str, \"type\": one of [collection,risk,behavior,concentration,general], "
             "\"sentiment\": one of [positive,neutral,warning,critical], "
             "\"title\": short headline, \"detail\": one sentence, "
             "\"metric\": short like '+12%' or '8 days' (optional), "
-            "\"drill\": {\"target\": one of [khata,customers,none], \"search\": optional customer name}"
+            "\"drill\": {\"target\": one of [khata,customers,none], \"search\": optional customer label}"
             "}]}.\n\n"
-            f"Stats: {json.dumps(stats)}"
+            f"Stats: {json.dumps(safe_stats)}"
         )
         resp = client.chat.completions.create(
             model=settings.openai_model,
@@ -645,7 +829,9 @@ def generate_insights(stats: dict) -> list[dict]:
         )
         data = json.loads(resp.choices[0].message.content or "{}")
         insights = data.get("insights", [])
-        return insights if isinstance(insights, list) else _heuristic_insights(stats)
+        if not isinstance(insights, list):
+            return _heuristic_insights(stats)
+        return _rehydrate_insights(insights, mapping)
     except Exception as exc:  # noqa: BLE001
         log.warning("OpenAI insights failed, using heuristic: %s", exc)
         return _heuristic_insights(stats)

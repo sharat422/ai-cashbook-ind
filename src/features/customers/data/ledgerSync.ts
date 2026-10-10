@@ -2,6 +2,7 @@ import {NetworkError} from '@api/client';
 import {connectivity} from '@/services/network/connectivity';
 import {ledgerLocal} from './ledger.local';
 import {ledgerRemote} from './ledger.remote';
+import {usePendingLedgerStore} from '../presentation/store/pendingLedger.store';
 
 /**
  * Flush the offline ledger queue. Returns the customer ids that had entries
@@ -16,7 +17,9 @@ export async function syncPendingLedger(): Promise<string[]> {
   const touched = new Set<string>();
   for (const item of queue) {
     try {
-      await ledgerRemote.add(item.customerId, item.draft, item.localId);
+      const entry = await ledgerRemote.add(item.customerId, item.draft, item.localId);
+      const store = usePendingLedgerStore.getState();
+      store.cache(item.customerId, [...(store.cached[item.customerId] ?? []).filter(e => e.id !== entry.id), entry]);
       ledgerLocal.remove(item.localId);
       touched.add(item.customerId);
     } catch (err) {

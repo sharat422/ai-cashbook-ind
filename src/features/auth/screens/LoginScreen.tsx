@@ -46,15 +46,13 @@ export function LoginScreen({
           {t('auth.login.agreePrefix')}
           <Text
             className="text-xs font-semibold text-primary"
-            accessibilityRole="link"
-            onPress={() => openExternalUrl(LEGAL.termsUrl)}>
+            onPress={() => navigation.navigate('LegalDoc', {doc: 'terms'})}>
             {t('auth.terms')}
           </Text>
           {t('auth.login.and')}
           <Text
             className="text-xs font-semibold text-primary"
-            accessibilityRole="link"
-            onPress={() => openExternalUrl(LEGAL.privacyUrl)}>
+            onPress={() => navigation.navigate('LegalDoc', {doc: 'privacy'})}>
             {t('auth.privacy')}
           </Text>
           .

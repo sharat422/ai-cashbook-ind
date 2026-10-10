@@ -27,7 +27,43 @@ def run_startup_migrations(engine) -> None:
     tables = set(inspector.get_table_names())
 
     _add_customer_concurrency_columns(engine, inspector, tables)
+    _widen_encrypted_columns(engine, inspector, tables)
     _backfill_owner_memberships(engine, tables)
+
+
+# Columns that became application-encrypted (EncryptedText → TEXT). Ciphertext is
+# far longer than the old VARCHAR(n) limits, so an existing Postgres schema must
+# widen them to TEXT or encrypted writes overflow the column. Fresh databases get
+# TEXT straight from create_all; this only fixes already-provisioned ones.
+_ENCRYPTED_COLUMNS_TO_WIDEN = {
+    "customers": ["gst_number"],
+    "ledger_entries": ["payment_method", "reference_number"],
+}
+
+
+def _widen_encrypted_columns(engine, inspector, tables: set[str]) -> None:
+    # Only Postgres enforces VARCHAR length; SQLite ignores it, so this is a
+    # no-op there. Widening VARCHAR→TEXT is lossless and fast.
+    if engine.dialect.name != "postgresql":
+        return
+    try:
+        with engine.begin() as conn:
+            for table, cols in _ENCRYPTED_COLUMNS_TO_WIDEN.items():
+                if table not in tables:
+                    continue
+                existing = {c["name"]: c for c in inspector.get_columns(table)}
+                for col in cols:
+                    info = existing.get(col)
+                    if info is None:
+                        continue
+                    if str(info["type"]).upper().startswith("TEXT"):
+                        continue  # already widened
+                    conn.execute(
+                        text(f'ALTER TABLE {table} ALTER COLUMN {col} TYPE TEXT')
+                    )
+                    log.info("migration: widened %s.%s to TEXT", table, col)
+    except Exception:  # noqa: BLE001 — never let a migration crash boot
+        log.exception("migration: failed widening encrypted columns")
 
 
 def _add_customer_concurrency_columns(engine, inspector, tables: set[str]) -> None:

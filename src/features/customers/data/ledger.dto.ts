@@ -6,6 +6,7 @@ import type {
 
 /** Backend ledger entry (snake_case). */
 export interface LedgerEntryDto {
+  client_id?: string | null;
   id: string;
   type: LedgerEntryType;
   amount: number;
@@ -21,6 +22,7 @@ export interface LedgerEntryDto {
 export function toLedgerEntry(dto: LedgerEntryDto): LedgerEntry {
   return {
     id: dto.id,
+    clientId: dto.client_id ?? undefined,
     type: dto.type,
     amount: Number(dto.amount ?? 0),
     date: dto.date,

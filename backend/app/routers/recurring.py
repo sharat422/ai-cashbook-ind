@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..calc import today_iso
@@ -46,6 +46,26 @@ def _owned(db: Session, business: Business, rec_id: str) -> RecurringExpense:
     if row is None or row.business_id != business.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurring expense not found")
     return row
+
+
+def _assert_name_unique(
+    db: Session, business: Business, name: str, exclude_id: str | None = None
+) -> None:
+    """A recurring template's name identifies it within a business. Reject a
+    second template with the same name (case-insensitive, trimmed) so the user
+    can't accidentally add "Shop rent" twice."""
+    cleaned = name.strip()
+    q = select(RecurringExpense).where(
+        RecurringExpense.business_id == business.id,
+        func.lower(RecurringExpense.name) == cleaned.lower(),
+    )
+    if exclude_id is not None:
+        q = q.where(RecurringExpense.id != exclude_id)
+    if db.scalars(q).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="This expense name is already added.",
+        )
 
 
 def _anchor_day(body: RecurringBody) -> int | None:
@@ -105,6 +125,7 @@ def create_recurring(
     db: Session = Depends(get_db),
 ) -> dict:
     _validate(body)
+    _assert_name_unique(db, business, body.name)
     row = RecurringExpense(
         business_id=business.id,
         name=body.name.strip(),
@@ -133,6 +154,7 @@ def update_recurring(
 ) -> dict:
     _validate(body)
     row = _owned(db, business, rec_id)
+    _assert_name_unique(db, business, body.name, exclude_id=rec_id)
     row.name = body.name.strip()
     row.amount = body.amount
     row.category = body.category

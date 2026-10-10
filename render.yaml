@@ -55,6 +55,12 @@ services:
         value: 3.11.9
       - key: JWT_SECRET
         generateValue: true
+      # Fernet key for application-level field encryption. Set manually in the
+      # dashboard (Render's generateValue is NOT a valid Fernet key). Generate:
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # Production refuses to boot without it.
+      - key: APP_ENCRYPTION_KEY
+        sync: false
       - key: JWT_EXPIRE_MINUTES
         value: "43200"
       - key: DATABASE_URL
@@ -68,7 +74,15 @@ services:
         value: "123456"
       - key: CORS_ORIGINS
         value: "*"
+      # Breach detection: Sentry DSN (real-time error/alert email) + an owner
+      # mobile for WhatsApp security alerts. Set both in the dashboard.
+      - key: SENTRY_DSN
+        sync: false
+      - key: OWNER_ALERT_MOBILE
+        sync: false
       - key: OPENAI_API_KEY
+        sync: false
+      - key: META_MODEL_API_KEY
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4o-mini
@@ -103,6 +117,12 @@ services:
         value: 3.11.9
       - key: JWT_SECRET
         generateValue: true
+      # Fernet key for application-level field encryption. Set manually in the
+      # dashboard (Render's generateValue is NOT a valid Fernet key). Generate:
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # Production refuses to boot without it.
+      - key: APP_ENCRYPTION_KEY
+        sync: false
       - key: JWT_EXPIRE_MINUTES
         value: "43200"
       - key: DATABASE_URL
@@ -117,7 +137,15 @@ services:
         value: "false"
       - key: CORS_ORIGINS
         value: "*"
+      # Breach detection: Sentry DSN (real-time error/alert email) + an owner
+      # mobile for WhatsApp security alerts. Set both in the dashboard.
+      - key: SENTRY_DSN
+        sync: false
+      - key: OWNER_ALERT_MOBILE
+        sync: false
       - key: OPENAI_API_KEY
+        sync: false
+      - key: META_MODEL_API_KEY
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4o-mini

@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Alert, View} from 'react-native';
+import {Alert, Linking, View} from 'react-native';
 
 import {
   Button,
@@ -16,6 +16,7 @@ import {
   useVoiceSettingsStore,
 } from '@features/settings/store/voiceSettings.store';
 import {TextField} from '@components/form';
+import {GRIEVANCE} from '@config/constants';
 import {isValidUpiId} from '@features/collections/domain/upi';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {
@@ -31,6 +32,7 @@ import {
   useAppLockStore,
 } from '@features/security/store/appLock.store';
 import {useRestoreStore} from '@features/restore/store/restore.store';
+import {downloadMyData} from '@features/account/presentation/downloadMyData';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
@@ -173,6 +175,24 @@ export function SettingsScreen({
         },
       ],
     );
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const onDownloadData = async () => {
+    setExporting(true);
+    try {
+      const shared = await downloadMyData();
+      if (shared) {
+        Alert.alert(t('account.exportReadyTitle'), t('account.exportReadyMsg'));
+      }
+    } catch (e) {
+      Alert.alert(
+        t('account.exportErrorTitle'),
+        e instanceof Error ? e.message : t('ai.tryAgain'),
+      );
+    } finally {
+      setExporting(false);
+    }
   };
 
   const onLogout = () => {
@@ -380,6 +400,12 @@ export function SettingsScreen({
           onPress={() => navigation.navigate('Notifications')}
         />
         <Button
+          title={t('settings.privacyConsent')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('ConsentSettings')}
+        />
+        <Button
           title={t('settings.help')}
           variant="secondary"
           className="mt-3"
@@ -405,6 +431,72 @@ export function SettingsScreen({
             onPress={onRestoreData}
           />
         ) : null}
+
+        {/* Your data & privacy (self-service data rights) */}
+        <Text variant="label" className="mt-8 mb-3">
+          {t('account.section')}
+        </Text>
+        <Button
+          title={t('account.downloadData')}
+          variant="secondary"
+          className="mb-3"
+          loading={exporting}
+          onPress={onDownloadData}
+        />
+        {canManageSettings ? (
+          <Button
+            title={t('account.editBusiness')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('BusinessEdit')}
+          />
+        ) : null}
+        <Button
+          title={t('account.deleteAccount')}
+          variant="secondary"
+          onPress={() => navigation.navigate('DeleteAccount')}
+        />
+
+        {/* Privacy & Grievances — the DPDP data-protection / grievance contact,
+            deliberately separate from generic customer support (Help). */}
+        <Text variant="label" className="mt-8 mb-3">
+          {t('grievance.section')}
+        </Text>
+        <View className="rounded-2xl border border-border bg-white p-4">
+          <Text className="text-base font-semibold text-slate-900">
+            {GRIEVANCE.officerName}
+          </Text>
+          <Text variant="caption" className="mt-1 leading-5">
+            {t('grievance.desc')}
+          </Text>
+          <Text className="mt-2 text-sm font-medium text-primary">
+            {GRIEVANCE.email}
+          </Text>
+          <Button
+            title={t('grievance.contact')}
+            variant="secondary"
+            className="mt-3"
+            onPress={() =>
+              Linking.openURL(
+                `mailto:${GRIEVANCE.email}?subject=${encodeURIComponent(
+                  'Privacy / grievance — Smart CashBook',
+                )}`,
+              ).catch(() => {})
+            }
+          />
+        </View>
+        <Button
+          title={t('auth.privacy')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('LegalDoc', {doc: 'privacy'})}
+        />
+        <Button
+          title={t('auth.terms')}
+          variant="secondary"
+          className="mt-3"
+          onPress={() => navigation.navigate('LegalDoc', {doc: 'terms'})}
+        />
 
         <Button
           title={t('common.logout')}

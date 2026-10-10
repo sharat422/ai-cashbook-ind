@@ -1,12 +1,11 @@
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
+import {secureAuthStorage} from '@features/security/data/secureAuthStorage';
 import type {Business, User} from '@features/auth/types';
 import {
   DEFAULT_APP_LANGUAGE,
   type AppLanguage,
 } from '@features/auth/utils/languagePreference';
-
-import {keychainStorage} from './keychainStorage';
 
 /**
  * Where the user is in the authentication lifecycle. Drives which navigator
@@ -70,10 +69,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      // JWT lives in the OS secure store (Keychain/Keystore), never in
-      // plaintext AsyncStorage. See keychainStorage.ts for the failure and
-      // legacy-migration contract.
-      storage: createJSONStorage(() => keychainStorage),
+      // Keychain/Keystore-backed, not AsyncStorage — the JWT never touches the
+      // plaintext file system. Migrates legacy AsyncStorage sessions on first read.
+      storage: createJSONStorage(() => secureAuthStorage),
       // Only persist durable session data, never the hydration flag.
       partialize: ({token, user, business, preferredLanguage}) => ({
         token,

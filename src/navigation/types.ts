@@ -19,10 +19,12 @@ export interface ExpensePrefill {
 export type AuthStackParamList = {
   Login: undefined;
   Otp: {verificationId: string; mobile: string};
+  LegalDoc: {doc: 'privacy' | 'terms'};
 };
 
 /** Screens shown after login but before onboarding is complete. */
 export type OnboardingStackParamList = {
+  Consent: undefined;
   CreateBusiness: undefined;
 };
 
@@ -30,6 +32,10 @@ export type OnboardingStackParamList = {
 export type AppStackParamList = {
   Dashboard: undefined;
   Settings: undefined;
+  ConsentSettings: undefined;
+  BusinessEdit: undefined;
+  DeleteAccount: undefined;
+  LegalDoc: {doc: 'privacy' | 'terms'};
   Business: undefined;
   Assistant: undefined;
   Reports: undefined;
@@ -39,7 +45,6 @@ export type AppStackParamList = {
   ItemForm: {item?: Item} | undefined;
   Recurring: undefined;
   RecurringForm: {recurring?: RecurringExpense} | undefined;
-  SmsImport: undefined;
   Team: undefined;
   Diagnostics: undefined;
   Help: undefined;
@@ -61,7 +66,6 @@ export type AppStackParamList = {
   Customers: {search?: string} | undefined;
   CustomerProfile: {customer: Customer};
   CustomerForm: {customer?: Customer} | undefined;
-  DeleteAccount: undefined;
   AddCredit: {customer: Customer};
   CustomerStatement: {customer: Customer};
   RequestPayment: {customer: Customer};

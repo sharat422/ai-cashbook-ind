@@ -61,6 +61,7 @@ def customer_dto(m: Customer) -> dict:
 def ledger_dto(m: LedgerEntry) -> dict:
     return {
         "id": m.id,
+        "client_id": m.client_id,
         "type": m.type,
         "amount": m.amount,
         "date": m.date,
