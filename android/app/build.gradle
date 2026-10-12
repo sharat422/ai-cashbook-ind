@@ -101,8 +101,9 @@ android {
     defaultConfig {
         applicationId "com.syntaro.aismartcashbook"
         minSdkVersion rootProject.ext.minSdkVersion
-        // Play requires targetSdk 35 for new/updated apps as of Aug 2025.
-        targetSdkVersion 35
+        // Play requires targetSdk 36 (Android 16) for new apps and all updates
+        // as of Aug 31, 2026; a targetSdk 35 upload is rejected at submission.
+        targetSdkVersion 36
         // CI overrides these per build so every Play upload gets a unique,
         // increasing versionCode (pass -PversionCodeOverride / -PversionNameOverride).
         versionCode project.hasProperty('versionCodeOverride') ? project.property('versionCodeOverride').toString().toInteger() : 1
