@@ -72,12 +72,16 @@ export const useAuthStore = create<AuthState>()(
       // Keychain/Keystore-backed, not AsyncStorage — the JWT never touches the
       // plaintext file system. Migrates legacy AsyncStorage sessions on first read.
       storage: createJSONStorage(() => secureAuthStorage),
-      // Only persist durable session data, never the hydration flag.
-      partialize: ({token, user, business, preferredLanguage}) => ({
-        token,
-        user,
-        business,
-        preferredLanguage,
+      // Session is memory-only: every cold start requires a fresh OTP login.
+      // Business is re-fetched after login (useSyncBusiness). Only the language
+      // preference survives.
+      partialize: ({preferredLanguage}) => ({preferredLanguage}),
+      // Ignore token/user/business left in storage by older builds.
+      merge: (persisted, current) => ({
+        ...current,
+        preferredLanguage:
+          (persisted as Partial<AuthState> | undefined)?.preferredLanguage ??
+          current.preferredLanguage,
       }),
       onRehydrateStorage: () => state => {
         state?._setHydrated(true);
