@@ -9,7 +9,7 @@ deviation from *Expected* as a blocker. A [Production readiness sign-off](#38-pr
 checklist is at the end.
 
 > **Automated coverage runs first.** Before manual testing a build, run the
-> automated suites (they must be green): `npm test` (frontend Jest — **162**
+> automated suites (they must be green): `npm test` (frontend Jest — **169**
 > tests) and `cd backend && python -m pytest` (backend pytest — **214** tests,
 > +1 xfail). See [TESTING.md](TESTING.md). Manual testing verifies the
 > device/UX layer those suites can't reach.
@@ -22,8 +22,11 @@ checklist is at the end.
 |---|---|---|
 | 0.1 | App built with `API_BASE_URL=https://smart-cashbook-api.onrender.com` (see [.env.example](.env.example)) | App reaches the backend over HTTPS |
 | 0.2 | Backend awake: open `https://smart-cashbook-api.onrender.com/health` | `{"status":"ok"}` |
-| 0.3 | **Login is always enforced** — there is no auth bypass in this build. A fresh install opens on Splash → Login. | No shortcut into the app without a real token |
-| 0.4 | Fresh install (or logged out) | App opens on Splash → Login |
+| 0.3 | **Login is always enforced** — there is no auth bypass in this build. **Every cold start** (app fully closed, then reopened) opens on Splash → Login → OTP; the session is memory-only and never saved to disk. | No shortcut into the app without a fresh OTP |
+| 0.4 | Fresh install, logged out, or app swiped away and reopened | App opens on Splash → (first run only: Welcome carousel) → Login |
+| 0.6 | **Android device setup:** enable Developer options + USB debugging, `adb devices` shows the phone, install the build (`npm run android` for a debug build against Metro, or install the release APK/AAB from Codemagic / Play internal track). Targets Android SDK 36. | App installs and launches; no red-box / crash on open |
+| 0.7 | **Which build?** A `main` build = **production** backend (`DEBUG=false`, real OTP). A `dev` build = **staging** (master OTP `123456`). | Know this before testing auth |
+| 0.8 | Handy during testing: `adb logcat *:E ReactNativeJS:V` for JS errors; Settings → Diagnostics (§34) for the in-app error log. | |
 | 0.5 | Backend mode: production backend runs with `DEBUG=false` → **rate limiting is ON** and the master OTP is **not** accepted. A staging/dev backend runs with `DEBUG=true` → master OTP works, rate limiting off. | Know which backend you're pointed at before testing auth/limits |
 
 **Login credentials for testing (staging/DEBUG backend only):** any 10-digit
@@ -48,7 +51,11 @@ production backend you must use a number wired to a real OTP delivery channel.
 
 ### 1.1 Splash
 - **Steps:** Launch the app.
-- **Expected:** Branded splash (~1.5s), then routes to Login (no token), Onboarding (token, no business), or Dashboard (fully set up).
+- **Expected:** Branded splash (~1.5s), then — because the session is not persisted — always routes to **Login** (after the one-time Welcome carousel, §1.1a). Onboarding/Dashboard are only reachable *after* a successful OTP in this run.
+
+### 1.1a Welcome carousel (first run only)
+- **Steps:** Fresh install (or clear app data: Android Settings → Apps → Smart CashBook → Storage → Clear data) → launch.
+- **Expected:** 3 swipeable slides ("Your shop's khata, digital" / "Just speak or scan" / "Know your profit") with **Skip** (top-right) and **Next** → **Get started** on the last slide. Finishing or skipping lands on Login. Relaunching does **not** show the carousel again.
 
 ### 1.2 Mobile number validation
 - **Steps:** On Login, tap **Continue** empty; then letters; then `12345`; then `9876543210`.
@@ -82,21 +89,29 @@ production backend you must use a number wired to a real OTP delivery channel.
 - **Steps:** Log in with a brand-new number.
 - **Expected:** Routes to the **Consent** screen (§2.1) first, then **Create business** (§3), then Dashboard.
 
-### 1.10 Session persistence
-- **Steps:** Complete onboarding, close and reopen the app.
-- **Expected:** Opens directly on the Dashboard; no re-login. (Token now lives in the Keychain/Keystore, not plaintext — see §36.)
+### 1.10 OTP required on every app open (no persisted session) — *changed*
+- **Steps:** Log in with OTP and reach the Dashboard. **Swipe the app away** from Recents (full close) and reopen it. Repeat once more.
+- **Expected:** Each cold start shows Splash → **Login** (not Dashboard). You must request and enter a new OTP every time. No token/user/business is written to storage (only the language preference survives).
+- **Also check:** (a) Pressing Home and returning (app still alive in background) does **not** log you out. (b) After the OTP login, the Dashboard shows your existing business/data (business is re-fetched from the server — no Create Business screen, no data loss). (c) The Content-language you chose is still applied on the Login screen.
+- **Upgrading from an older build:** a user who was logged in before this update is asked for an OTP once on first launch (the old saved session is ignored).
+- **With App lock ON (§26):** cold start shows the PIN screen first, then Login → OTP. Both are required.
 
 ### 1.11 Logout
 - **Steps:** Dashboard/Settings → **Log out** → confirm.
-- **Expected:** Confirmation alert; on confirm returns to Login; reopening stays logged out.
+- **Expected:** Confirmation alert; on confirm returns to Login; reopening also lands on Login (as on every launch, §1.10).
 
 ### 1.12 Returning login pulls the existing business
 - **Steps:** Register a business, add data, log out, log in again with the **same** number.
-- **Expected:** Lands on **your** Dashboard with existing business/data — **not** Create Business. Holds for a same-session re-login (no restart), and the backend refuses to create a duplicate business.
+- **Expected:** Lands on **your** Dashboard with existing business/data — **not** Create Business. Holds for a same-session re-login (no restart) **and** after a full app close + reopen + OTP (§1.10), and the backend refuses to create a duplicate business.
 
 ### 1.13 Data is business-specific (no cross-account leak)
 - **Steps:** As user A add income/expenses/customers. Log out. Log in as a **different** number (user B) and onboard.
 - **Expected:** User B's Dashboard, activity, customers, notifications, UPI settings and drafts are **empty**. Logging back as A restores A's server data. Device-local caches (offline queues, drafts, UPI id) are cleared on logout/switch.
+
+### 1.14 Restore offer (returning user on a fresh install/device)
+- **Steps:** Log in with a number that already has server data, on a device/install with no local data (fresh install or Clear data).
+- **Expected:** After OTP, a **"Restore your data"** screen shows counts (Customers / Khata entries / Transactions) with **⬇️ Restore my data** and **Skip for now**. Restore shows step-by-step progress (customers → income → expense → done) and then the Dashboard. Offered **once per account per device** — later logins/launches skip it. Server unreachable → "Couldn't check your data" with **Retry** / **Continue without restoring**; interrupted restore → "Restore didn't finish" with Retry / Continue.
+- **Note:** Because login is required each launch, confirm this screen does **not** reappear on later OTP logins on the same device after you restored or skipped.
 
 ## 2. Consent capture (onboarding)
 
@@ -464,9 +479,9 @@ Gujarati, Bengali, Malayalam, Punjabi.
 - **Steps:** `ramesh paid 2000` → Read.
 - **Expected:** Customer **Ramesh**, Type **payment**, Amount **₹2,000**.
 
-### 17.5 Voice via keyboard mic
-- **Steps:** Tap the box → keyboard 🎤 → speak a transaction → Read.
-- **Expected:** Speech → text → parses as above. *(Requires the dictation language installed.)*
+### 17.5 Voice via in-app mic (Muse live transcribe; Whisper fallback) — *updated*
+- **Steps:** Pick a **Voice language**, tap the blue **🎤 Speak** button (grant microphone permission on first use), say a transaction, tap again (⏹ "Listening… tap to stop") to stop.
+- **Expected:** Live partial text appears while speaking (Muse streaming); on stop it shows "Transcribing…" and the final text lands in the box, then parses as above. If live streaming is unavailable the clip is uploaded and transcribed by the server (Whisper). Denying mic permission or no internet → "Voice is unavailable right now" and you can still **type**. If the build has no native audio module, the mic/language controls are hidden and typing works. Needs **AI consent ON** (§29) and internet.
 
 ### 17.6 Edit before saving
 - **Steps:** After parsing, change any field.
@@ -975,8 +990,8 @@ every rule (403); the app also hides what a role can't do.
 - **Expected:** The stricter auth per-IP budget trips **429** sooner than general endpoints — blunts OTP brute force / credential stuffing.
 
 ### 39.3 Secure token storage
-- **Steps:** (Code/QA verification) Confirm the JWT session is stored in the iOS Keychain / Android Keystore, not plaintext AsyncStorage.
-- **Expected:** Existing users updating from an older build are **not logged out** (one-time migration); a fresh login persists to the secure store. See [secureAuthStorage.ts](src/features/security/data/secureAuthStorage.ts).
+- **Steps:** (Code/QA verification) Confirm the JWT is **not** persisted at all: after OTP login, force-stop the app and reopen.
+- **Expected:** Always back at Login (§1.10) — the session lives in memory only. Users updating from an older build are asked for an OTP once (the old stored session is ignored). See [auth.store.ts](src/store/auth.store.ts). (`secureAuthStorage.ts` still backs the store but now holds only the language preference.)
 
 ### 39.4 TLS enforced
 - **Steps:** Confirm release builds refuse cleartext HTTP (Android network-security-config; iOS ATS).
@@ -1000,7 +1015,7 @@ every rule (403); the app also hides what a role can't do.
 
 ## Regression checklist (quick smoke)
 
-1. Login (`123456` on staging) → **Consent** → onboarding → Dashboard.
+1. Login (`123456` on staging) → **Consent** → onboarding → Dashboard. Then **swipe the app away and reopen → must land on Login and require OTP again** (§1.10).
 2. Add income + expense (today) → Dashboard figures update.
 3. Add a customer → add credit → receive payment → outstanding correct.
 4. Khata dashboard shows receivable/overdue; insights load.
@@ -1030,22 +1045,23 @@ every rule (403); the app also hides what a role can't do.
 
 Tick before shipping to production:
 
-- [ ] Automated suites green: `npm test` (162) and `pytest` (214).
+- [ ] Automated suites green: `npm test` (169) and `pytest` (214).
 - [ ] Pointed at the **production** backend (`DEBUG=false`): master OTP rejected, rate limiting active (§39.1–39.2).
 - [ ] Legal/company placeholders filled by counsel: company legal name, address, effective date, grievance officer name + email (§30.2 drift check passes).
 - [ ] Consent defaults verified: Marketing + AI **OFF** by default; AI gating works both directions (§29).
 - [ ] Data-rights flows verified end-to-end: download, correct, delete (with server-side deletion log) (§28).
-- [ ] Secure token storage confirmed; upgrade migration doesn't log users out (§39.3).
+- [ ] OTP required on every cold start; no session persisted; background→foreground doesn't log out (§1.10, §39.3).
 - [ ] TLS enforced in release; cert pinning decision made (ship disabled unless real CA pins are filled) (§39.4–39.5).
 - [ ] Crash reporting verified on backend + iOS + Android (§40).
 - [ ] App lock + biometric verified on a physical device (§26–§27).
 - [ ] Offline → sync → no-duplicate journey verified on a device (§25).
 - [ ] Roles enforced server-side (staff/accountant/owner) (§37).
+- [ ] Welcome carousel (§1.1a), Restore offer (§1.14) and in-app voice mic (§17.5) verified on a physical Android device.
 - [ ] Regression smoke checklist (all 23) passes on both iOS and Android.
 
 ---
 
 ### Automated coverage
 Much of the above logic is also covered by automated tests — run them before a
-release: `npm test` (frontend, **162**) and `cd backend && python -m pytest`
+release: `npm test` (frontend, **169**) and `cd backend && python -m pytest`
 (backend, **214** +1 xfail). See [TESTING.md](TESTING.md).
