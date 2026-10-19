@@ -4,7 +4,7 @@
 #                 Testing playground. DEBUG=true so testers log in with OTP 123456.
 #                 Its own throwaway Postgres. This is what current TestFlight builds hit.
 #
-#   • production  smart-cashbook-api-prod   → https://smart-cashbook-api-prod.onrender.com
+#   • production  smart-cashbook-api-prod   → https://ai-cashbook-ind.onrender.com
 #                 Real users. DEBUG=false (real auth — see note), Singapore region
 #                 (closer to India), its own separate Postgres so test data never
 #                 mixes with production data.
@@ -100,7 +100,7 @@ services:
         value: "91"
 
   # =========================================================================
-  # PRODUCTION — new URL (smart-cashbook-api-prod.onrender.com), Singapore region
+  # PRODUCTION — new URL (ai-cashbook-ind.onrender.com), Singapore region
   # =========================================================================
   - type: web
     name: smart-cashbook-api-prod

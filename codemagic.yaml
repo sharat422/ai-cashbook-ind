@@ -9,7 +9,7 @@
 #   * ios-staging        — signed IPA → TestFlight, wired to the STAGING backend
 #                          (smart-cashbook-api.onrender.com, master OTP 123456).
 #   * ios-production     — signed IPA → TestFlight, wired to the PRODUCTION backend
-#                          (smart-cashbook-api-prod.onrender.com).
+#                          (ai-cashbook-ind.onrender.com).
 #
 # android-production signing — create an encrypted variable GROUP named
 # `android_release_keystore` (Codemagic → app settings → Environment variables,
@@ -163,7 +163,7 @@ workflows:
         # CM_KEY_ALIAS, CM_KEY_PASSWORD — see the header notes.
         - android_release_keystore
       vars:
-        API_BASE_URL: "https://smart-cashbook-api-prod.onrender.com"
+        API_BASE_URL: "https://ai-cashbook-ind.onrender.com"
     # No caching — see the note on the `android` workflow (stale cache broke
     # react-native-config autolinking). Clean autolink every run is deterministic.
     scripts:
@@ -260,7 +260,7 @@ workflows:
     publishing: *ios_publishing
 
   # ==========================================================================
-  # iOS · PRODUCTION → TestFlight (smart-cashbook-api-prod.onrender.com)
+  # iOS · PRODUCTION → TestFlight (ai-cashbook-ind.onrender.com)
   # ==========================================================================
   ios-production:
     name: iOS · Production (TestFlight)
@@ -283,7 +283,7 @@ workflows:
         bundle_identifier: com.syntaro.aismartcashbook
       vars:
         <<: *ios_vars
-        API_BASE_URL: "https://smart-cashbook-api-prod.onrender.com"
+        API_BASE_URL: "https://ai-cashbook-ind.onrender.com"
     cache:
       cache_paths:
         - node_modules

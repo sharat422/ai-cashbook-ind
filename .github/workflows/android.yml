@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       STAGING_API_URL: https://smart-cashbook-api.onrender.com
-      PRODUCTION_API_URL: https://smart-cashbook-api-prod.onrender.com
+      PRODUCTION_API_URL: https://ai-cashbook-ind.onrender.com
 
     steps:
       - name: Check out repository

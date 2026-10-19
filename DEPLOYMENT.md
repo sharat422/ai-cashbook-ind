@@ -7,7 +7,7 @@ and real user data never mix (separate databases, separate `JWT_SECRET`).
 | --- | --- | --- |
 | **Git branch** | `dev` | `main` |
 | Backend service | `smart-cashbook-api` | `smart-cashbook-api-prod` |
-| URL | https://smart-cashbook-api.onrender.com | https://smart-cashbook-api-prod.onrender.com |
+| URL | https://smart-cashbook-api.onrender.com | https://ai-cashbook-ind.onrender.com |
 | Database | `smart-cashbook-db-staging` | `smart-cashbook-db-prod` |
 | Region | Oregon (US) | Singapore (near India) |
 | `DEBUG` | `true` (login with OTP `123456`) | `false` (real auth — see PRODUCTION_SETUP.md §7) |

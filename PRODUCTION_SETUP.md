@@ -20,7 +20,7 @@ data never mix. Each has its own web service, its own PostgreSQL, and its own
 | | **Staging** | **Production** |
 |---|---|---|
 | Service | `smart-cashbook-api` | `smart-cashbook-api-prod` |
-| URL | `https://smart-cashbook-api.onrender.com` | `https://smart-cashbook-api-prod.onrender.com` |
+| URL | `https://smart-cashbook-api.onrender.com` | `https://ai-cashbook-ind.onrender.com` |
 | Database | `smart-cashbook-db-staging` | `smart-cashbook-db-prod` |
 | Region | Oregon (US) | Singapore (near India) |
 | `DEBUG` | `true` (login with OTP `123456`) | `false` (real auth — see §7) |
@@ -37,7 +37,7 @@ time (via the "Seed .env" step), so you just pick the workflow:
 | Codemagic workflow | Builds against | Publishes |
 |---|---|---|
 | **`ios-staging`** | `https://smart-cashbook-api.onrender.com` | TestFlight |
-| **`ios-production`** | `https://smart-cashbook-api-prod.onrender.com` | TestFlight |
+| **`ios-production`** | `https://ai-cashbook-ind.onrender.com` | TestFlight |
 | `android` | staging (default) | APK artifact |
 
 Start a build in Codemagic → choose `ios-staging` (USA testing now) or
