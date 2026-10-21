@@ -39,7 +39,7 @@ production backend you must use a number wired to a real OTP delivery channel.
 
 > 🔐 **AI features are consent-gated.** Every AI feature (§14–§20) sends data to
 > an AI provider **only** if the user has turned **AI processing consent ON**
-> (it is **OFF by default** — see §22). With it off, pure-AI endpoints return a
+> (it is **pre-selected ON** for new users at onboarding — see §2.1 — and can be turned off any time in Settings, §29). With it off, pure-AI endpoints return a
 > "turn on AI processing" message and insights fall back to on-device heuristics.
 > Toggle it in Settings → Privacy & consent before testing the AI sections.
 
@@ -117,11 +117,11 @@ production backend you must use a number wired to a real OTP delivery channel.
 
 ### 2.1 Granular consent screen
 - **Steps:** As a new user, reach the Consent screen after OTP.
-- **Expected:** Three **independent** rows — **Core** (required, locked ON), **Marketing** (optional, **OFF** by default), **AI processing** (optional, **OFF** by default). Not a single bundled "I agree".
+- **Expected:** Three **independent** rows — **Core** (required, locked ON), **Marketing** (optional, **OFF** by default), **AI processing for insights** (optional, **pre-selected ON** for a first-time user; can be switched off before continuing). Not a single bundled "I agree".
 
 ### 2.2 Agree & continue
 - **Steps:** Leave optional toggles as-is (or toggle) → **Agree & continue**.
-- **Expected:** Choices saved server-side; proceeds to Create business. AI/marketing remain off unless you turned them on.
+- **Expected:** Choices saved server-side; proceeds to Create business. AI is saved ON (the default) unless you switched it off; marketing stays off unless you turned it on.
 
 ### 2.3 Consent is skipped once satisfied
 - **Steps:** If you dropped off after consent but before business creation, log in again.
@@ -1048,7 +1048,7 @@ Tick before shipping to production:
 - [ ] Automated suites green: `npm test` (169) and `pytest` (214).
 - [ ] Pointed at the **production** backend (`DEBUG=false`): master OTP rejected, rate limiting active (§39.1–39.2).
 - [ ] Legal/company placeholders filled by counsel: company legal name, address, effective date, grievance officer name + email (§30.2 drift check passes).
-- [ ] Consent defaults verified: Marketing + AI **OFF** by default; AI gating works both directions (§29).
+- [ ] Consent defaults verified: Marketing **OFF** and AI **pre-selected ON** by default; AI gating works both directions (§29).
 - [ ] Data-rights flows verified end-to-end: download, correct, delete (with server-side deletion log) (§28).
 - [ ] OTP required on every cold start; no session persisted; background→foreground doesn't log out (§1.10, §39.3).
 - [ ] TLS enforced in release; cert pinning decision made (ship disabled unless real CA pins are filled) (§39.4–39.5).

@@ -18,8 +18,9 @@ import type {OnboardingScreenProps} from '@navigation/types';
 
 /**
  * Onboarding step: capture GRANULAR consent before the business is created.
- * Core is required (locked on); marketing and AI are optional and off by
- * default. If the user already satisfied the required consent under the current
+ * Core is required (locked on); marketing is optional and off by default. AI
+ * processing is pre-selected for first-time users (still a visible toggle they
+ * can switch off before agreeing); a prior explicit choice is always respected. If the user already satisfied the required consent under the current
  * policy (e.g. they dropped off after this step), we skip straight ahead.
  */
 export function ConsentScreen({
@@ -30,7 +31,7 @@ export function ConsentScreen({
   const update = useUpdateConsents();
 
   const [marketing, setMarketing] = useState(false);
-  const [ai, setAi] = useState(false);
+  const [ai, setAi] = useState(true);
 
   // Seed optional toggles from any prior choice; skip the step entirely if the
   // required consent is already recorded for the current policy version.
@@ -44,7 +45,9 @@ export function ConsentScreen({
       !!data.consents.find((c: ConsentState) => c.purpose === 'marketing')
         ?.granted,
     );
-    setAi(!!data.consents.find((c: ConsentState) => c.purpose === 'ai')?.granted);
+    const aiState = data.consents.find((c: ConsentState) => c.purpose === 'ai');
+    // Never decided → default ON; otherwise keep the user's earlier choice.
+    setAi(aiState?.updatedAt == null ? true : !!aiState.granted);
   }, [data, navigation]);
 
   const onAgree = () => {
