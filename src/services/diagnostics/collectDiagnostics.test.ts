@@ -1,4 +1,5 @@
 import {collectDiagnostics, formatDiagnostics} from './collectDiagnostics';
+import {APP_CONFIG} from '@config/constants';
 import {useErrorLogStore} from './errorLog.store';
 
 beforeEach(() => useErrorLogStore.setState({entries: []}));
@@ -23,7 +24,7 @@ describe('collectDiagnostics', () => {
 
   it('formatDiagnostics renders a readable block for the email fallback', () => {
     const text = formatDiagnostics(collectDiagnostics());
-    expect(text).toContain('Smart CashBook');
+    expect(text).toContain(APP_CONFIG.name);
     expect(text).toContain('Platform:');
   });
 });
