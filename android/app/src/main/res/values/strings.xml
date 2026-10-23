@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Smart CashBook</string>
+    <string name="app_name">Bolcash</string>
     <!-- react-native-config finds BuildConfig via getPackageName() (= applicationId
          com.syntaro.aismartcashbook) unless this points it at the namespace, where
          BuildConfig actually lives. Without it, Config.* is empty at runtime and the

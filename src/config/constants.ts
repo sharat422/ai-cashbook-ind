@@ -4,7 +4,7 @@
  */
 
 export const APP_CONFIG = {
-  name: 'bolcash',
+  name: 'Bolcash',
   /** User-facing app version (keep in step with the iOS/Android build number). */
   version: '1.0.0',
   /** How long the splash screen stays visible while bootstrapping (ms). */

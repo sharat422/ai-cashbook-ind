@@ -102,5 +102,5 @@ export function UnlockScreen(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   // Opaque so the app underneath is fully hidden while locked.
-  fill: {backgroundColor: '#F8FAFC', zIndex: 1000, elevation: 1000},
+  fill: {backgroundColor: '#F5F6FF', zIndex: 1000, elevation: 1000},
 });

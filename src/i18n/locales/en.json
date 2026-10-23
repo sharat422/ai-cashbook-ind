@@ -397,7 +397,7 @@
   "feedback.failedOffline": "You seem to be offline. Send it by email instead?",
   "feedback.failedTitle": "Couldn’t send",
   "feedback.idea": "💡 Feedback",
-  "feedback.ideaPlaceholder": "What would make Smart CashBook better for you?",
+  "feedback.ideaPlaceholder": "What would make Bolcash better for you?",
   "feedback.send": "Send",
   "feedback.subtitle": "Tell us what happened — a little detail helps us fix it faster.",
   "feedback.thanksMsg": "We’ve received your message and will look into it.",
@@ -430,7 +430,7 @@
   "help.reportProblem": "🐞 Report a problem",
   "help.subtitle": "Quick answers, or reach us directly.",
   "help.title": "Help & support",
-  "help.waPrefill": "Hi, I need help with Smart CashBook.",
+  "help.waPrefill": "Hi, I need help with Bolcash.",
   "income.addedMsg": "Your income entry has been recorded.",
   "income.addedTitle": "Income added",
   "income.attachmentHint": "Optional — attach a receipt photo",
@@ -680,7 +680,7 @@
   "txn.vendorLabel": "Vendor / payee",
   "txn.vendorPlaceholder": "Who was paid? (optional)",
   "unlock.incorrect": "Incorrect PIN. Try again.",
-  "unlock.subtitle": "Smart CashBook is locked. Enter your {n}-digit PIN to continue.",
+  "unlock.subtitle": "Bolcash is locked. Enter your {n}-digit PIN to continue.",
   "unlock.title": "Enter your PIN",
   "unlock.useBiometrics": "Use biometrics"
 }

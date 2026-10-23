@@ -680,7 +680,7 @@
   "txn.vendorLabel": "കച്ചവടക്കാരൻ / പേയിയ",
   "txn.vendorPlaceholder": "ആരെക്കോ പണം കൊടുത്തു? (ഐച്ഛികം)",
   "unlock.incorrect": "PIN തെറ്റാണ്. വീണ്ടും ശ്രമിക്കുക.",
-  "unlock.subtitle": "Smart CashBook പൂട്ടിയിരിക്കുന്നു. തുടരാൻ നിങ്ങളുടെ {n}-അക്കങ്ങളുള്ള PIN നൽകുക.",
+  "unlock.subtitle": "Bolcash പൂട്ടിയിരിക്കുന്നു. തുടരാൻ നിങ്ങളുടെ {n}-അക്കങ്ങളുള്ള PIN നൽകുക.",
   "unlock.title": "PIN നൽകുക",
   "unlock.useBiometrics": "ബയോമെട്രിക്സ് ഉപയോഗിക്കുക"
 }
