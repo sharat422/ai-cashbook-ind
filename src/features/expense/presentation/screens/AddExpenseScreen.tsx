@@ -267,6 +267,7 @@ export function AddExpenseScreen({
             error={form.errors.notes}
             hint={t('form.notesHint')}>
             <NotesInput
+              maxLength={5000}
               value={form.values.notes}
               onChange={value => form.setField('notes', value)}
               error={form.errors.notes}

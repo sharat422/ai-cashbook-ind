@@ -1,7 +1,13 @@
 import React, {useEffect, useState} from 'react';
 import {Image, View} from 'react-native';
 
-import {AmountInput, ChipSelect, DateField, TextField} from '@components/form';
+import {
+  AmountInput,
+  ChipSelect,
+  DateField,
+  NotesInput,
+  TextField,
+} from '@components/form';
 import {Button, ErrorState, Screen, Text} from '@components/ui';
 import {
   EXPENSE_CATEGORIES,
@@ -17,6 +23,7 @@ import type {AppScreenProps} from '@navigation/types';
 import {toISODate} from '@utils/date';
 
 interface CorrectedFields {
+  receiptText: string;
   vendor: string;
   invoiceNumber: string;
   gstNumber: string;
@@ -34,7 +41,7 @@ function composeNotes(f: CorrectedFields): string {
   if (!Number.isNaN(f.taxAmount) && f.taxAmount > 0) {
     parts.push(`Tax: ₹${f.taxAmount}`);
   }
-  return parts.join(' · ');
+  return [...parts, f.receiptText.trim()].filter(Boolean).join('\n');
 }
 
 /**
@@ -61,6 +68,7 @@ export function ReceiptReviewScreen({
   useEffect(() => {
     if (!extraction) return;
     setFields({
+      receiptText: extraction.receiptText.value,
       vendor: extraction.vendorName.value,
       invoiceNumber: extraction.invoiceNumber.value,
       gstNumber: extraction.gstNumber.value,
@@ -164,6 +172,17 @@ export function ReceiptReviewScreen({
 
         <View className="mt-6" style={{gap: 18}}>
           <ExtractedFieldRow
+            label={t('receipt.fullText')}
+            confidence={extraction.receiptText.confidence}>
+            <NotesInput
+              value={fields.receiptText}
+              onChange={v => update('receiptText', v)}
+              maxLength={5000}
+              placeholder={t('receipt.fullTextHint')}
+            />
+          </ExtractedFieldRow>
+
+          <ExtractedFieldRow
             label={t('receipt.vendorName')}
             confidence={extraction.vendorName.confidence}>
             <TextField
@@ -194,10 +213,7 @@ export function ReceiptReviewScreen({
           <ExtractedFieldRow
             label={t('form.date')}
             confidence={extraction.date.confidence}>
-            <DateField
-              value={fields.date}
-              onChange={v => update('date', v)}
-            />
+            <DateField value={fields.date} onChange={v => update('date', v)} />
           </ExtractedFieldRow>
 
           <ExtractedFieldRow

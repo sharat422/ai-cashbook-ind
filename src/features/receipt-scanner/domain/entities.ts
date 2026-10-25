@@ -21,6 +21,7 @@ export interface ExtractedField<T> {
  * the UI can flag low-confidence values for review.
  */
 export interface ReceiptExtraction {
+  receiptText: ExtractedField<string>;
   vendorName: ExtractedField<string>;
   invoiceNumber: ExtractedField<string>;
   gstNumber: ExtractedField<string>;

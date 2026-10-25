@@ -9,6 +9,14 @@ const base: ExpenseDraft = {
 };
 
 describe('validateExpenseDraft', () => {
+  it('preserves receipt notes up to the server limit', () => {
+    expect(
+      validateExpenseDraft({...base, notes: 'x'.repeat(5000)}).notes,
+    ).toBeUndefined();
+    expect(
+      validateExpenseDraft({...base, notes: 'x'.repeat(5001)}).notes,
+    ).toBeTruthy();
+  });
   it('accepts a quick entry with no vendor (only amount required)', () => {
     expect(validateExpenseDraft(base)).toEqual({});
   });
@@ -26,7 +34,11 @@ describe('validateExpenseDraft', () => {
   });
 
   it('caps vendor length when one is provided', () => {
-    expect(validateExpenseDraft({...base, vendor: 'x'.repeat(81)}).vendor).toBeTruthy();
-    expect(validateExpenseDraft({...base, vendor: 'Kirana Store'}).vendor).toBeUndefined();
+    expect(
+      validateExpenseDraft({...base, vendor: 'x'.repeat(81)}).vendor,
+    ).toBeTruthy();
+    expect(
+      validateExpenseDraft({...base, vendor: 'Kirana Store'}).vendor,
+    ).toBeUndefined();
   });
 });

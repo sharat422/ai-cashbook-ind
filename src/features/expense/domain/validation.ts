@@ -39,8 +39,8 @@ export function validateExpenseDraft(draft: ExpenseDraft): ExpenseFieldErrors {
     errors.vendor = 'Vendor must be 80 characters or fewer';
   }
 
-  if (draft.notes && draft.notes.length > 280) {
-    errors.notes = 'Notes must be 280 characters or fewer';
+  if (draft.notes && draft.notes.length > 5000) {
+    errors.notes = 'Notes must be 5000 characters or fewer';
   }
 
   return errors;

@@ -536,6 +536,8 @@
   "receipt.scanningTitle": "Scanning receipt…",
   "receipt.takePhoto": "📷 Take photo",
   "receipt.tapToEdit": "Tap any field to edit. Confidence is shown per field.",
+  "receipt.fullText": "All receipt details",
+  "receipt.fullTextHint": "Review items, quantities, prices, taxes and payment details",
   "receipt.taxAmount": "Tax amount",
   "receipt.vendorName": "Vendor name",
   "receipt.vendorPlaceholder": "Vendor / payee",
