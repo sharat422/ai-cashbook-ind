@@ -148,7 +148,7 @@ def _heuristic_amount(text: str) -> float | None:
 # Tokens that are never a customer name (verbs, fillers, units, numbers).
 _NAME_STOPWORDS = {
     "gave", "give", "given", "sold", "sell", "sells", "paid", "pay", "pays",
-    "received", "receive", "got", "get", "gets", "took", "take",
+    "received", "receive", "got", "get", "gets", "took", "take", "owe", "owes",
     "to", "from", "for", "the", "a", "an", "of", "and", "on", "in", "at",
     "rs", "rupees", "rupee", "inr", "money", "amount", "cash",
     "ka", "ki", "ke", "ko", "se", "ne", "ku", "mera", "meri",
@@ -180,7 +180,7 @@ def _heuristic_name(text: str) -> str | None:
                 return tokens[i + 1].capitalize()
     # 3) English SVO: name precedes the verb ("ramesh paid…", "ramesh gave…").
     for i, w in enumerate(low):
-        if w in ("paid", "pays", "gave", "received", "got") and i > 0:
+        if w in ("paid", "pays", "gave", "received", "got", "owes") and i > 0:
             if _is_name(tokens[i - 1]):
                 return tokens[i - 1].capitalize()
     # 4) First name-like token as a last resort.
@@ -190,20 +190,37 @@ def _heuristic_name(text: str) -> str | None:
     return None
 
 
-def _heuristic_txn_category(text_for_cat: str, kind: str) -> str:
+def _for_item(text: str) -> str | None:
+    """The item word after "for" ("…500 for groceries" -> "Groceries")."""
     import re
 
-    m = re.search(r"\bfor\s+([A-Za-z][A-Za-z]+)", text_for_cat, re.IGNORECASE)
-    if m:
-        return m.group(1).capitalize()
-    return "Payment" if kind == "payment" else "Sale"
+    m = re.search(r"\bfor\s+([A-Za-z][A-Za-z]+)", text, re.IGNORECASE)
+    return m.group(1).capitalize() if m else None
+
+
+def _heuristic_txn_category(text_for_cat: str, kind: str) -> str:
+    return _for_item(text_for_cat) or ("Payment" if kind == "payment" else "Sale")
+
+
+# Explicit English direction rules, matched as whole words before the looser
+# multilingual substring hints ("paid" must not fire on "unpaid", "mile" on
+# "smile"). Payment wins when both appear: "X paid for what I gave".
+_EN_PAYMENT_RE = r"\b(paid|pays|received|got\b.*\bfrom)\b"
+_EN_CREDIT_RE = r"\b(gave|give|given|sold|on credit|owes?)\b"
 
 
 def _heuristic_parse(text: str, today: str) -> dict:
+    import re
+
     low = text.lower()
-    is_payment = any(h in low for h in _PAYMENT_HINTS) and not any(
-        h in low for h in ("maal", "udhaar", "udhar", "diya")
-    )
+    if re.search(_EN_PAYMENT_RE, low):
+        is_payment = True
+    elif re.search(_EN_CREDIT_RE, low):
+        is_payment = False
+    else:
+        is_payment = any(h in low for h in _PAYMENT_HINTS) and not any(
+            h in low for h in ("maal", "udhaar", "udhar", "diya")
+        )
     kind = "payment" if is_payment else "credit"
     return {
         "customer_name": _heuristic_name(text),
@@ -232,7 +249,8 @@ def _normalize_parsed(data: dict, text: str, today: str) -> dict:
         "customer_name": (str(name).strip() or None) if name else None,
         "type": kind,
         "amount": amount,
-        "category": data.get("category")
+        # The "for X" item word is unambiguous, so it beats the model's label.
+        "category": _for_item(text) or data.get("category")
         or ("Payment" if kind == "payment" else "Sale"),
         "date": date,
         "confidence": 0.85,
@@ -259,12 +277,30 @@ def parse_transaction(text: str, today: str) -> dict:
             "Return ONLY JSON with keys: customer_name (party name as written, or "
             "null), type ('credit' or 'payment'), amount (number in INR; convert "
             "words e.g. 'teen hazaar'=3000, 'do sau'=200, 'ek lakh'=100000; null "
-            "if none), category (short label like 'Sale' or 'Payment'), date "
-            "(YYYY-MM-DD).\n\n"
+            "if none), category (the item word after 'for', capitalized, e.g. "
+            "'for groceries' -> 'Groceries'; otherwise 'Sale' for credit or "
+            "'Payment' for payment), date (YYYY-MM-DD).\n\n"
+            "The speaker is always the shopkeeper.\n"
             "'credit' = the shopkeeper GAVE goods or lent money and the customer "
-            "now OWES (e.g. 'maal diya', 'udhaar diya', 'sold', 'gave').\n"
-            "'payment' = the shopkeeper RECEIVED money (e.g. 'mile', 'paisa aaya', "
-            "'received', 'paid me').\n"
+            "now OWES. English: 'gave X', 'give X', 'sold to X', 'on credit', "
+            "'X owes'. Hinglish: 'X ko ... maal diya', 'udhaar diya'.\n"
+            "'payment' = the shopkeeper RECEIVED money from the customer. English: "
+            "'X paid', 'received from X', 'got from X'. Hinglish: 'X se ... mile', "
+            "'paisa aaya'.\n"
+            "'gave X <amount>' is ALWAYS credit, never payment.\n\n"
+            "Examples:\n"
+            '"gave ramesh 500 for groceries" -> {"customer_name": "Ramesh", '
+            '"type": "credit", "amount": 500, "category": "Groceries"}\n'
+            '"ramesh paid 2000" -> {"customer_name": "Ramesh", "type": "payment", '
+            '"amount": 2000, "category": "Payment"}\n'
+            '"sold to Anil on credit 750 for cement" -> {"customer_name": "Anil", '
+            '"type": "credit", "amount": 750, "category": "Cement"}\n'
+            '"got 400 from suresh" -> {"customer_name": "Suresh", '
+            '"type": "payment", "amount": 400, "category": "Payment"}\n'
+            '"Ramesh ko 2500 ka maal diya" -> {"customer_name": "Ramesh", '
+            '"type": "credit", "amount": 2500, "category": "Sale"}\n'
+            '"Suresh se teen hazaar mile" -> {"customer_name": "Suresh", '
+            '"type": "payment", "amount": 3000, "category": "Payment"}\n\n'
             f"If no date is stated, use {today}.\n\n"
             f'Sentence: "{text}"'
         )
