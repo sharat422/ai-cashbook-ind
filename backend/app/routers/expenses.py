@@ -8,7 +8,7 @@ from ..rbac import DATA_VIEW, ENTRY_CREATE
 from ..models import Business, Expense
 from ..serializers import expense_dto
 from ..storage import save_upload
-from ..validation import validate_date, validate_text, validate_amount
+from ..validation import validate_amount, validate_date, validate_notes, validate_text
 
 router = APIRouter(tags=["expenses"])
 
@@ -41,11 +41,9 @@ def create_expense(
     amount = validate_amount(amount)
     vendor = validate_text(vendor, "Vendor", 200)
     category = validate_text(category, "Category", 60)
-    date = validate_date(date)
+    date = validate_date(date, allow_future=False)
     client_id = validate_text(client_id, "Client ID", 80)
-    if notes is not None and len(notes) > 5000:
-        from fastapi import HTTPException
-        raise HTTPException(422, "Notes must not exceed 5000 characters.")
+    notes = validate_notes(notes, 5000)
     existing = db.scalars(
         select(Expense).where(
             Expense.business_id == business.id, Expense.client_id == client_id

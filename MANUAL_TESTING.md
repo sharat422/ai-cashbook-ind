@@ -296,6 +296,7 @@ production backend you must use a number wired to a real OTP delivery channel.
 ### 9.2 Create customer
 - **Steps:** + Add → Full name, Mobile (required), optional GST/business name/address/notes → save.
 - **Expected:** Created; in the list; outstanding ₹0.
+- **Note:** Mobile is required by the app's form only. The API deliberately accepts an empty mobile because AI/voice entry creates name-only customers; a mobile that *is* sent must be a valid 10-digit number.
 
 ### 9.3 Search
 - **Steps:** Search by name / business / mobile.

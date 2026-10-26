@@ -74,7 +74,7 @@ def validate_mobile(
     return digits
 
 
-def validate_date(value: str) -> str:
+def validate_date(value: str, *, allow_future: bool = True) -> str:
     from datetime import date
     try:
         parsed = date.fromisoformat(value)
@@ -82,7 +82,17 @@ def validate_date(value: str) -> str:
         raise _reject("Date must be a valid YYYY-MM-DD date.")
     if parsed.isoformat() != value:
         raise _reject("Date must use YYYY-MM-DD format.")
+    if not allow_future:
+        from .calc import today_iso
+        if value > today_iso():
+            raise _reject("Date can't be in the future.")
     return value
+
+
+def validate_notes(notes: str | None, max_length: int) -> str | None:
+    if notes is not None and len(notes) > max_length:
+        raise _reject(f"Notes must be {max_length} characters or fewer.")
+    return notes
 
 
 def validate_text(value: str, field: str, max_length: int) -> str:

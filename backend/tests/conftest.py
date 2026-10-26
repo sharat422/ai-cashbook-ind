@@ -13,7 +13,7 @@ SQLite database — no cross-test bleed of incomes, customers, ledgers, etc.
 
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -64,12 +64,14 @@ MASTER_OTP = "123456"
 
 
 def today_iso() -> str:
-    """UTC 'today' — matches how the backend computes the current day."""
-    return datetime.now(timezone.utc).date().isoformat()
+    """IST 'today' — matches how the backend computes the current day."""
+    from app.calc import today_iso as _today
+    return _today()
 
 
 def days_ago_iso(n: int) -> str:
-    return (datetime.now(timezone.utc).date() - timedelta(days=n)).isoformat()
+    from app.calc import IST
+    return (datetime.now(IST).date() - timedelta(days=n)).isoformat()
 
 
 @pytest.fixture(scope="session")

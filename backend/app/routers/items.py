@@ -8,6 +8,7 @@ from ..deps import require
 from ..rbac import DATA_VIEW, SETTINGS_MANAGE
 from ..models import Business, Item
 from ..serializers import item_dto
+from ..validation import _reject
 
 router = APIRouter(tags=["items"])
 
@@ -22,6 +23,20 @@ class ItemBody(BaseModel):
     gst_rate: float = 0.0
     track_stock: bool = False
     stock_qty: float = 0.0
+
+
+# Rates the GST council actually uses (0.25% cut diamonds, 3% gold/silver).
+GST_RATES = {0, 0.25, 3, 5, 12, 18, 28}
+
+
+def _validated(body: ItemBody) -> dict:
+    if body.sale_price < 0:
+        raise _reject("Sale price can't be negative.")
+    if body.purchase_price < 0:
+        raise _reject("Purchase price can't be negative.")
+    if body.gst_rate not in GST_RATES:
+        raise _reject("GST rate must be one of 0, 0.25, 3, 5, 12, 18 or 28%.")
+    return body.model_dump()
 
 
 def _owned_item(db: Session, business: Business, item_id: str) -> Item:
@@ -78,7 +93,7 @@ def create_item(
     business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> dict:
-    row = Item(business_id=business.id, **body.model_dump())
+    row = Item(business_id=business.id, **_validated(body))
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -93,7 +108,7 @@ def update_item(
     db: Session = Depends(get_db),
 ) -> dict:
     item = _owned_item(db, business, item_id)
-    for key, value in body.model_dump().items():
+    for key, value in _validated(body).items():
         setattr(item, key, value)
     db.commit()
     db.refresh(item)

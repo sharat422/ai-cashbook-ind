@@ -9,12 +9,13 @@ classifier when no OpenAI key is set.
 import json
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import settings
+from .calc import IST
 from .models import Business, Customer, Expense, Income, LedgerEntry
 
 log = logging.getLogger("cashbook.assistant")
@@ -52,7 +53,7 @@ _PERIOD_LABEL = {
 
 
 def _today():
-    return datetime.now(timezone.utc).date()
+    return datetime.now(IST).date()
 
 
 def _inr(x: float) -> str:

@@ -32,7 +32,11 @@ def dashboard_summary(
     today_expense = sum(e.amount for e in expenses if e.date == today)
     month_revenue = sum(i.amount for i in incomes if i.date.startswith(month_prefix))
     month_expense = sum(e.amount for e in expenses if e.date.startswith(month_prefix))
-    cash_balance = sum(i.amount for i in incomes) - sum(e.amount for e in expenses)
+    # Future-dated rows (created before the server rejected them) haven't
+    # happened yet, so they don't count toward cash on hand.
+    cash_balance = sum(i.amount for i in incomes if i.date <= today) - sum(
+        e.amount for e in expenses if e.date <= today
+    )
 
     return {
         "today_income": today_income,

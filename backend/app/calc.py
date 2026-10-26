@@ -1,6 +1,6 @@
 """Date helpers and derived-field recomputation shared across aggregates."""
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,8 +10,13 @@ from .models import Customer, LedgerEntry
 OVERDUE_DAYS = 30
 
 
+# India Standard Time — fixed +05:30, no DST, so no tzdata dependency needed.
+IST = timezone(timedelta(hours=5, minutes=30), "IST")
+
+
 def today_iso() -> str:
-    return datetime.now(timezone.utc).date().isoformat()
+    """The business day as users see it (Asia/Kolkata), not UTC."""
+    return datetime.now(IST).date().isoformat()
 
 
 def parse_date(value: str | None) -> date | None:
@@ -27,7 +32,7 @@ def days_since(value: str | None) -> int:
     d = parse_date(value)
     if d is None:
         return 0
-    return (datetime.now(timezone.utc).date() - d).days
+    return (datetime.now(IST).date() - d).days
 
 
 def recompute_customer(db: Session, customer: Customer) -> None:
