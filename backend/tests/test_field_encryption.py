@@ -69,19 +69,20 @@ def test_roundtrip_and_legacy_plaintext_passthrough():
     assert decrypt("plain-legacy-text") == "plain-legacy-text"
 
 
-def test_legacy_plaintext_row_reads_through_orm():
+def test_legacy_plaintext_row_reads_through_orm(make_user):
     # Simulate a pre-encryption row by writing raw plaintext straight to the DB,
     # then reading it back through the ORM (which runs the decrypt path).
     cid = uuid.uuid4().hex
+    biz_id = make_user().business["id"]  # real parent row (Postgres enforces the FK)
     with SessionLocal() as s:
         s.execute(
             text(
                 "INSERT INTO customers (id, business_id, full_name, mobile, "
                 "address, outstanding_amount, is_overdue, created_at, updated_at, "
-                "version) VALUES (:id, 'b-legacy', 'Legacy', '7000009999', :addr, "
-                "0, 0, '2026-01-01', '2026-01-01', 1)"
+                "version) VALUES (:id, :biz, 'Legacy', '7000009999', :addr, "
+                "0, false, '2026-01-01', '2026-01-01', 1)"
             ),
-            {"id": cid, "addr": "Legacy Plain Address"},
+            {"id": cid, "biz": biz_id, "addr": "Legacy Plain Address"},
         )
         s.commit()
         got = s.get(Customer, cid)
