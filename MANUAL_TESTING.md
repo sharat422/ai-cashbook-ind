@@ -784,7 +784,7 @@ Open from Dashboard **🔁 Recurring**.
 
 ### 28.4 Delete account — warning & confirmation phrase
 - **Steps:** Your data & privacy → **Delete account**.
-- **Expected:** Red-titled screen listing exactly what's erased (business, transactions, customers, "irreversible"). The **Delete** button is **disabled** until you type the exact confirmation phrase.
+- **Expected:** Red-titled screen listing exactly what's erased (business, transactions, customers, "irreversible"). The **Delete** button is **disabled** until you type the exact confirmation phrase in capitals (`DELETE MY ACCOUNT`); lowercase `delete my account` keeps it disabled.
 
 ### 28.5 Delete account — execute
 - **Steps:** Type the confirmation phrase → **Delete** → confirm the final alert.
