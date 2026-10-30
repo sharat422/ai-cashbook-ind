@@ -253,6 +253,10 @@ workflows:
       # breaks RN 0.76.5's C++ (e.g. RNSVGLayoutableShadowNode.cpp).
       xcode: latest
       cocoapods: default
+      groups:
+        # Provides CERTIFICATE_PRIVATE_KEY (RSA key for the Apple Distribution
+        # certificate) used by "Set up iOS code signing".
+        - ios_signing
       vars:
         <<: *ios_vars
         API_BASE_URL: "https://smart-cashbook-api.onrender.com"
@@ -282,6 +286,10 @@ workflows:
       node: 18.20.4
       xcode: latest
       cocoapods: default
+      groups:
+        # Provides CERTIFICATE_PRIVATE_KEY (RSA key for the Apple Distribution
+        # certificate) used by "Set up iOS code signing".
+        - ios_signing
       vars:
         <<: *ios_vars
         API_BASE_URL: "https://ai-cashbook-ind.onrender.com"
