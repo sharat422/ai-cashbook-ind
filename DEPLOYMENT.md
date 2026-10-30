@@ -28,7 +28,9 @@ git push                      # → production backend redeploys
 ```
 
 - **Backend (Render)** auto-deploys on push: `dev` → staging, `main` → production
-  (wired via the `branch:` fields in `render.yaml`).
+  (wired via the `branch:` fields in `render.yaml`). Production waits until
+  **all** GitHub checks on the commit pass (`autoDeployTrigger: checksPass`);
+  staging deploys on every push.
 - **Mobile (Codemagic)** auto-builds on push via each workflow's `triggering`:
   `dev` → staging apps (`android`, `ios-staging`), `main` → production apps
   (`android-production`, `ios-production`, which upload to TestFlight/Play).
