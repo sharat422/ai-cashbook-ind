@@ -683,7 +683,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "gu": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -1369,7 +1371,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "hi": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2055,7 +2059,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "kn": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2741,7 +2747,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "ml": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -3427,7 +3435,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "mr": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -4113,7 +4123,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "pa": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -4799,7 +4811,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "ta": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -5485,7 +5499,9 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   },
   "te": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -6171,6 +6187,8 @@
     "grievance.contact": "0bf0a98fa0d6",
     "grievance.desc": "a09fca2ea119",
     "grievance.section": "92c51001d398",
-    "legal.language": "377a258a20bf"
+    "legal.language": "377a258a20bf",
+    "receipt.fullText": "08e4ae13610c",
+    "receipt.fullTextHint": "4f5b5eb0ed51"
   }
 }

@@ -526,6 +526,8 @@
   "receipt.errorMsg": "કૃપયા પસાર ફોટોથી ફરી પ્રયાસ કરો.",
   "receipt.errorTitle": "રસીદ વાંચી શક્યા નથી",
   "receipt.frameHint": "રસીદને સપાટ સપાટી પર સારા પ્રકાશ સાથે મૂકો અને આખો બિલ કેપચર કરો.",
+  "receipt.fullText": "રસીદની સંપૂર્ણ વિગતો",
+  "receipt.fullTextHint": "વસ્તુઓ, જથ્થો, કિંમતો, ટેક્સ અને ચુકવણીની વિગતો તપાસો",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "ઇનવોઇસ નંબર",
   "receipt.invoicePlaceholder": "ઇનવોઇસ / બિલ નંબર",

@@ -526,6 +526,8 @@
   "receipt.errorMsg": "ಸ್ಪಷ್ಟ ಫೋಟೋದೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   "receipt.errorTitle": "ರಸೀದಿ ಓದಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
   "receipt.frameHint": "ರಸೀದಿಯನ್ನು ಸಮತಟ್ಟಾದ ಮೇಲ್ಮೈಯಲ್ಲಿ ಚೆನ್ನಾಗಿ ಬೆಳಕಿನೊಂದಿಗೆ ಇರಿಸಿ ಮತ್ತು ಸಂಪೂರ್ಣ ಬಿಲ್ ಹಿಡಿಕ್ಕೆ ಮಾಡಿ.",
+  "receipt.fullText": "ರಸೀದಿಯ ಸಂಪೂರ್ಣ ವಿವರಗಳು",
+  "receipt.fullTextHint": "ವಸ್ತುಗಳು, ಪ್ರಮಾಣಗಳು, ಬೆಲೆಗಳು, ತೆರಿಗೆಗಳು ಮತ್ತು ಪಾವತಿ ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "ಸಾಲೆ ಸಂಖ್ಯೆ",
   "receipt.invoicePlaceholder": "ಸಾಲೆ / ಬಿಲ್ ಸಂಖ್ಯೆ.",

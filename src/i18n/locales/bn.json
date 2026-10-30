@@ -526,6 +526,8 @@
   "receipt.errorMsg": "অনুগ্রহ করে একটি স্পষ্টতর ছবির সাথে আবার চেষ্টা করুন।",
   "receipt.errorTitle": "রসিদ পড়তে পারেনি",
   "receipt.frameHint": "রসিদটি একটি সমতল পৃষ্ঠে রাখুন ভালো আলোতে এবং সম্পূর্ণ বিল ক্যাপচার করুন।",
+  "receipt.fullText": "রসিদের সম্পূর্ণ বিবরণ",
+  "receipt.fullTextHint": "পণ্য, পরিমাণ, দাম, কর এবং পেমেন্টের বিবরণ যাচাই করুন",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "ইনভয়েস নম্বর",
   "receipt.invoicePlaceholder": "ইনভয়েস / বিল নম্বর",

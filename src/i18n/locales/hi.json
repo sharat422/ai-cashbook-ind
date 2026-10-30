@@ -526,6 +526,8 @@
   "receipt.errorMsg": "कृपया स्पष्ट तस्वीर के साथ दोबारा कोशिश करें।",
   "receipt.errorTitle": "रसीद पढ़ नहीं सकी",
   "receipt.frameHint": "रसीद को समतल सतह पर रखें, अच्छी रोशनी में पूरा बिल कैप्चर करें।",
+  "receipt.fullText": "रसीद का पूरा विवरण",
+  "receipt.fullTextHint": "आइटम, मात्रा, कीमतें, टैक्स और भुगतान विवरण जांचें",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "इनवॉइस नंबर",
   "receipt.invoicePlaceholder": "इनवॉइस / बिल नंबर",

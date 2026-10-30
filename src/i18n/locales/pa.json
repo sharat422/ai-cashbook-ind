@@ -526,6 +526,8 @@
   "receipt.errorMsg": "ਕਿਰਪਾ ਕਰ ਕੇ ਇੱਕ ਸਾਫ਼-ਸੁਥਰੀ ਫ਼ੋਟੋ ਨਾਲ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   "receipt.errorTitle": "ਰਸੀਦ ਪੜ੍ਹਾ ਨਹੀਂ ਜਾ ਸਕਿਆ",
   "receipt.frameHint": "ਰਸੀਦ ਨੂੰ ਸਮਤਲ ਸਤ੍ਹਾ 'ਤੇ ਚੰਗੀ ਰੋਸ਼ਨੀ ਦੇ ਨਾਲ ਰਖੋ ਅਤੇ ਪੂਰਾ ਬਿੱਲ ਕੈਪਚਰ ਕਰੋ।",
+  "receipt.fullText": "ਰਸੀਦ ਦਾ ਪੂਰਾ ਵੇਰਵਾ",
+  "receipt.fullTextHint": "ਆਈਟਮਾਂ, ਮਾਤਰਾ, ਕੀਮਤਾਂ, ਟੈਕਸ ਅਤੇ ਭੁਗਤਾਨ ਵੇਰਵੇ ਜਾਂਚੋ",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "ਇਨਵਾਇਸ ਨੰਬਰ",
   "receipt.invoicePlaceholder": "ਇਨਵਾਇਸ / ਬਿੱਲ ਨੰ.",

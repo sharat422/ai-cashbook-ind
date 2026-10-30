@@ -526,6 +526,8 @@
   "receipt.errorMsg": "మరింత స్పష్టమైన ఫోటో ఉపయోగించి మళ్లీ ప్రయత్నించండి.",
   "receipt.errorTitle": "రిసీట్ చదవలేకపోయాం",
   "receipt.frameHint": "రిసీట్‌ను చదునైన ఉపరితలంపై ఉంచండి మరియు మంచి లైటింగ్‌తో మొత్తం బిల్ క్యాప్చర్ చేయండి.",
+  "receipt.fullText": "రసీదు పూర్తి వివరాలు",
+  "receipt.fullTextHint": "వస్తువులు, పరిమాణాలు, ధరలు, పన్నులు మరియు చెల్లింపు వివరాలను సమీక్షించండి",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "ఇన్‌వాయిస్ నంబర్",
   "receipt.invoicePlaceholder": "ఇన్‌వాయిస్ / బిల్ నం.",
