@@ -1,4 +1,3 @@
-import base64
 import json
 import logging
 
@@ -13,6 +12,7 @@ from ..ai import (
     categorize_text,
     parse_expense,
     parse_transaction,
+    prepare_receipt_image,
     scan_receipt,
     transcribe_audio,
 )
@@ -235,8 +235,9 @@ def scan(
     db: Session = Depends(get_db),
 ) -> dict:
     raw = receipt.file.read()
-    image_b64 = base64.b64encode(raw).decode("ascii")
-    media_type = receipt.content_type or "image/jpeg"
+    if not raw:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "The receipt photo was empty. Please retake it.")
+    image_b64, media_type = prepare_receipt_image(raw, receipt.content_type)
 
     result = scan_receipt(image_b64, media_type)
 

@@ -7,6 +7,10 @@ python-multipart==0.0.20
 PyJWT==2.10.1
 openai==1.59.6
 anthropic==0.42.0
+# Receipt photos are decoded, rotated, downsized and re-encoded as JPEG before
+# OCR (phone photos are often too large / HEIC for the vision API).
+pillow==11.0.0
+pillow-heif==0.21.0
 # HTTP client for outbound calls (WhatsApp Cloud API). Also pulled in by
 # openai/anthropic, but pinned explicitly since we import it directly.
 httpx==0.28.1
