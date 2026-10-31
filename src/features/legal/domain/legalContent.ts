@@ -47,7 +47,7 @@ const EN: Record<LegalKind, LegalDoc> = {
       {
         heading: 'Who we are',
         body: [
-          '{legalName} ("we", "us") operates the Smart CashBook app. This policy ' +
+          '{legalName} ("we", "us") operates the Bolcash app. This policy ' +
             "explains what personal data we handle and your rights under India's " +
             'Digital Personal Data Protection Act, 2023 (DPDP Act).',
           'Registered address: {address}. Effective date: {effectiveDate}.',
@@ -142,14 +142,14 @@ const EN: Record<LegalKind, LegalDoc> = {
       {
         heading: 'Acceptance',
         body: [
-          'By using Smart CashBook you agree to these Terms with {legalName}. ' +
+          'By using Bolcash you agree to these Terms with {legalName}. ' +
             'Effective date: {effectiveDate}.',
         ],
       },
       {
         heading: 'The service',
         body: [
-          'Smart CashBook helps small businesses in India record income, expenses ' +
+          'Bolcash helps small businesses in India record income, expenses ' +
             'and customer credit (khata), with optional AI-assisted entry.',
         ],
       },

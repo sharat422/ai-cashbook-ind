@@ -79,6 +79,19 @@ def test_delete_requires_exact_confirmation(user, client):
     assert client.get("/api/v1/account/export", headers=user.headers).status_code == 200
 
 
+def test_delete_rejects_lowercase_confirmation(user, client):
+    _seed(client, user.headers)
+    bad = client.request("DELETE", "/api/v1/account", headers=user.headers,
+                         json={"confirmation": DELETE_CONFIRMATION.lower()})
+    assert bad.status_code == 422
+    with SessionLocal() as s:
+        assert s.scalars(select(User).where(User.mobile == user.mobile)).first() is not None
+        assert s.scalars(
+            select(Business).where(Business.id == user.business["id"])).first() is not None
+        assert s.scalars(
+            select(Income).where(Income.business_id == user.business["id"])).first() is not None
+
+
 def test_delete_erases_all_data_and_logs_it(make_user, client):
     victim = make_user()
     other = make_user()  # must remain untouched

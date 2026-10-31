@@ -12,6 +12,7 @@ interface FieldDto<T> {
 
 /** Backend response shape (snake_case). */
 export interface ReceiptExtractionDto {
+  receipt_text?: FieldDto<string | null>;
   vendor_name: FieldDto<string | null>;
   invoice_number: FieldDto<string | null>;
   gst_number: FieldDto<string | null>;
@@ -48,6 +49,7 @@ export function toReceiptExtraction(
   dto: ReceiptExtractionDto,
 ): ReceiptExtraction {
   return {
+    receiptText: str(dto.receipt_text ?? {value: '', confidence: 0}),
     vendorName: str(dto.vendor_name),
     invoiceNumber: str(dto.invoice_number),
     gstNumber: str(dto.gst_number),

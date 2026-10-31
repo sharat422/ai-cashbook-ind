@@ -471,7 +471,7 @@ export function SettingsScreen({
             onPress={() =>
               Linking.openURL(
                 `mailto:${GRIEVANCE.email}?subject=${encodeURIComponent(
-                  'Privacy / grievance — Smart CashBook',
+                  'Privacy / grievance — Bolcash',
                 )}`,
               ).catch(() => {})
             }

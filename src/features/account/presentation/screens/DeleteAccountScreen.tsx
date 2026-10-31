@@ -24,7 +24,8 @@ export function DeleteAccountScreen({
   const [phrase, setPhrase] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  const confirmed = phrase.trim().toUpperCase() === DELETE_CONFIRMATION;
+  // Exact match (case-sensitive), same as the server.
+  const confirmed = phrase.trim() === DELETE_CONFIRMATION;
 
   const bullets = [
     t('account.deleteItem.business'),
@@ -43,7 +44,7 @@ export function DeleteAccountScreen({
         onPress: async () => {
           setDeleting(true);
           try {
-            await accountRemote.deleteAccount(phrase.trim().toUpperCase());
+            await accountRemote.deleteAccount(phrase.trim());
             // Data is gone and the token is now invalid — clear the session,
             // which sends the user back to the login screen.
             logout();

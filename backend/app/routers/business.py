@@ -3,13 +3,13 @@ daily digest, profit dashboard, month-over-month trends and a simple cash-flow
 forecast. All computed from income / expense / ledger data.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..calc import days_since
+from ..calc import IST, days_since
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW
@@ -19,7 +19,7 @@ router = APIRouter(tags=["business"])
 
 
 def _today():
-    return datetime.now(timezone.utc).date()
+    return datetime.now(IST).date()
 
 
 def _month_prefix(base, months_back: int) -> str:

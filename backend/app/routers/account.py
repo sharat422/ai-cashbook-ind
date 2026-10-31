@@ -115,7 +115,7 @@ def delete_account(
 ) -> dict:
     """Permanently delete the user and everything they own. Requires the exact
     confirmation phrase. Writes a PII-free deletion record for compliance."""
-    if body.confirmation.strip().upper() != DELETE_CONFIRMATION:
+    if body.confirmation.strip() != DELETE_CONFIRMATION:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f'Type "{DELETE_CONFIRMATION}" exactly to confirm deletion.',

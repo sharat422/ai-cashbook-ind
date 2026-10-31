@@ -31,11 +31,16 @@ def submit_feedback(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "Please describe the issue."
         )
+    if len(message) > 2000:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Feedback must be 2,000 characters or fewer.",
+        )
 
     row = Feedback(
         user_id=user.id,
         kind="bug" if body.kind == "bug" else "feedback",
-        message=message[:5000],
+        message=message,
         diagnostics=json.dumps(body.diagnostics or {})[:8000],
     )
     db.add(row)

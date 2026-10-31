@@ -430,7 +430,7 @@
   "help.reportProblem": "🐞 સમસ્યાની જાણ કરો",
   "help.subtitle": "ઝડપી જવાબો અથવા સીધો અમને પૌંચો.",
   "help.title": "સહાય અને સમર્થન",
-  "help.waPrefill": "હાય, મને Smart CashBook માટે સહાય જોઇતી છે.",
+  "help.waPrefill": "હાય, મને Bolcash માટે સહાય જોઇતી છે.",
   "income.addedMsg": "તમારી આવકની એન્ટ્રી રેકોર્ડ કરવામાં આવી છે.",
   "income.addedTitle": "આવક ઉમેરવામાં આવી",
   "income.attachmentHint": "વૈકલ્પિક — રસીદનો ફોટો જોડો",
@@ -526,6 +526,8 @@
   "receipt.errorMsg": "કૃપયા પસાર ફોટોથી ફરી પ્રયાસ કરો.",
   "receipt.errorTitle": "રસીદ વાંચી શક્યા નથી",
   "receipt.frameHint": "રસીદને સપાટ સપાટી પર સારા પ્રકાશ સાથે મૂકો અને આખો બિલ કેપચર કરો.",
+  "receipt.fullText": "રસીદની સંપૂર્ણ વિગતો",
+  "receipt.fullTextHint": "વસ્તુઓ, જથ્થો, કિંમતો, ટેક્સ અને ચુકવણીની વિગતો તપાસો",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "ઇનવોઇસ નંબર",
   "receipt.invoicePlaceholder": "ઇનવોઇસ / બિલ નંબર",
@@ -680,7 +682,7 @@
   "txn.vendorLabel": "વિક્રેતા / લાભાર્થી",
   "txn.vendorPlaceholder": "કોને પૈસા આપ્યા? (વૈકલ્પિક)",
   "unlock.incorrect": "PIN ખોટો છે. ફરી પ્રયાસ કરો.",
-  "unlock.subtitle": "Smart CashBook બંધ છે. આગળ વધવા માટે તમારો {n}-અંકનો PIN દાખલ કરો.",
+  "unlock.subtitle": "Bolcash બંધ છે. આગળ વધવા માટે તમારો {n}-અંકનો PIN દાખલ કરો.",
   "unlock.title": "તમારો PIN દાખલ કરો",
   "unlock.useBiometrics": "બાયોમેટ્રિક્સ વાપરો"
 }

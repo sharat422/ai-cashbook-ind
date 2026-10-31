@@ -27,12 +27,19 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    # Ask AI chatbot (app/chatbot): model for the tool-calling loop and the cap
+    # on tokens the model may generate per LLM call.
+    chatbot_model: str = "gpt-4o-mini"
+    chatbot_max_tokens: int = 300
     # Speech-to-text model for voice entry. whisper-1 auto-detects the spoken
     # language (Hindi/Telugu/Tamil/…); swap for gpt-4o-transcribe when preferred.
     openai_transcribe_model: str = "whisper-1"
 
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
+    # Used once if ANTHROPIC_MODEL returns 404 (retired or mistyped id), so
+    # receipt OCR keeps working while the config is fixed.
+    anthropic_fallback_model: str = "claude-sonnet-5-5"
 
     # --- Meta Model API — Muse Voice Transcribe (primary speech-to-text) ---
     # Voice entry transcribes via Muse first, falling back to OpenAI Whisper

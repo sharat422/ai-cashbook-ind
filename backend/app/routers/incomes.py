@@ -8,7 +8,7 @@ from ..rbac import DATA_VIEW, ENTRY_CREATE
 from ..models import Business, Income
 from ..serializers import income_dto
 from ..storage import save_upload
-from ..validation import validate_date, validate_text, validate_amount
+from ..validation import validate_amount, validate_date, validate_notes, validate_text
 
 router = APIRouter(tags=["incomes"])
 
@@ -39,11 +39,9 @@ def create_income(
 ) -> dict:
     amount = validate_amount(amount)
     category = validate_text(category, "Category", 60)
-    date = validate_date(date)
+    date = validate_date(date, allow_future=False)
     client_id = validate_text(client_id, "Client ID", 80)
-    if notes is not None and len(notes) > 5000:
-        from fastapi import HTTPException
-        raise HTTPException(422, "Notes must not exceed 5000 characters.")
+    notes = validate_notes(notes, 280)
     # Idempotency: a retried offline submission must not create a duplicate.
     existing = db.scalars(
         select(Income).where(

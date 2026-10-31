@@ -75,9 +75,12 @@ definitions:
         # App Store Connect integration if they don't exist yet.
         app-store-connect fetch-signing-files "$BUNDLE_ID"           --type IOS_APP_STORE           --create
         keychain add-certificates
+        # TESTFLIGHT_INTERNAL_ONLY is set per workflow: staging builds are for
+        # internal testers only; production builds can go to external testers
+        # and App Store review. Defaults to internal-only if unset.
         xcode-project use-profiles \
           --project "$CM_BUILD_DIR/ios/AISmartCashBook.xcodeproj" \
-          --custom-export-options='{"testFlightInternalTestingOnly": true}'
+          --custom-export-options="{\"testFlightInternalTestingOnly\": ${TESTFLIGHT_INTERNAL_ONLY:-true}}"
 
     - name: Increment iOS build number
       script: |
@@ -248,14 +251,18 @@ workflows:
       app_store_connect: AICashBook
     environment:
       node: 18.20.4
-      # Pin to an Xcode that RN 0.76.5 + its pods (Folly/RNSVG C++) compile
-      # against. "latest" resolves to Xcode 26.x, whose newer clang/libc++
-      # breaks RN 0.76.5's C++ (e.g. RNSVGLayoutableShadowNode.cpp).
+      # "latest" (Xcode 26.6 as of Oct 2026) builds RN 0.76.5 fine, and App
+      # Store Connect requires the Xcode 26 SDK for uploads, so don't pin older.
       xcode: latest
       cocoapods: default
+      groups:
+        # Provides CERTIFICATE_PRIVATE_KEY (RSA key for the Apple Distribution
+        # certificate) used by "Set up iOS code signing".
+        - ios_signing
       vars:
         <<: *ios_vars
         API_BASE_URL: "https://smart-cashbook-api.onrender.com"
+        TESTFLIGHT_INTERNAL_ONLY: "true"
     cache:
       cache_paths:
         - node_modules
@@ -282,9 +289,14 @@ workflows:
       node: 18.20.4
       xcode: latest
       cocoapods: default
+      groups:
+        # Provides CERTIFICATE_PRIVATE_KEY (RSA key for the Apple Distribution
+        # certificate) used by "Set up iOS code signing".
+        - ios_signing
       vars:
         <<: *ios_vars
         API_BASE_URL: "https://ai-cashbook-ind.onrender.com"
+        TESTFLIGHT_INTERNAL_ONLY: "false"
     cache:
       cache_paths:
         - node_modules

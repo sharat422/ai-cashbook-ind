@@ -35,6 +35,7 @@ def _mk_business(s: Session, *, with_active_owner: bool = True) -> Business:
         state="KA",
     )
     s.add(biz)
+    s.flush()  # Postgres enforces the FK: the business must exist before its member.
     if with_active_owner:
         s.add(BusinessMember(id=uuid.uuid4().hex, business_id=biz.id, user_id=uid, role="owner", status="active"))
     s.commit()

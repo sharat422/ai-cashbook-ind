@@ -12,14 +12,35 @@ import type {Attachment} from '@features/receipt-scanner/domain/entities';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
-function assetToAttachment(asset: Asset): Attachment | null {
+/** iOS often reports "image/jpg", which the OCR backend's vision API rejects. */
+export function normalizeImageType(type: string | undefined): string {
+  const t = (type ?? '').toLowerCase();
+  if (!t || t === 'image/jpg' || t === 'image/pjpeg') return 'image/jpeg';
+  return t;
+}
+
+export function assetToAttachment(asset: Asset): Attachment | null {
   if (!asset.uri) return null;
   return {
     uri: asset.uri,
     fileName: asset.fileName ?? `receipt_${Date.now()}.jpg`,
-    type: asset.type ?? 'image/jpeg',
+    type: normalizeImageType(asset.type),
   };
 }
+
+/**
+ * Receipts only need enough resolution to read the text. A full 12 MP camera
+ * shot is several MB — slow to upload on mobile data and over the vision
+ * model's size limit — so we downscale on device. "compatible" makes iOS hand
+ * us a JPEG instead of a HEIC from the gallery.
+ */
+const PHOTO_OPTIONS = {
+  mediaType: 'photo',
+  quality: 0.8,
+  maxWidth: 2000,
+  maxHeight: 2000,
+  assetRepresentationMode: 'compatible',
+} as const;
 
 /**
  * Step 1 of the scanner: capture a receipt photo (camera) or pick one from the
@@ -42,13 +63,13 @@ export function ReceiptCaptureScreen({
 
   const capture = () =>
     launchCamera(
-      {mediaType: 'photo', quality: 0.8, saveToPhotos: false},
+      {...PHOTO_OPTIONS, saveToPhotos: false},
       onResponse,
     );
 
   const pickFromGallery = () =>
     launchImageLibrary(
-      {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
+      {...PHOTO_OPTIONS, selectionLimit: 1},
       onResponse,
     );
 

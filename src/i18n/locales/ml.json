@@ -526,6 +526,8 @@
   "receipt.errorMsg": "കൂടുതൽ വ്യക്തമായ ഫോട്ടോ ഉപയോഗിച്ച് പ്രയാസം ചെയ്യുക.",
   "receipt.errorTitle": "രസീത് വായിക്കാൻ കഴിഞ്ഞില്ല",
   "receipt.frameHint": "രസീത് നിശ്ചലമായ പ്രതലത്തിൽ നല്ല പ്രകാശനം ഉപയോഗിച്ച് സമ്പൂർണ്ണ ബില് ക്യാപ്‌ചർ ചെയ്യുക.",
+  "receipt.fullText": "രസീതിന്റെ പൂർണ്ണ വിവരങ്ങൾ",
+  "receipt.fullTextHint": "ഇനങ്ങൾ, അളവുകൾ, വിലകൾ, നികുതികൾ, പേയ്‌മെന്റ് വിവരങ്ങൾ എന്നിവ പരിശോധിക്കുക",
   "receipt.gstPlaceholder": "GSTIN",
   "receipt.invoiceNumber": "ഇൻവോയ്സ് നമ്പർ",
   "receipt.invoicePlaceholder": "ഇൻവോയ്സ് / ബില് നമ്പർ",
@@ -680,7 +682,7 @@
   "txn.vendorLabel": "കച്ചവടക്കാരൻ / പേയിയ",
   "txn.vendorPlaceholder": "ആരെക്കോ പണം കൊടുത്തു? (ഐച്ഛികം)",
   "unlock.incorrect": "PIN തെറ്റാണ്. വീണ്ടും ശ്രമിക്കുക.",
-  "unlock.subtitle": "Smart CashBook പൂട്ടിയിരിക്കുന്നു. തുടരാൻ നിങ്ങളുടെ {n}-അക്കങ്ങളുള്ള PIN നൽകുക.",
+  "unlock.subtitle": "Bolcash പൂട്ടിയിരിക്കുന്നു. തുടരാൻ നിങ്ങളുടെ {n}-അക്കങ്ങളുള്ള PIN നൽകുക.",
   "unlock.title": "PIN നൽകുക",
   "unlock.useBiometrics": "ബയോമെട്രിക്സ് ഉപയോഗിക്കുക"
 }

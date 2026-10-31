@@ -90,7 +90,7 @@ export function HelpScreen({
           onPress={() =>
             Linking.openURL(
               `mailto:${SUPPORT.email}?subject=${encodeURIComponent(
-                'Smart CashBook support',
+                'Bolcash support',
               )}`,
             ).catch(() => {})
           }

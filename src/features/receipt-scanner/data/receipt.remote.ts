@@ -27,6 +27,16 @@ export const receiptRemote = {
       body: form,
       timeoutMs: ENV.receiptScanTimeoutMs,
     });
-    return toReceiptExtraction(dto);
+    const result = toReceiptExtraction(dto);
+    if (
+      !result.receiptText.value.trim() &&
+      !result.vendorName.value.trim() &&
+      !Number.isFinite(result.amount.value)
+    ) {
+      throw new Error(
+        'No receipt details could be read. Try a clearer photo or enter the expense manually.',
+      );
+    }
+    return result;
   },
 };

@@ -44,11 +44,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # RN 0.76.5 is known in this repository to fail with Xcode 26 native C++
-      # compilation. Xcode 16.2 remains installed on the macos-15 image and is
-      # pinned for this unsigned CI build.
-      - name: Select Xcode 16.2
-        run: sudo xcode-select --switch /Applications/Xcode_16.2.app/Contents/Developer
+      # Use the image's default Xcode: GitHub keeps its simulator runtime
+      # installed. (Pinning Xcode 16.2 broke with "iOS 18.2 Platform Not
+      # Installed" once the image dropped that runtime. Xcode 26 compiles
+      # RN 0.76.5 fine, as the Codemagic TestFlight builds show.)
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

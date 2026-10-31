@@ -1,4 +1,3 @@
-import base64
 import json
 import logging
 
@@ -6,13 +5,14 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from datetime import datetime, timezone
+from ..calc import today_iso
 
 from ..ai import (
     CASHBOOK_TRANSCRIBE_PROMPT,
     categorize_text,
     parse_expense,
     parse_transaction,
+    prepare_receipt_image,
     scan_receipt,
     transcribe_audio,
 )
@@ -104,7 +104,7 @@ def parse_transaction_route(
 ) -> dict:
     """Turn a spoken/typed sentence (any of several Indian languages) into a
     structured transaction: {customer_name, type, amount, category, date}."""
-    today = body.today or datetime.now(timezone.utc).date().isoformat()
+    today = body.today or today_iso()
     result = parse_transaction(body.text, today)
 
     db.add(AiDecision(
@@ -131,7 +131,7 @@ def voice_parse_route(
     auto-detects the language) then parse it into a structured transaction.
     Returns the parse result plus the raw `transcript` so the app can show what
     was heard for confirmation/editing before saving."""
-    day = today or datetime.now(timezone.utc).date().isoformat()
+    day = today or today_iso()
     transcript = _transcribe_or_raise(audio, language)
 
     result = parse_transaction(transcript, day)
@@ -181,7 +181,7 @@ def parse_expense_route(
 ) -> dict:
     """Extract a structured expense from typed/spoken text (any language),
     flagging uncertain fields for confirmation. Feeds the Add Expense form."""
-    today = body.today or datetime.now(timezone.utc).date().isoformat()
+    today = body.today or today_iso()
     result = parse_expense(body.text, today, language=body.language)
     _log_expense_decision(db, business, body.text, result)
     return result
@@ -199,7 +199,7 @@ def voice_parse_expense_route(
     """Transcribe spoken audio then extract a structured expense. Returns the
     parse result plus the raw `raw_transcript` so the app can show what was heard
     and let the user confirm the flagged fields before saving."""
-    day = today or datetime.now(timezone.utc).date().isoformat()
+    day = today or today_iso()
     transcript = _transcribe_or_raise(audio, language)
     result = parse_expense(transcript, day, language=language)
     _log_expense_decision(db, business, transcript, result)
@@ -235,8 +235,9 @@ def scan(
     db: Session = Depends(get_db),
 ) -> dict:
     raw = receipt.file.read()
-    image_b64 = base64.b64encode(raw).decode("ascii")
-    media_type = receipt.content_type or "image/jpeg"
+    if not raw:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "The receipt photo was empty. Please retake it.")
+    image_b64, media_type = prepare_receipt_image(raw, receipt.content_type)
 
     result = scan_receipt(image_b64, media_type)
 

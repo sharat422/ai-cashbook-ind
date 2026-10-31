@@ -24,7 +24,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <QueryProvider>
-        <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F6FF" />
         {/* Keep the offline queues syncing in the background. */}
         <OfflineSyncManager />
         <ExpenseSyncManager />

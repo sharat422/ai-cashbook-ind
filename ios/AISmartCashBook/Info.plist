@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Smart CashBook</string>
+	<string>Bolcash</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- Export compliance: the app only uses Apple-provided encryption (HTTPS
+	     and the iOS Keychain), which is exempt. Revisit if custom crypto is added. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -64,13 +68,13 @@
 		-->
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Smart CashBook needs camera access to scan receipts and attach photos to your transactions.</string>
+	<string>Bolcash needs camera access to scan receipts and attach photos to your transactions.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Smart CashBook uses the microphone so you can speak a transaction in your language and we turn it into an entry.</string>
+	<string>Bolcash uses the microphone so you can speak a transaction in your language and we turn it into an entry.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Smart CashBook needs photo library access to attach receipts and images to your transactions.</string>
+	<string>Bolcash needs photo library access to attach receipts and images to your transactions.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Smart CashBook needs permission to save generated statements to your photo library.</string>
+	<string>Bolcash needs permission to save generated statements to your photo library.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
