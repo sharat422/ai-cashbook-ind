@@ -37,6 +37,9 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
+    # Used once if ANTHROPIC_MODEL returns 404 (retired or mistyped id), so
+    # receipt OCR keeps working while the config is fixed.
+    anthropic_fallback_model: str = "claude-sonnet-5-5"
 
     # --- Meta Model API — Muse Voice Transcribe (primary speech-to-text) ---
     # Voice entry transcribes via Muse first, falling back to OpenAI Whisper
