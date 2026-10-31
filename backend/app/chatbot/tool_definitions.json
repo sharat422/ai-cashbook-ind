@@ -1,0 +1,84 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "get_business_summary",
+      "description": "Merchant's total outstanding (money customers owe), how many customers owe, total collected this month, and the split of this month's collections by payment method (cash, upi, ...). Use for 'kitna baaki hai', 'total udhaar', 'is mahine kitna aaya', 'cash vs UPI'.",
+      "parameters": {"type": "object", "properties": {}, "additionalProperties": false}
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_customer_balance",
+      "description": "Balance for ONE customer. Pass customer_name as the user said it, or customer_id if the user already picked one. Returns status found / ambiguous (several matches: ask the user which one) / not_found.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customer_name": {"type": "string", "description": "Customer name as spoken, e.g. 'Ramesh'."},
+          "customer_id": {"type": "string", "description": "Exact id of a customer the user picked."}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "list_recent_transactions",
+      "description": "Recent incomes, expenses and khata entries (credit = maal/udhaar diya, payment = paisa mila), newest first, with date, customer, amount and type.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "How many to return (default 10)."},
+          "days": {"type": "integer", "minimum": 1, "maximum": 365, "description": "Look back this many days including today (default 30)."}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_top_defaulters",
+      "description": "Customers who owe the most, biggest first, with since when (owing_since = oldest unpaid credit) and days_owing. Use for 'sabse zyada kaun deta hai', 'who owes me most', 'kiska paisa purana atka hai'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "How many customers (default 5)."}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_collections_summary",
+      "description": "Money collected from customers in a period: today, this_week (Monday to today) or this_month. Total, count and split by payment method.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "period": {"type": "string", "enum": ["today", "this_week", "this_month"]}
+        },
+        "required": ["period"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_customer",
+      "description": "Find every customer whose name contains the given text, with their ids and balances. Use when the user names someone and you need to see all matches.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "description": "Name or part of a name."}
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    }
+  }
+]

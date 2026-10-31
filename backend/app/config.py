@@ -27,6 +27,10 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    # Ask AI chatbot (app/chatbot): model for the tool-calling loop and the cap
+    # on tokens the model may generate per LLM call.
+    chatbot_model: str = "gpt-4o-mini"
+    chatbot_max_tokens: int = 300
     # Speech-to-text model for voice entry. whisper-1 auto-detects the spoken
     # language (Hindi/Telugu/Tamil/…); swap for gpt-4o-transcribe when preferred.
     openai_transcribe_model: str = "whisper-1"

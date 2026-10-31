@@ -1,0 +1,5 @@
+{
+  "_comment": "Fixed user-facing replies the server returns instead of a model answer.",
+  "unverified": "I couldn't verify that - please try again.",
+  "unavailable": "The assistant is unavailable right now. Please try again in a moment."
+}
