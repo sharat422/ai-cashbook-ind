@@ -53,11 +53,15 @@ def hello(user, **kwargs):
 def assert_sessions_closed(client):
     # TestClient.close enqueues a disconnect; wait for the server to handle it.
     async def wait_for_cleanup():
-        for _ in range(100):
+        import time
+        started = time.monotonic()
+        # Release now waits for the usage write (minutes before release), so
+        # allow up to 10 s; report how long it took if it never happens.
+        while time.monotonic() - started < 10:
             if not live._active:
                 return
             await asyncio.sleep(0.01)
-        assert not live._active
+        assert not live._active, f"session not released after {time.monotonic() - started:.1f}s"
     client.portal.call(wait_for_cleanup)
 
 

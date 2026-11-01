@@ -189,11 +189,17 @@ async def voice_live(client: WebSocket):
         except (RuntimeError, WebSocketDisconnect):
             pass
     finally:
-        try:
-            # Record minutes BEFORE releasing the session, so anything that sees
-            # the session as closed (a new session, the daily cap) also sees them.
-            if session is not None and usage["seconds"] > 0:
-                await asyncio.to_thread(_log_usage, *session, usage["seconds"])
-        finally:
-            if user_id is not None:
+        if user_id is not None:
+            try:
+                # Record minutes, THEN release the session. Synchronous on
+                # purpose: when the phone hangs up this task is cancelled, and an
+                # awaited write could be interrupted (or never start if the loop
+                # is closing), releasing the session before its minutes count.
+                # ponytail: one short blocking DB write per session end; move to
+                # a queue if session ends ever stall the event loop.
+                if session is not None and usage["seconds"] > 0:
+                    _log_usage(*session, usage["seconds"])
+            except Exception:  # noqa: BLE001 — never keep a session locked
+                log.warning("Could not record voice usage", exc_info=False)
+            finally:
                 _active.discard(user_id)
