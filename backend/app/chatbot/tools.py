@@ -261,13 +261,19 @@ def get_customer_balance(db: Session, merchant_id: str, customer_name: str | Non
 
 @tool(empty={"transactions": [], "from": None, "to": None})
 def list_recent_transactions(db: Session, merchant_id: str, limit: int | None = None,
-                             days: int | None = None) -> dict:
-    """Incomes, expenses and khata entries from the last `days` days, newest first.
+                             days: int | None = None, older_than_days: int | None = None) -> dict:
+    """Incomes, expenses and khata entries, newest first. Either the last `days`
+    days, or (older_than_days) everything dated at least that many days ago.
     `customer` is set for khata entries only (incomes/expenses have no customer)."""
     limit = _int(limit, 10, 1, MAX_LIMIT, "limit")
-    days = _int(days, 30, 1, MAX_DAYS, "days")
-    to = _today().isoformat()
-    frm = (_today() - timedelta(days=days - 1)).isoformat()
+    if older_than_days is not None:
+        cutoff = _int(older_than_days, 0, 0, 3650, "older_than_days")
+        to = (_today() - timedelta(days=cutoff)).isoformat()
+        frm = "0000-01-01"
+    else:
+        days = _int(days, 30, 1, MAX_DAYS, "days")
+        to = _today().isoformat()
+        frm = (_today() - timedelta(days=days - 1)).isoformat()
     rows = [
         {"id": i.id, "date": i.date, "type": "income", "amount": i.amount, "customer": None,
          "category": i.category, "_ts": i.created_at}
@@ -289,25 +295,37 @@ def list_recent_transactions(db: Session, merchant_id: str, limit: int | None = 
     rows.sort(key=lambda r: (r["date"], r["_ts"]), reverse=True)
     for r in rows:
         del r["_ts"]
-    return {"from": frm, "to": to, "total_found": len(rows), "transactions": rows[:limit]}
+    # "older than" has no real start date: report only the cutoff.
+    return {"from": None if older_than_days is not None else frm, "to": to,
+            "total_found": len(rows), "transactions": rows[:limit]}
 
 
 @tool(empty={"defaulters": []})
-def get_top_defaulters(db: Session, merchant_id: str, limit: int | None = None) -> dict:
-    """Customers who owe the most, with since when (oldest unpaid credit) and for how many days."""
+def get_top_defaulters(db: Session, merchant_id: str, limit: int | None = None,
+                       sort: str | None = None) -> dict:
+    """Customers who owe money with since when (oldest unpaid credit) and for how
+    many days. sort="amount" (default): biggest balance first; sort="oldest":
+    longest-owed first, so "whose debt is oldest" is simply the first row."""
     limit = _int(limit, 5, 1, MAX_LIMIT, "limit")
+    sort = sort or "amount"
+    if sort not in ("amount", "oldest"):
+        raise ToolError("sort must be one of: amount, oldest")
     today = _today()
-    owing = sorted((c for c in _customers(db, merchant_id) if _balance(c) > 0),
-                   key=_balance, reverse=True)
-    defaulters = []
-    for c in owing[:limit]:
-        since = _owing_since(db, c)
-        defaulters.append({
-            **_customer_brief(c),
-            "owing_since": since,
-            "days_owing": (today - date.fromisoformat(since)).days if since else None,
-        })
-    return {"as_of": today.isoformat(), "total_customers_owing": len(owing), "defaulters": defaulters}
+    rows = []
+    for c in _customers(db, merchant_id):
+        if _balance(c) > 0:
+            since = _owing_since(db, c)
+            rows.append({
+                **_customer_brief(c),
+                "owing_since": since,
+                "days_owing": (today - date.fromisoformat(since)).days if since else None,
+            })
+    if sort == "oldest":
+        rows.sort(key=lambda r: (r["owing_since"] or "9999-12-31", -r["balance"]))
+    else:
+        rows.sort(key=lambda r: r["balance"], reverse=True)
+    return {"as_of": today.isoformat(), "sort": sort, "total_customers_owing": len(rows),
+            "defaulters": rows[:limit]}
 
 
 @tool(empty={"total_collected": 0.0, "count": 0, "from": None, "to": None})
@@ -334,6 +352,31 @@ def search_customer(db: Session, merchant_id: str, name: str | None = None) -> d
         raise ToolError("name is required")
     return {"matches": [_customer_brief(c) for c in _customers(db, merchant_id)
                         if query in _norm(c.full_name)]}
+
+
+@tool(empty={"income_total": 0.0, "expense_total": 0.0, "from": None, "to": None})
+def get_cashbook_summary(db: Session, merchant_id: str, period: str | None = None) -> dict:
+    """Income (sales) and expenses recorded in the cashbook for today / this week
+    (Mon-today) / this month. Not the same as collections: collections are
+    payments from khata customers (get_collections_summary)."""
+    period = period or "this_month"
+    frm, to = _period_range(period)
+    incomes = db.scalars(select(Income).where(
+        Income.business_id == merchant_id, Income.date >= frm, Income.date <= to)).all()
+    expenses = db.scalars(select(Expense).where(
+        Expense.business_id == merchant_id, Expense.date >= frm, Expense.date <= to)).all()
+    income_total = _sum(i.amount for i in incomes)
+    expense_total = _sum(e.amount for e in expenses)
+    return {
+        "period": period,
+        "from": frm,
+        "to": to,
+        "income_total": income_total,
+        "income_count": len(incomes),
+        "expense_total": expense_total,
+        "expense_count": len(expenses),
+        "net": float(Decimal(str(income_total)) - Decimal(str(expense_total))),
+    }
 
 
 # ---------------------------------------------------------------------------

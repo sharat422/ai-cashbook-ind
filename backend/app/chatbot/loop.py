@@ -75,6 +75,15 @@ def numbers_in_text(text: str) -> set[Decimal]:
     return {d for d in (_dec(m) for m in _NUMBER.findall(text or "")) if d is not None}
 
 
+_LIST_MARKER = re.compile(r"(?m)^[ 	]*\d{1,2}[.)][ 	]+")
+
+
+def answer_numbers(text: str) -> set[Decimal]:
+    """Numbers in a model answer, ignoring numbered-list markers ("1. ", "2) ")
+    at the start of a line: list positions, not amounts."""
+    return numbers_in_text(_LIST_MARKER.sub("", text or ""))
+
+
 def numbers_in_results(value) -> set[Decimal]:
     """Numbers the tools actually returned: numeric fields, date parts and the
     visible digits of masked phones. Ids and names are ignored on purpose."""
@@ -161,13 +170,15 @@ def _details(calls: list[tuple[str, dict]], outcome: str) -> tuple[dict | None, 
                 period = {"from": r["month_from"], "to": r["month_to"]}
             elif r.get("as_of"):
                 period = {"as_of": r["as_of"]}
+            elif r.get("to") and "from" in r:  # "older than" search: up to the cutoff
+                period = {"as_of": r["to"]}
             elif r.get("status") == "found" or r.get("matches"):
                 period = {"as_of": _today().isoformat()}
         one = r.get("customer") if r.get("status") == "found" else (
             r["matches"][0] if len(r.get("matches") or []) == 1 else None)
         if one and one.get("customer_id"):
             view = {"screen": "CustomerProfile", "customer_id": one["customer_id"]}
-        elif view is None and name == "list_recent_transactions":
+        elif view is None and name in ("list_recent_transactions", "get_cashbook_summary"):
             view = {"screen": "TransactionHistory"}
         elif view is None and name in ("get_top_defaulters", "get_business_summary", "get_collections_summary"):
             view = {"screen": "KhataDashboard"}
@@ -290,14 +301,14 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
             llm_calls = 2
             model_answer = second.choices[0].message.content or ""
             allowed = numbers_in_results(results) | numbers_in_text(question)
-            ungrounded = numbers_in_text(model_answer) - allowed
+            ungrounded = answer_numbers(model_answer) - allowed
             outcome = "rejected_ungrounded" if (ungrounded or not model_answer.strip()) else "answered"
     else:
         model_answer = reply.content or ""
         # No tool was called, so nothing in the answer is backed by data or docs.
         # Numbers -> "couldn't verify" (phase 2 rule); anything else -> a fixed
         # reply about what the bot can do, so it can't invent a feature either.
-        invented = numbers_in_text(model_answer) - numbers_in_text(question)
+        invented = answer_numbers(model_answer) - numbers_in_text(question)
         outcome = "rejected_no_tool" if invented else "out_of_scope"
 
     if outcome == "not_in_help":

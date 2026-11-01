@@ -332,3 +332,21 @@ def test_number_extraction():
     assert numbers_in_text("₹1,99,999.50 on 2 Sep 2026") <= numbers_in_results([199999.5, "2026-09-02"])
     assert numbers_in_text("₹1,200") - numbers_in_results([1199.99]) == numbers_in_text("1200")
     assert numbers_in_results({"customer_id": "a1b2c3", "mobile_masked": "***3210"}) == numbers_in_text("3210")
+
+
+def test_numbered_lists_are_not_mistaken_for_invented_numbers(merchant, client, llm):
+    user, _, _ = merchant
+
+    def listing(messages):
+        top = _tool_results(messages)[0]["defaulters"]
+        lines = [f"{i}. {d['name']} ₹{d['balance']:,.2f}" for i, d in enumerate(top, 1)]
+        return _resp("\n".join(["Yeh customers dete hain:", *lines, "", "3. extra note"]))
+
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {"limit": 50})]), listing)
+    body = _ask(client, user, "sab customers jo paisa dete hain").json()
+    assert body["verified"] is True and "₹3,500.00" in body["answer_text"]
+
+    # An invented amount inside a numbered list is still caught.
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {"limit": 50})]),
+        _resp("1. TEST Ramesh ₹3,500.00\n2. TEST Ramesh Traders ₹9,999.00"))
+    assert _ask(client, user, "sab customers").json()["verified"] is False

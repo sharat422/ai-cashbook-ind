@@ -235,7 +235,7 @@ def test_every_call_is_audited_with_masked_names(merchant, caplog):
     assert "Ramesh" not in caplog.text and "9876543210" not in caplog.text
 
 
-def test_check_script_runs_all_six_tools(merchant, capsys):
+def test_check_script_runs_all_account_tools(merchant, capsys):
     from scripts.chatbot_tools_check import main
 
     mid, _ = merchant
@@ -244,3 +244,36 @@ def test_check_script_runs_all_six_tools(merchant, capsys):
     assert set(out) == set(ACCOUNT_TOOLS)
     assert out["get_business_summary"]["total_outstanding"] == 2800.1
     assert out["get_customer_balance"]["status"] == "ambiguous"
+
+
+def test_cashbook_summary_income_and_expenses(merchant, make_user):
+    from app.chatbot.tools import get_cashbook_summary
+
+    mid, _ = merchant
+    out = _call(get_cashbook_summary, mid, period="today")
+    assert (out["income_total"], out["expense_total"], out["net"]) == (10000.0, 2500.0, 7500.0)
+    assert (out["income_count"], out["expense_count"]) == (1, 1)
+    assert out["from"] == out["to"] == today_iso()
+    # Income is not collections (khata payments): 5300.1 must not leak in here.
+    assert 5300.1 not in out.values()
+    other = make_user().business["id"]
+    assert _call(get_cashbook_summary, other, period="today")["income_total"] == 0
+    assert "period" in _call(get_cashbook_summary, mid, period="yesterday")["error"]
+
+
+def test_defaulters_sorted_by_oldest_debt(merchant):
+    mid, _ = merchant
+    oldest = _call(get_top_defaulters, mid, sort="oldest")["defaulters"]
+    # Ramesh (since 10 days) before Ramesh Traders (since today).
+    assert [d["name"] for d in oldest] == ["TEST Ramesh", "TEST Ramesh Traders"]
+    assert oldest[0]["days_owing"] == 10
+    assert "sort" in _call(get_top_defaulters, mid, sort="newest")["error"]
+
+
+def test_transactions_older_than(merchant):
+    mid, _ = merchant
+    out = _call(list_recent_transactions, mid, older_than_days=30, limit=50)
+    assert out["from"] is None and out["to"] == days_ago_iso(30)
+    assert {(t["type"], t["amount"]) for t in out["transactions"]} == {("credit", 5000.0), ("credit", 300.0)}
+    assert all(t["date"] <= days_ago_iso(30) for t in out["transactions"])
+    assert _call(list_recent_transactions, mid, older_than_days=365)["transactions"] == []

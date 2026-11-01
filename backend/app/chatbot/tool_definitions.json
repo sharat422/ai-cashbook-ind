@@ -26,12 +26,13 @@
     "type": "function",
     "function": {
       "name": "list_recent_transactions",
-      "description": "Recent incomes, expenses and khata entries (credit = maal/udhaar diya, payment = paisa mila), newest first, with date, customer, amount and type.",
+      "description": "Incomes, expenses and khata entries (credit = maal/udhaar diya, payment = paisa mila) within the last `days` days, newest first, with date, customer, amount and type. For old entries ('older than 6 months', '200 din pehle') use days=365. The returned from/to are the SEARCH WINDOW, not transaction dates.",
       "parameters": {
         "type": "object",
         "properties": {
           "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "How many to return (default 10)."},
-          "days": {"type": "integer", "minimum": 1, "maximum": 365, "description": "Look back this many days including today (default 30)."}
+          "days": {"type": "integer", "minimum": 1, "maximum": 365, "description": "Look back this many days including today (default 30)."},
+          "older_than_days": {"type": "integer", "minimum": 0, "maximum": 3650, "description": "Instead of days: entries dated at least this many days ago ('older than 6 months' = 180, '200 din pehle ki entries' = 200)."}
         },
         "additionalProperties": false
       }
@@ -41,11 +42,12 @@
     "type": "function",
     "function": {
       "name": "get_top_defaulters",
-      "description": "Customers who owe the most, biggest first, with since when (owing_since = oldest unpaid credit) and days_owing. Use for 'sabse zyada kaun deta hai', 'who owes me most', 'kiska paisa purana atka hai'.",
+      "description": "Customers who owe money, biggest first, with since when (owing_since = oldest unpaid credit) and days_owing. Use for 'sabse zyada kaun deta hai', 'who owes me most', 'kiska paisa purana atka hai', and to LIST all customers who owe (set limit 50).",
       "parameters": {
         "type": "object",
         "properties": {
-          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "How many customers (default 5)."}
+          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "How many customers (default 5)."},
+          "sort": {"type": "string", "enum": ["amount", "oldest"], "description": "amount = biggest balance first (default); oldest = longest-owed first (for 'sabse purana udhaar', 'oldest dues')."}
         },
         "additionalProperties": false
       }
@@ -77,6 +79,21 @@
           "name": {"type": "string", "description": "Name or part of a name."}
         },
         "required": ["name"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_cashbook_summary",
+      "description": "Income (sales, aamdani) and expenses (kharcha) recorded in the cashbook for today, this_week (Monday to today) or this_month, with counts and net (income - expenses). Use for 'aaj kitni income/sale hui', 'is mahine kitna kharcha'. NOT collections: money received from khata customers is get_collections_summary.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "period": {"type": "string", "enum": ["today", "this_week", "this_month"]}
+        },
+        "required": ["period"],
         "additionalProperties": false
       }
     }
