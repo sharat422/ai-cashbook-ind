@@ -1,5 +1,30 @@
 {
-  "_comment": "Fixed user-facing replies the server returns instead of a model answer.",
+  "_comment": "Fixed user-facing replies the server returns instead of (or appends to) a model answer. Per-language entries are picked by language_hint (default hinglish).",
   "unverified": "I couldn't verify that - please try again.",
-  "unavailable": "The assistant is unavailable right now. Please try again in a moment."
+  "unavailable": "The assistant is unavailable right now. Please try again in a moment.",
+  "not_in_help": {
+    "hinglish": "Yeh help guide mein nahi hai. Aap Settings → 💬 Help & support se hamari team se baat kar sakte hain.",
+    "hi": "यह हेल्प गाइड में नहीं है। आप Settings → 💬 Help & support से हमारी टीम से बात कर सकते हैं।",
+    "en": "That's not in the help guide. You can reach our team from Settings → 💬 Help & support."
+  },
+  "out_of_scope": {
+    "hinglish": "Main aapke khate (balance, udhaar, collection, recent entries) aur Bolcash app ke use ke sawaalon mein madad kar sakta hoon. Kisi aur cheez ke liye Settings → 💬 Help & support se hamari team se baat kariye.",
+    "hi": "मैं आपके खाते (बैलेंस, उधार, कलेक्शन, हाल की एंट्री) और Bolcash ऐप के इस्तेमाल के सवालों में मदद कर सकता हूँ। किसी और चीज़ के लिए Settings → 💬 Help & support से हमारी टीम से बात करें।",
+    "en": "I can help with your account (balances, dues, collections, recent entries) and with using the Bolcash app. For anything else, reach our team from Settings → 💬 Help & support."
+  },
+  "limit_questions": {
+    "hinglish": "Is ghante ke sawaal poore ho gaye ({limit} per hour). Thodi der baad phir poochhiye.",
+    "hi": "इस घंटे के सवाल पूरे हो गए ({limit} प्रति घंटा)। थोड़ी देर बाद फिर पूछिए।",
+    "en": "You've reached this hour's limit of {limit} questions. Please try again a little later."
+  },
+  "limit_voice": {
+    "hinglish": "Aaj ke Ask AI voice minutes poore ho gaye ({minutes} min per day). Aap sawaal type kar sakte hain.",
+    "hi": "आज के Ask AI वॉइस मिनट पूरे हो गए ({minutes} मिनट प्रतिदिन)। आप सवाल टाइप कर सकते हैं।",
+    "en": "You've used today's {minutes} minutes of Ask AI voice. You can still type your question."
+  },
+  "next_step": {
+    "hinglish": "Kya main {screen} screen khol doon?",
+    "hi": "क्या मैं {screen} स्क्रीन खोल दूँ?",
+    "en": "Want me to open the {screen} screen?"
+  }
 }

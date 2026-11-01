@@ -1,4 +1,4 @@
-"""Run all six read-only chatbot tools for one merchant and print the results.
+"""Run all read-only chatbot account tools for one merchant and print the results.
 
 For checking the tools' numbers against the app by hand (phase 1 acceptance).
 It NEVER writes: it opens a session, the tools only SELECT, and it rolls back.
@@ -22,6 +22,7 @@ import sys
 
 from app.chatbot.tools import (
     get_business_summary,
+    get_cashbook_summary,
     get_collections_summary,
     get_customer_balance,
     get_top_defaulters,
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
             "list_recent_transactions": list_recent_transactions(db, mid, limit=args.limit, days=args.days),
             "get_top_defaulters": get_top_defaulters(db, mid, limit=args.limit),
             "get_collections_summary": get_collections_summary(db, mid, period=args.period),
+            "get_cashbook_summary": get_cashbook_summary(db, mid, period=args.period),
         }
         if args.customer:
             results["search_customer"] = search_customer(db, mid, name=args.customer)

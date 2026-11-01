@@ -19,7 +19,7 @@ from app.chatbot.tools import TOOLS
 from app.config import settings
 from app.crypto import decrypt
 from app.database import SessionLocal
-from app.models import AiDecision
+from app.models import AiDecision, User
 
 URL = "/api/v1/chatbot/ask"
 UNVERIFIED = MESSAGES["unverified"]
@@ -98,12 +98,19 @@ def test_who_owes_most_returns_real_top_defaulters(merchant, client, llm):
     r = _ask(client, user, "who owes me most?")
     assert r.status_code == 200, r.text
     body = r.json()
+    assert isinstance(body.pop("question_id"), str)
     assert body == {
         "answer_text": "Sabse zyada: TEST Ramesh ₹3,500.00 (10 din se); TEST Ramesh Traders ₹800.20 (0 din se).",
         "tools_used": ["get_top_defaulters"],
         "data_source": "database",
         "verified": True,
+        "blocked": None,
         "candidates": [],
+        "sources": [],
+        "suggested_screen": None,
+        # Date range and "View details" come from the tool result, not the model.
+        "period": {"as_of": today_iso()},
+        "view_details": {"screen": "KhataDashboard"},
     }
     # Exactly two LLM calls; the second can't call tools; tokens capped.
     assert len(fake.calls) == 2
@@ -141,16 +148,23 @@ def test_number_without_tool_call_is_rejected(merchant, client, llm):
     user, _, _ = merchant
     fake = llm(_resp("Your total outstanding is ₹4,300."))
     body = _ask(client, user, "total outstanding kitna hai?").json()
+    assert isinstance(body.pop("question_id"), str)
     assert body == {"answer_text": UNVERIFIED, "tools_used": [], "data_source": "none",
-                    "verified": False, "candidates": []}
+                    "verified": False, "blocked": None, "candidates": [], "sources": [],
+                    "suggested_screen": None, "period": None, "view_details": None}
     assert len(fake.calls) == 1
 
 
-def test_numberless_reply_without_tools_is_allowed(merchant, client, llm):
+def test_reply_without_tools_becomes_fixed_scope_message(merchant, client, llm):
+    # Nothing un-backed reaches the user: not a greeting, not an invented feature.
     user, _, _ = merchant
-    llm(_resp("Namaste! Main aapke khate ke sawaalon mein madad kar sakta hoon."))
+    llm(_resp("Haan, Bolcash aapke liye GST return file karta hai."))
     body = _ask(client, user, "hello").json()
+    assert body["answer_text"] == MESSAGES["out_of_scope"]["hinglish"]
     assert body["verified"] is True and body["data_source"] == "none"
+    llm(_resp("I can help with your account."))
+    body = _ask(client, user, "hello", language_hint="en").json()
+    assert body["answer_text"] == MESSAGES["out_of_scope"]["en"]
 
 
 def test_altered_amount_after_tool_call_is_rejected(merchant, client, llm):
@@ -242,8 +256,50 @@ def test_unavailable_without_key_or_on_provider_error(merchant, client, monkeypa
 
 # --- Logging ------------------------------------------------------------------
 
+def _set_history_consent(client, user, granted: bool):
+    r = client.put("/api/v1/consents", headers=user.headers,
+                   json={"choices": [{"purpose": "ai_history", "granted": granted}]})
+    assert r.status_code == 200, r.text
+
+
+def _last_chat_row(user):
+    with SessionLocal() as s:
+        return s.query(AiDecision).filter_by(business_id=user.business["id"], kind="chatbot").all()[-1]
+
+
+def test_without_history_consent_only_metadata_is_stored(merchant, client, llm):
+    user, _, _ = merchant
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {})]), _resp("Kisi ka nahi."))
+    _ask(client, user, "TEST Ramesh kitna deta hai?", input_mode="voice")
+    row = _last_chat_row(user)
+    meta = json.loads(row.output_json)
+    assert row.input_text is None and "answer_enc" not in meta
+    assert meta["text_stored"] is False and meta["input_mode"] == "voice"
+    with SessionLocal() as s:
+        assert meta["user_id"] == s.query(User).filter_by(mobile=user.mobile).one().id
+    assert meta["tools_used"] == ["get_top_defaulters"]
+
+
+def test_delete_history_removes_text_keeps_metadata(merchant, client, llm, make_user):
+    user, _, _ = merchant
+    _set_history_consent(client, user, True)
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {})]), _resp("Kisi ka nahi."))
+    _ask(client, user, "TEST Ramesh kitna deta hai?")
+    assert _last_chat_row(user).input_text is not None
+
+    r = client.delete("/api/v1/chatbot/history", headers=user.headers)
+    assert r.status_code == 200 and r.json() == {"deleted": 1}
+    row = _last_chat_row(user)
+    meta = json.loads(row.output_json)
+    assert row.input_text is None and "answer_enc" not in meta and meta["text_stored"] is False
+    assert meta["tools_used"] == ["get_top_defaulters"]  # usage metadata kept
+    # Deleting again is a no-op; another merchant's delete touches nothing here.
+    assert client.delete("/api/v1/chatbot/history", headers=user.headers).json() == {"deleted": 0}
+
+
 def test_question_and_answer_logged_encrypted_metadata_in_app_log(merchant, client, llm, caplog):
     user, ramesh, traders = merchant
+    _set_history_consent(client, user, True)
     llm(_resp(tool_calls=[_tool_call("get_customer_balance", {"customer_name": "ramesh"})]),
         _resp("Kaun sa Ramesh?"))
     with caplog.at_level(logging.INFO, logger="cashbook.chatbot"):
@@ -276,3 +332,21 @@ def test_number_extraction():
     assert numbers_in_text("₹1,99,999.50 on 2 Sep 2026") <= numbers_in_results([199999.5, "2026-09-02"])
     assert numbers_in_text("₹1,200") - numbers_in_results([1199.99]) == numbers_in_text("1200")
     assert numbers_in_results({"customer_id": "a1b2c3", "mobile_masked": "***3210"}) == numbers_in_text("3210")
+
+
+def test_numbered_lists_are_not_mistaken_for_invented_numbers(merchant, client, llm):
+    user, _, _ = merchant
+
+    def listing(messages):
+        top = _tool_results(messages)[0]["defaulters"]
+        lines = [f"{i}. {d['name']} ₹{d['balance']:,.2f}" for i, d in enumerate(top, 1)]
+        return _resp("\n".join(["Yeh customers dete hain:", *lines, "", "3. extra note"]))
+
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {"limit": 50})]), listing)
+    body = _ask(client, user, "sab customers jo paisa dete hain").json()
+    assert body["verified"] is True and "₹3,500.00" in body["answer_text"]
+
+    # An invented amount inside a numbered list is still caught.
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {"limit": 50})]),
+        _resp("1. TEST Ramesh ₹3,500.00\n2. TEST Ramesh Traders ₹9,999.00"))
+    assert _ask(client, user, "sab customers").json()["verified"] is False

@@ -2,6 +2,7 @@ import React from 'react';
 import {Alert, Pressable, View} from 'react-native';
 
 import {Button, ErrorState, Screen, Text} from '@components/ui';
+import {useDeleteAskAiHistory} from '@features/assistant/presentation/hooks';
 import {ConsentRow} from '@features/consent/presentation/components/ConsentRow';
 import {
   CONSENT_COPY,
@@ -26,6 +27,14 @@ export function ConsentSettingsScreen({
   const t = useT();
   const {data, isLoading, isError, refetch} = useConsents();
   const update = useUpdateConsents();
+  const deleteHistory = useDeleteAskAiHistory();
+
+  // One tap, no confirm (by design): it only removes the user's own Ask AI text.
+  const onDeleteHistory = () =>
+    deleteHistory.mutate(undefined, {
+      onSuccess: () => Alert.alert(t('consent.deleteHistoryDone')),
+      onError: err => Alert.alert(t('consent.deleteHistoryError'), err.message),
+    });
 
   const setPurpose = (purpose: ConsentPurpose, granted: boolean) =>
     update.mutate([{purpose, granted}], {
@@ -93,6 +102,14 @@ export function ConsentSettingsScreen({
                       {t('consent.withdraw')}
                     </Text>
                   </Pressable>
+                ) : null}
+                {c.purpose === 'ai_history' ? (
+                  <Button
+                    title={t('consent.deleteHistory')}
+                    variant="secondary"
+                    loading={deleteHistory.isPending}
+                    onPress={onDeleteHistory}
+                  />
                 ) : null}
               </View>
             ))}

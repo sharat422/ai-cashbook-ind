@@ -1,12 +1,18 @@
 """Ask AI chat loop: direct OpenAI tool calling, at most two LLM calls per question.
 
-1. Call 1: system prompt + question, with the six account tools available.
+1. Call 1: system prompt + question, with the six account tools and the
+   help-guide search available.
 2. If the model calls tools, run them server-side with the authenticated
    merchant_id, then Call 2 (tools disabled) writes the answer from the results.
 3. Guards, applied by the server, not the model:
-   - No tool called + the answer contains a number -> rejected (unverified).
+   - No tool called + the answer contains a number -> rejected (unverified);
+     no tool called otherwise -> a fixed "what I can help with" reply.
    - Every number in the final answer must appear in the tool results (or the
      question). Otherwise the answer is replaced with the "unverified" message.
+   - App how-to questions: if the model skips search_help_docs but the guide
+     covers the question, the server runs the search itself; if the guide has
+     nothing, a fixed "not in the help guide" reply is returned (no call 2);
+     an app answer without a closing next-step question gets one appended.
 
 Prompt, tool definitions and fixed replies live in the files next to this one.
 """
@@ -17,6 +23,7 @@ import json
 import logging
 import re
 import time
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -25,7 +32,8 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..crypto import encrypt
 from ..models import AiDecision
-from .tools import _today, run_tool
+from . import guardrails, help_search
+from .tools import HELP_TOOL, _today, run_tool
 
 log = logging.getLogger("cashbook.chatbot")
 
@@ -35,6 +43,16 @@ TOOL_DEFINITIONS = json.loads((_DIR / "tool_definitions.json").read_text(encodin
 MESSAGES = json.loads((_DIR / "messages.json").read_text(encoding="utf-8"))
 
 MAX_TOOL_CALLS = 4  # per question, all from call 1
+NOT_IN_GUIDE = "NOT_IN_HELP_GUIDE"  # model's signal; the server writes the reply
+# The model often says "not covered" in its own words instead of the signal,
+# and then adds unverified product talk. For help-only answers, these phrases
+# also mean "not in the guide", and the server's fixed reply is used.
+_NOT_COVERED = re.compile(
+    r"not in the help guide|help guide (mein|me) nahi|nahi dikh|nahi mil|nahi lagta|don'?t see|do not see|"
+    r"doesn'?t seem|does not seem|"
+    r"couldn'?t find|could not find|नहीं दिख|नहीं मिल",
+    re.IGNORECASE,
+)
 LANGUAGE_HINTS = ("hinglish", "hi", "en")
 _LANGUAGE_TEXT = {
     "hinglish": "Hinglish",
@@ -67,6 +85,15 @@ def numbers_in_text(text: str) -> set[Decimal]:
     return {d for d in (_dec(m) for m in _NUMBER.findall(text or "")) if d is not None}
 
 
+_LIST_MARKER = re.compile(r"(?m)^[ 	]*\d{1,2}[.)][ 	]+")
+
+
+def answer_numbers(text: str) -> set[Decimal]:
+    """Numbers in a model answer, ignoring numbered-list markers ("1. ", "2) ")
+    at the start of a line: list positions, not amounts."""
+    return numbers_in_text(_LIST_MARKER.sub("", text or ""))
+
+
 def numbers_in_results(value) -> set[Decimal]:
     """Numbers the tools actually returned: numeric fields, date parts and the
     visible digits of masked phones. Ids and names are ignored on purpose."""
@@ -81,8 +108,11 @@ def numbers_in_results(value) -> set[Decimal]:
         elif m := _MASKED_PHONE.match(value):
             found.add(Decimal(m.group(1)).normalize())
     elif isinstance(value, dict):
-        for v in value.values():
-            found |= numbers_in_results(v)
+        for k, v in value.items():
+            if k in ("content", "title") and isinstance(v, str):
+                found |= numbers_in_text(v)  # help-doc text: step numbers, limits
+            else:
+                found |= numbers_in_results(v)
     elif isinstance(value, list):
         for v in value:
             found |= numbers_in_results(v)
@@ -131,8 +161,91 @@ def _add_usage(total: dict, response) -> None:
         total[key] += int(getattr(usage, key, 0) or 0)
 
 
+_EMPTY_USAGE = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+
+def _details(calls: list[tuple[str, dict]], outcome: str) -> tuple[dict | None, dict | None]:
+    """Date range and "View details" target for an account answer, taken from
+    the tool results themselves (not from the model's wording)."""
+    if outcome != "answered":
+        return None, None
+    period = view = None
+    for name, r in calls:
+        if not isinstance(r, dict) or name == HELP_TOOL or "error" in r:
+            continue
+        if period is None:
+            if r.get("from") and r.get("to"):
+                period = {"from": r["from"], "to": r["to"]}
+            elif r.get("month_from") and r.get("month_to"):
+                period = {"from": r["month_from"], "to": r["month_to"]}
+            elif r.get("as_of"):
+                period = {"as_of": r["as_of"]}
+            elif r.get("to") and "from" in r:  # "older than" search: up to the cutoff
+                period = {"as_of": r["to"]}
+            elif r.get("status") == "found" or r.get("matches"):
+                period = {"as_of": _today().isoformat()}
+        one = r.get("customer") if r.get("status") == "found" else (
+            r["matches"][0] if len(r.get("matches") or []) == 1 else None)
+        if one and one.get("customer_id"):
+            view = {"screen": "CustomerProfile", "customer_id": one["customer_id"]}
+        elif view is None and name in ("list_recent_transactions", "get_cashbook_summary"):
+            view = {"screen": "TransactionHistory"}
+        elif view is None and name in ("get_top_defaulters", "get_business_summary", "get_collections_summary"):
+            view = {"screen": "KhataDashboard"}
+    return period, view
+
+
+def _record(db: Session, merchant_id: str, question: str, answer: str, model_answer: str,
+            outcome: str, store_text: bool, started: float, **meta_fields) -> str:
+    """Log one question: metadata to the app log; a row (text encrypted, only
+    with ai_history consent) to ai_decisions. Returns the row id = question_id."""
+    meta = {
+        "event": "chatbot_ask",
+        "merchant_id": merchant_id,
+        "outcome": outcome,
+        "llm_calls": 0,
+        "tools_used": [],
+        "tokens": dict(_EMPTY_USAGE),
+        **meta_fields,
+        "latency_ms": round((time.monotonic() - started) * 1000),
+    }
+    log.info(json.dumps(meta))  # metadata only: no question/answer text in app logs
+    # Text (encrypted) only with the user's ai_history consent; see
+    # delete_history() for the one-tap delete.
+    text = {
+        "answer_enc": encrypt(answer),
+        "model_answer_enc": encrypt(model_answer) if model_answer and outcome != "answered" else None,
+    } if store_text else {}
+    row = AiDecision(
+        business_id=merchant_id,
+        kind="chatbot",
+        input_text=encrypt(question) if store_text else None,
+        output_json=json.dumps({**meta, "text_stored": store_text, **text}),
+        confidence=None,
+    )
+    db.add(row)
+    db.commit()
+    return row.id
+
+
 def ask(db: Session, merchant_id: str, question: str, language_hint: str | None = None,
-        selected_customer_id: str | None = None) -> dict:
+        selected_customer_id: str | None = None, *, user_id: str | None = None,
+        store_text: bool = False, input_mode: str = "text") -> dict:
+    """Answer one question. `store_text` (the user's ai_history consent) decides
+    whether the question/answer text is kept; metadata is always logged."""
+    lang = language_hint or "hinglish"
+    category = guardrails.blocked_category(question)
+    if category:
+        # Refused before any LLM call: read-only bot, fixed safe reply.
+        answer = guardrails.refusal(category, lang)
+        return {
+            "answer_text": answer, "tools_used": [], "data_source": "none", "verified": True,
+            "blocked": category, "candidates": [], "sources": [], "suggested_screen": None,
+            "period": None, "view_details": None,
+            "question_id": _record(db, merchant_id, question, answer, "", f"blocked_{category}",
+                                   store_text, time.monotonic(), user_id=user_id,
+                                   input_mode=input_mode),
+        }
     if not settings.openai_api_key:
         raise ChatbotUnavailable("OPENAI_API_KEY is not set")
     from openai import OpenAI
@@ -152,79 +265,157 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
     reply = first.choices[0].message
     tools_used: list[str] = []
     results: list = []
+    help_docs: list[dict] = []
+    help_searched = False
 
-    if reply.tool_calls:
+    tool_calls = [(tc.id, tc.function.name, tc.function.arguments) for tc in (reply.tool_calls or [])]
+    forced_help = False
+    if not tool_calls and help_search.search(question):
+        # The model skipped the help guide for a question the guide covers. Run
+        # the search server-side so the answer still comes only from the docs.
+        tool_calls = [("server_help_search", HELP_TOOL, json.dumps({"query": question}))]
+        forced_help = True
+
+    if tool_calls:
         messages.append({
             "role": "assistant",
-            "content": reply.content,
+            "content": None if forced_help else reply.content,
             "tool_calls": [
-                {"id": tc.id, "type": "function",
-                 "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
-                for tc in reply.tool_calls
+                {"id": call_id, "type": "function", "function": {"name": name, "arguments": arguments}}
+                for call_id, name, arguments in tool_calls
             ],
         })
-        for i, tc in enumerate(reply.tool_calls):
+        for i, (call_id, name, arguments) in enumerate(tool_calls):
             if i >= MAX_TOOL_CALLS:
                 result = {"error": "too many tool calls; answer with what you have"}
             else:
                 try:
-                    args = json.loads(tc.function.arguments or "{}")
+                    args = json.loads(arguments or "{}")
                 except json.JSONDecodeError:
                     args = None
-                result = run_tool(db, merchant_id, tc.function.name, args)
-                tools_used.append(tc.function.name)
+                result = run_tool(db, merchant_id, name, args)
+                tools_used.append(name)
                 results.append(result)
-            messages.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
+                if name == HELP_TOOL:
+                    help_searched = True
+                    help_docs += result.get("results", [])
+            messages.append({"role": "tool", "tool_call_id": call_id, "content": json.dumps(result)})
 
-        second = _complete(client, messages, "none")
-        _add_usage(usage, second)
-        llm_calls = 2
-        model_answer = second.choices[0].message.content or ""
-        allowed = numbers_in_results(results) | numbers_in_text(question)
-        ungrounded = numbers_in_text(model_answer) - allowed
-        outcome = "rejected_ungrounded" if (ungrounded or not model_answer.strip()) else "answered"
+        account_used = any(name != HELP_TOOL for name in tools_used)
+        if help_searched and not help_docs and not account_used:
+            # Nothing in the help guide: fixed reply, no chance to improvise.
+            model_answer, outcome = "", "not_in_help"
+        else:
+            second = _complete(client, messages, "none")
+            _add_usage(usage, second)
+            llm_calls = 2
+            model_answer = second.choices[0].message.content or ""
+            allowed = numbers_in_results(results) | numbers_in_text(question)
+            ungrounded = answer_numbers(model_answer) - allowed
+            help_only = help_searched and not any(name != HELP_TOOL for name in tools_used)
+            if help_searched and (NOT_IN_GUIDE in model_answer or (help_only and _NOT_COVERED.search(model_answer))):
+                # The model judged the docs don't cover it: the server words the
+                # reply, so no claim about the product slips in.
+                outcome = "not_in_help"
+            else:
+                outcome = "rejected_ungrounded" if (ungrounded or not model_answer.strip()) else "answered"
     else:
         model_answer = reply.content or ""
-        # No tool was called, so no number in the answer can be verified.
-        invented = numbers_in_text(model_answer) - numbers_in_text(question)
-        outcome = "rejected_no_tool" if (invented or not model_answer.strip()) else "answered"
+        # No tool was called, so nothing in the answer is backed by data or docs.
+        # Numbers -> "couldn't verify" (phase 2 rule); anything else -> a fixed
+        # reply about what the bot can do, so it can't invent a feature either.
+        invented = answer_numbers(model_answer) - numbers_in_text(question)
+        outcome = "rejected_no_tool" if invented else "out_of_scope"
 
-    answer = model_answer.strip() if outcome == "answered" else MESSAGES["unverified"]
+    if outcome == "not_in_help":
+        answer = MESSAGES["not_in_help"][lang]
+    elif outcome == "out_of_scope":
+        answer = MESSAGES["out_of_scope"][lang]
+    elif outcome == "answered":
+        answer = model_answer.strip()
+        if help_docs and not answer.endswith("?"):  # every app answer ends with a next step
+            answer += " " + MESSAGES["next_step"][lang].format(screen=help_docs[0]["screen_label"])
+    else:
+        answer = MESSAGES["unverified"]
+
+    # Docs that were searched but didn't answer the question aren't sources.
+    sources = [] if outcome == "not_in_help" else list(dict.fromkeys(d["source"] for d in help_docs))
+    data_source = "+".join(
+        label for label, used in (("database", any(n != HELP_TOOL for n in tools_used)),
+                                  ("help_docs", help_searched)) if used
+    ) or "none"
     candidates = [
         {k: m.get(k) for k in ("customer_id", "name", "business_name", "mobile_masked")}
         for r in results if isinstance(r, dict) and r.get("status") == "ambiguous"
         for m in r.get("matches", [])
     ]
+    period, view_details = _details(list(zip(tools_used, results)), outcome)
     response = {
         "answer_text": answer,
         "tools_used": tools_used,
-        "data_source": "database" if tools_used else "none",
-        "verified": outcome == "answered",
+        "data_source": data_source,
+        "verified": outcome in ("answered", "not_in_help", "out_of_scope"),
+        "blocked": None,
         "candidates": candidates,
+        "sources": sources,
+        "suggested_screen": (
+            {"screen": help_docs[0]["screen"], "label": help_docs[0]["screen_label"]}
+            if help_docs and outcome == "answered" else None
+        ),
+        "period": period,
+        "view_details": view_details,
     }
-
-    meta = {
-        "event": "chatbot_ask",
-        "merchant_id": merchant_id,
-        "outcome": outcome,
-        "llm_calls": llm_calls,
-        "tools_used": tools_used,
-        "result_customer_ids": _customer_ids(results),
-        "latency_ms": round((time.monotonic() - started) * 1000),
-        "tokens": usage,
-        "model": settings.chatbot_model,
-    }
-    log.info(json.dumps(meta))  # metadata only: no question/answer text in app logs
-    db.add(AiDecision(
-        business_id=merchant_id,
-        kind="chatbot",
-        input_text=encrypt(question),
-        output_json=json.dumps({
-            **meta,
-            "answer_enc": encrypt(answer),
-            "model_answer_enc": encrypt(model_answer) if outcome != "answered" else None,
-        }),
-        confidence=None,
-    ))
-    db.commit()
+    response["question_id"] = _record(
+        db, merchant_id, question, answer, model_answer, outcome, store_text, started,
+        user_id=user_id, input_mode=input_mode, llm_calls=llm_calls, tools_used=tools_used,
+        forced_help_search=forced_help, help_sources=sources,
+        result_customer_ids=_customer_ids(results), tokens=usage, model=settings.chatbot_model,
+    )
     return response
+
+
+def delete_history(db: Session, merchant_id: str, user_id: str) -> int:
+    """Remove the stored question/answer text (and feedback notes) of this
+    user's Ask AI chats in this business. Usage metadata (tools, minutes,
+    tokens, ratings) is kept. Returns the number of chats changed."""
+    removed = 0
+    rows = db.query(AiDecision).filter(
+        AiDecision.business_id == merchant_id, AiDecision.kind == "chatbot"
+    ).all()
+    for row in rows:
+        meta = json.loads(row.output_json)
+        # Rows from before per-user history (no user_id) are cleared too.
+        note = (meta.get("feedback") or {}).get("note_enc")
+        if meta.get("user_id") not in (user_id, None) or not (row.input_text or "answer_enc" in meta or note):
+            continue
+        for key in ("answer_enc", "model_answer_enc"):
+            meta.pop(key, None)
+        if note:  # the user's own feedback note is text too; the rating stays
+            meta["feedback"]["note_enc"] = None
+        meta["text_stored"] = False
+        row.output_json = json.dumps(meta)
+        row.input_text = None
+        removed += 1
+    db.commit()
+    return removed
+
+
+def record_feedback(db: Session, merchant_id: str, user_id: str, question_id: str,
+                    rating: str, note: str | None) -> bool:
+    """Thumbs up/down (+ optional note, encrypted) on one answer. Only a
+    question of this merchant counts; anything else returns False (404)."""
+    row = db.get(AiDecision, question_id)
+    if row is None or row.kind != "chatbot" or row.business_id != merchant_id:
+        return False
+    meta = json.loads(row.output_json)
+    meta["feedback"] = {
+        "rating": rating,
+        "note_enc": encrypt(note) if note else None,
+        "user_id": user_id,
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    row.output_json = json.dumps(meta)
+    db.commit()
+    log.info(json.dumps({"event": "chatbot_feedback", "merchant_id": merchant_id,
+                         "question_id": question_id, "rating": rating, "has_note": bool(note)}))
+    return True

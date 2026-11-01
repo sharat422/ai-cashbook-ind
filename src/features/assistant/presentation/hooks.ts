@@ -1,9 +1,23 @@
 import {useMutation} from '@tanstack/react-query';
 
-import {assistantRemote} from '@features/assistant/data/assistant.remote';
+import {
+  assistantRemote,
+  type AskInput,
+} from '@features/assistant/data/assistant.remote';
 
 export function useAsk() {
   return useMutation({
-    mutationFn: (question: string) => assistantRemote.ask(question),
+    mutationFn: (input: AskInput) => assistantRemote.ask(input),
+  });
+}
+
+export function useDeleteAskAiHistory() {
+  return useMutation({mutationFn: () => assistantRemote.deleteHistory()});
+}
+
+export function useAnswerFeedback() {
+  return useMutation({
+    mutationFn: (v: {questionId: string; rating: 'up' | 'down'; note?: string}) =>
+      assistantRemote.feedback(v.questionId, v.rating, v.note),
   });
 }

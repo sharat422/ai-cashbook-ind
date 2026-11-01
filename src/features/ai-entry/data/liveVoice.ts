@@ -8,6 +8,10 @@ export const isLiveVoiceAvailable = () => !!NativeModules.VoicePcm;
 
 interface Callbacks {
   language: string | null;
+  /** 'entry' (voice entry, default) or 'chatbot' (Ask AI: read-only, 60 s cap). */
+  purpose?: 'entry' | 'chatbot';
+  /** Stop automatically after this long (default 115 s, under the server's 120 s). */
+  maxMs?: number;
   onState: (state: LiveVoiceState) => void;
   onText: (text: string) => void;
   onComplete: (text: string) => void;
@@ -25,6 +29,9 @@ export function createLiveVoice(callbacks: Callbacks) {
   let sentBytes = 0;
   let acceptedBytes = 0;
   let finalText: string | undefined;
+  // Push-to-talk: a release before recording has started is remembered and
+  // applied as soon as it starts, instead of being silently ignored.
+  let stopRequested = false;
   let dataListener: {remove(): void} | undefined;
   let errorListener: {remove(): void} | undefined;
   let limitTimer: ReturnType<typeof setTimeout> | undefined;
@@ -64,7 +71,11 @@ export function createLiveVoice(callbacks: Callbacks) {
     }, ms);
   };
   const stop = async () => {
-    if (settled || ending || !ready) {
+    if (settled || ending) {
+      return;
+    }
+    if (!ready) {
+      stopRequested = true;
       return;
     }
     ending = true;
@@ -94,6 +105,7 @@ export function createLiveVoice(callbacks: Callbacks) {
       JSON.stringify({
         token: useAuthStore.getState().token,
         language: callbacks.language,
+        ...(callbacks.purpose ? {purpose: callbacks.purpose} : {}),
       }),
     );
   };
@@ -144,7 +156,10 @@ export function createLiveVoice(callbacks: Callbacks) {
         armTimeout(10_000);
         limitTimer = setTimeout(() => {
           stop();
-        }, 115_000);
+        }, callbacks.maxMs ?? 115_000);
+        if (stopRequested) {
+          stop();
+        }
       } else if (
         message.type === 'audioAccepted' &&
         typeof message.bytes === 'number'

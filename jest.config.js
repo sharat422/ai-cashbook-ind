@@ -1,5 +1,10 @@
 module.exports = {
   preset: 'react-native',
+  // On GitHub Actions, also report each failing test as an annotation on the
+  // commit/PR (readable without opening the raw log). Locally: default output.
+  reporters: process.env.GITHUB_ACTIONS
+    ? ['default', ['github-actions', {silent: false}]]
+    : ['default'],
   setupFiles: ['<rootDir>/jest.setup.js'],
   // Mirror the babel module-resolver aliases so `@...` imports (and jest.mock
   // targets) resolve consistently under Jest.

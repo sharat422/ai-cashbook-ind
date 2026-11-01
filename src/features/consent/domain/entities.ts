@@ -1,11 +1,12 @@
 /**
  * Consent domain. Each purpose is a distinct, independently-managed choice —
  * never a single bundled "agreed" flag. `core` is required to use the app;
- * `marketing` and `ai` are optional and opt-in (off by default).
+ * `marketing`, `ai` and `ai_history` (keep Ask AI question/answer text) are
+ * optional and opt-in (off by default).
  */
 import type {TKey} from '@/i18n';
 
-export const CONSENT_PURPOSES = ['core', 'marketing', 'ai'] as const;
+export const CONSENT_PURPOSES = ['core', 'marketing', 'ai', 'ai_history'] as const;
 export type ConsentPurpose = (typeof CONSENT_PURPOSES)[number];
 
 /** Current choice for one purpose (server is the source of truth). */
@@ -42,6 +43,10 @@ export const CONSENT_COPY: Record<
     description: 'consent.marketing.desc',
   },
   ai: {title: 'consent.ai.title', description: 'consent.ai.desc'},
+  ai_history: {
+    title: 'consent.aiHistory.title',
+    description: 'consent.aiHistory.desc',
+  },
 };
 
 /** True once the required purposes are granted under the current policy. */

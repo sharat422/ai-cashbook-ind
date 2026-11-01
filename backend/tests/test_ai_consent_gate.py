@@ -36,7 +36,7 @@ def test_ai_endpoints_are_blocked_without_ai_consent(make_user, client):
         files={"receipt": ("r.jpg", io.BytesIO(b"x"), "image/jpeg")},
     ).status_code == 403
     assert client.post(
-        "/api/v1/assistant/ask", headers=u.headers, json={"question": "hi"}
+        "/api/v1/chatbot/ask", headers=u.headers, json={"transcript_text": "hi"}
     ).status_code == 403
 
 
