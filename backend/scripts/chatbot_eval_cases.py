@@ -112,6 +112,13 @@ def collections(period: str, method: str | None = None) -> Decimal:
     )
 
 
+def cashbook(period: str, kind: str) -> Decimal:
+    """Income or expense total recorded in the cashbook in a period."""
+    start = period_start(period)
+    return sum((_d(a) for k, a, days_ago, _c, _v in CASHBOOK_A if k == kind and day(days_ago) >= start),
+               Decimal(0))
+
+
 def collection_count(period: str) -> int:
     start = period_start(period)
     return sum(1 for _k, t, _a, days_ago, _m in LEDGER_A if t == "payment" and day(days_ago) >= start)
@@ -140,6 +147,11 @@ def universe() -> set[Decimal]:
         if (d := owing_since_days(k)) is not None:
             add(d)
     add(total_outstanding()), add(len(ranked_debtors()))
+    for p in ("today", "this_week", "this_month"):
+        inc, exp = cashbook(p, "income"), cashbook(p, "expense")
+        add(inc), add(exp), add(inc - exp)
+        add(sum(1 for e in CASHBOOK_A if e[0] == "income" and day(e[2]) >= period_start(p)))
+        add(sum(1 for e in CASHBOOK_A if e[0] == "expense" and day(e[2]) >= period_start(p)))
     for p in ("today", "this_week", "this_month"):
         add(collections(p)), add(collection_count(p))
         for m in ("cash", "upi"):
@@ -200,8 +212,10 @@ def account_cases() -> list[Case]:
     A("Kul udhaar kitna hai market mein?", required=[total_outstanding()])
     A("Kitne customers pe paisa baaki hai?", required=[len(top)])
     A("Total kitna lena hai customers se?", required=[total_outstanding()])
-    A("Anil Shah ka balance kitna hai?", candidates=["TEST Anil Shah", "TEST Anil Shah"],
-      forbidden=[b["anil_1"], b["anil_2"]])
+    # Two customers with the same exact name: the bot must ask which one (the
+    # candidates). Showing BOTH correct balances while asking is allowed: it is
+    # the only way to tell them apart, and nothing is picked silently.
+    A("Anil Shah ka balance kitna hai?", candidates=["TEST Anil Shah", "TEST Anil Shah"])
     A("Ramesh ka balance kitna hai?", candidates=["TEST Ramesh Kumar", "TEST Ramesh Traders"])
     # Top defaulters
     A("Who owes me the most?", required=[top[0][1]], names=["Ramesh Kumar"])
@@ -234,7 +248,7 @@ def account_cases() -> list[Case]:
     A("Pichhle 7 din mein kya kya hua?", required_any=today_amounts)
     A("Recent khata entries dikhao", required_any=[e[2] for e in LEDGER_A if e[3] <= 6])
     A("Aaj kitna kharcha hua?", required=[2500])
-    A("Aaj kitni income hui?", required=[10000])
+    A("Aaj kitni income hui?", required=[cashbook("today", "income")], forbidden=[collections("today")])
     A("Show transactions from the last 60 days", required_any=today_amounts)
     # Empty / unknown
     A("Ganesh ka balance kitna hai?", not_found=True)

@@ -46,6 +46,15 @@ def test_truth_matches_the_tools(seeded):
         assert got["count"] == cases.collection_count(period), period
         for method in ("cash", "upi"):
             assert Decimal(str(got["by_method"][method])) == cases.collections(period, method)
+    for period in ("today", "this_week", "this_month"):
+        cb = _tool(tools.get_cashbook_summary, mid, period=period)
+        assert Decimal(str(cb["income_total"])) == cases.cashbook(period, "income"), period
+        assert Decimal(str(cb["expense_total"])) == cases.cashbook(period, "expense"), period
+    oldest = _tool(tools.get_top_defaulters, mid, limit=50, sort="oldest")["defaulters"]
+    assert oldest[0]["name"] == cases.CUSTOMERS_A["suresh"][0]
+    assert oldest[0]["days_owing"] == cases.owing_since_days("suresh")
+    old = _tool(tools.list_recent_transactions, mid, older_than_days=180, limit=50)["transactions"]
+    assert [t["amount"] for t in old] == [800]
     top = _tool(tools.get_top_defaulters, mid, limit=50)["defaulters"]
     truth = cases.ranked_debtors()
     assert [Decimal(str(d["balance"])) for d in top] == [b for _k, b in truth]
@@ -64,6 +73,7 @@ def test_universe_contains_every_number_the_tools_return(seeded):
         _tool(tools.get_top_defaulters, mid, limit=50),
         _tool(tools.list_recent_transactions, mid, limit=50, days=365),
         *(_tool(tools.get_collections_summary, mid, period=p) for p in ("today", "this_week", "this_month")),
+        *(_tool(tools.get_cashbook_summary, mid, period=p) for p in ("today", "this_week", "this_month")),
     ]
     missing = numbers_in_results(outputs) - cases.universe()
     assert not missing, f"pack would wrongly flag these real numbers as invented: {missing}"
