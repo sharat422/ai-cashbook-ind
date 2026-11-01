@@ -199,3 +199,45 @@ it('bounds audio queued behind a stalled network', async () => {
   expect(cb.onComplete).not.toHaveBeenCalled();
   expect(mockListeners.size).toBe(0);
 });
+
+describe('Ask AI push-to-talk', () => {
+  it('sends the chatbot purpose in the first frame', () => {
+    createLiveVoice({...callbacks(), purpose: 'chatbot'});
+    const socket = FakeSocket.latest;
+    socket.onopen?.();
+    expect(socket.sent[0]).toEqual({
+      token: 'user-token',
+      language: 'hi',
+      purpose: 'chatbot',
+    });
+  });
+
+  it('a release before recording starts still stops once it starts', async () => {
+    const cb = callbacks();
+    const session = createLiveVoice({...cb, purpose: 'chatbot'});
+    const socket = FakeSocket.latest;
+    await session.stop(); // finger lifted while still connecting
+    expect(socket.sent).toEqual([]);
+    await socket.message({type: 'ready'});
+    await flush();
+    expect(cb.onState).toHaveBeenCalledWith('finishing');
+    expect(socket.sent.at(-1)).toEqual({type: 'endStream'});
+  });
+
+  it('stops by itself at maxMs', async () => {
+    const cb = callbacks();
+    createLiveVoice({...cb, purpose: 'chatbot', maxMs: 59_500});
+    const socket = FakeSocket.latest;
+    await socket.message({type: 'ready'});
+    // The mic keeps sending audio (otherwise the 10 s no-audio watchdog ends it).
+    for (let ms = 0; ms < 59_000; ms += 1_000) {
+      mockListeners.get('voicePcmData')?.('AAAA');
+      jest.advanceTimersByTime(1_000);
+    }
+    jest.advanceTimersByTime(499);
+    expect(socket.sent.some(m => m.type === 'endStream')).toBe(false);
+    jest.advanceTimersByTime(1);
+    await flush();
+    expect(socket.sent.at(-1)).toEqual({type: 'endStream'});
+  });
+});

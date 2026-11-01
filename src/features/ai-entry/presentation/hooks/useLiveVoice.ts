@@ -6,6 +6,9 @@ import {ensureMicPermission} from '../../data/voiceRecorder';
 
 export function useLiveVoice(callbacks: {
   language: string | null;
+  /** Forwarded to createLiveVoice ('chatbot' = Ask AI, 60 s server cap). */
+  purpose?: 'entry' | 'chatbot';
+  maxMs?: number;
   onText: (text: string) => void;
   onComplete: (text: string) => void;
   onError: (error: Error) => void;
@@ -16,6 +19,8 @@ export function useLiveVoice(callbacks: {
   const session = useRef<ReturnType<typeof createLiveVoice> | null>(null);
   const starting = useRef(false);
   const generation = useRef(0);
+  // Push-to-talk release while mic permission / setup is still in progress.
+  const finishRequested = useRef(false);
 
   const cancel = useCallback(() => {
     generation.current++;
@@ -40,6 +45,7 @@ export function useLiveVoice(callbacks: {
       return;
     }
     starting.current = true;
+    finishRequested.current = false;
     const current = ++generation.current;
     setState('connecting');
     try {
@@ -52,6 +58,8 @@ export function useLiveVoice(callbacks: {
       }
       session.current = createLiveVoice({
         language: latest.current.language,
+        purpose: latest.current.purpose,
+        maxMs: latest.current.maxMs,
         onState: next => {
           if (current !== generation.current) {
             return;
@@ -77,6 +85,9 @@ export function useLiveVoice(callbacks: {
           }
         },
       });
+      if (finishRequested.current) {
+        session.current.stop();
+      }
     } catch (error) {
       if (current !== generation.current) {
         return;
@@ -91,7 +102,16 @@ export function useLiveVoice(callbacks: {
       }
     }
   };
+  // Push-to-talk release: end the recording and wait for the final transcript
+  // (onComplete). A release before the session exists is applied once it does.
+  const finish = () => {
+    if (session.current) {
+      session.current.stop();
+    } else if (starting.current) {
+      finishRequested.current = true;
+    }
+  };
   // Manual Stop keeps the text already displayed and unlocks Read immediately.
   // Invalidate callbacks so a late provider result cannot overwrite user edits.
-  return {state, start, stop: cancel};
+  return {state, start, stop: cancel, finish};
 }
