@@ -324,8 +324,10 @@ def get_top_defaulters(db: Session, merchant_id: str, limit: int | None = None,
         rows.sort(key=lambda r: (r["owing_since"] or "9999-12-31", -r["balance"]))
     else:
         rows.sort(key=lambda r: r["balance"], reverse=True)
+    # The exact total, so the model never has to add the rows itself (it did,
+    # and got 6,450.50 wrong as 5,450.50).
     return {"as_of": today.isoformat(), "sort": sort, "total_customers_owing": len(rows),
-            "defaulters": rows[:limit]}
+            "total_outstanding": _sum(r["balance"] for r in rows), "defaulters": rows[:limit]}
 
 
 @tool(empty={"total_collected": 0.0, "count": 0, "from": None, "to": None})

@@ -277,3 +277,10 @@ def test_transactions_older_than(merchant):
     assert {(t["type"], t["amount"]) for t in out["transactions"]} == {("credit", 5000.0), ("credit", 300.0)}
     assert all(t["date"] <= days_ago_iso(30) for t in out["transactions"])
     assert _call(list_recent_transactions, mid, older_than_days=365)["transactions"] == []
+
+
+def test_defaulters_include_the_exact_total(merchant):
+    mid, _ = merchant
+    out = _call(get_top_defaulters, mid, limit=1)
+    # Total of ALL customers owing, not just the rows returned (1999.9 + 800.2).
+    assert out["total_outstanding"] == 2800.1 and len(out["defaulters"]) == 1

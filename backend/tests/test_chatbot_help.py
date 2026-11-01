@@ -148,3 +148,34 @@ def test_help_search_is_audited_with_masked_query(merchant, client, llm, caplog)
         _ask(client, user, "reminder kaise bheje")
     rec = [json.loads(r.getMessage()) for r in caplog.records if r.name == "cashbook.chatbot.audit"][-1]
     assert rec["tool"] == "search_help_docs" and rec["params"] == {"query": "s************"}
+
+
+def test_model_signal_not_in_guide_gives_the_fixed_honest_reply(merchant, client, llm):
+    user, _, _ = merchant
+    # "credit card" matches the add-entry doc by keyword ("credit"), but the doc
+    # doesn't answer it: the model signals that, and the server words the reply.
+    llm(_resp(tool_calls=[_tool_call("search_help_docs", {"query": "credit card"})]),
+        _resp("NOT_IN_HELP_GUIDE"))
+    body = _ask(client, user, "Can I get a credit card through Bolcash?", language_hint="en").json()
+    assert body["answer_text"] == MESSAGES["not_in_help"]["en"]
+    assert body["sources"] == [] and body["suggested_screen"] is None and body["verified"] is True
+
+
+@pytest.mark.parametrize("model_text", [
+    "Mujhe yeh nahi dikh raha ki Bolcash se credit card milta hai. Bolcash ka main focus bookkeeping hai.",
+    "Mujhe barcode print karne ka option nahi dikh raha. Lekin aap reports export kar sakte hain.",
+    "I don't see that in the guide, but Bolcash probably supports it.",
+    "Mujhe dekh kar nahi lagta ki Bolcash ke through credit card lene ka option hai.",
+])
+def test_not_covered_in_own_words_becomes_the_fixed_reply(merchant, client, llm, model_text):
+    user, _, _ = merchant
+    llm(_resp(tool_calls=[_tool_call("search_help_docs", {"query": "credit card"})]), _resp(model_text))
+    body = _ask(client, user, "Can I get a credit card?").json()
+    assert body["answer_text"] == MESSAGES["not_in_help"]["hinglish"] and body["sources"] == []
+
+
+def test_account_answers_saying_not_found_are_unaffected(merchant, client, llm):
+    user, _, _ = merchant
+    llm(_resp(tool_calls=[_tool_call("get_customer_balance", {"customer_name": "Mahesh"})]),
+        _resp("Mujhe Mahesh naam ka customer nahi dikh raha."))
+    assert _ask(client, user, "Mahesh ka balance").json()["answer_text"] == "Mujhe Mahesh naam ka customer nahi dikh raha."

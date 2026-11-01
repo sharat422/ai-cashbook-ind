@@ -43,6 +43,16 @@ TOOL_DEFINITIONS = json.loads((_DIR / "tool_definitions.json").read_text(encodin
 MESSAGES = json.loads((_DIR / "messages.json").read_text(encoding="utf-8"))
 
 MAX_TOOL_CALLS = 4  # per question, all from call 1
+NOT_IN_GUIDE = "NOT_IN_HELP_GUIDE"  # model's signal; the server writes the reply
+# The model often says "not covered" in its own words instead of the signal,
+# and then adds unverified product talk. For help-only answers, these phrases
+# also mean "not in the guide", and the server's fixed reply is used.
+_NOT_COVERED = re.compile(
+    r"not in the help guide|help guide (mein|me) nahi|nahi dikh|nahi mil|nahi lagta|don'?t see|do not see|"
+    r"doesn'?t seem|does not seem|"
+    r"couldn'?t find|could not find|नहीं दिख|नहीं मिल",
+    re.IGNORECASE,
+)
 LANGUAGE_HINTS = ("hinglish", "hi", "en")
 _LANGUAGE_TEXT = {
     "hinglish": "Hinglish",
@@ -302,7 +312,13 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
             model_answer = second.choices[0].message.content or ""
             allowed = numbers_in_results(results) | numbers_in_text(question)
             ungrounded = answer_numbers(model_answer) - allowed
-            outcome = "rejected_ungrounded" if (ungrounded or not model_answer.strip()) else "answered"
+            help_only = help_searched and not any(name != HELP_TOOL for name in tools_used)
+            if help_searched and (NOT_IN_GUIDE in model_answer or (help_only and _NOT_COVERED.search(model_answer))):
+                # The model judged the docs don't cover it: the server words the
+                # reply, so no claim about the product slips in.
+                outcome = "not_in_help"
+            else:
+                outcome = "rejected_ungrounded" if (ungrounded or not model_answer.strip()) else "answered"
     else:
         model_answer = reply.content or ""
         # No tool was called, so nothing in the answer is backed by data or docs.
@@ -322,7 +338,8 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
     else:
         answer = MESSAGES["unverified"]
 
-    sources = list(dict.fromkeys(d["source"] for d in help_docs))
+    # Docs that were searched but didn't answer the question aren't sources.
+    sources = [] if outcome == "not_in_help" else list(dict.fromkeys(d["source"] for d in help_docs))
     data_source = "+".join(
         label for label, used in (("database", any(n != HELP_TOOL for n in tools_used)),
                                   ("help_docs", help_searched)) if used
