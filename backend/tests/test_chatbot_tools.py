@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from conftest import days_ago_iso, today_iso
 from helpers import add_customer, add_expense, add_income, add_ledger
 from app.chatbot.tools import (
+    ACCOUNT_TOOLS,
     TOOLS,
     get_business_summary,
     get_collections_summary,
@@ -240,6 +241,6 @@ def test_check_script_runs_all_six_tools(merchant, capsys):
     mid, _ = merchant
     assert main([mid, "--customer", "ramesh", "--period", "today"]) == 0
     out = json.loads(capsys.readouterr().out)
-    assert set(out) == set(TOOLS)
+    assert set(out) == set(ACCOUNT_TOOLS)
     assert out["get_business_summary"]["total_outstanding"] == 2800.1
     assert out["get_customer_balance"]["status"] == "ambiguous"

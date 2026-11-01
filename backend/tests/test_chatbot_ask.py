@@ -104,6 +104,8 @@ def test_who_owes_most_returns_real_top_defaulters(merchant, client, llm):
         "data_source": "database",
         "verified": True,
         "candidates": [],
+        "sources": [],
+        "suggested_screen": None,
     }
     # Exactly two LLM calls; the second can't call tools; tokens capped.
     assert len(fake.calls) == 2
@@ -142,15 +144,20 @@ def test_number_without_tool_call_is_rejected(merchant, client, llm):
     fake = llm(_resp("Your total outstanding is ₹4,300."))
     body = _ask(client, user, "total outstanding kitna hai?").json()
     assert body == {"answer_text": UNVERIFIED, "tools_used": [], "data_source": "none",
-                    "verified": False, "candidates": []}
+                    "verified": False, "candidates": [], "sources": [], "suggested_screen": None}
     assert len(fake.calls) == 1
 
 
-def test_numberless_reply_without_tools_is_allowed(merchant, client, llm):
+def test_reply_without_tools_becomes_fixed_scope_message(merchant, client, llm):
+    # Nothing un-backed reaches the user: not a greeting, not an invented feature.
     user, _, _ = merchant
-    llm(_resp("Namaste! Main aapke khate ke sawaalon mein madad kar sakta hoon."))
+    llm(_resp("Haan, Bolcash aapke liye GST return file karta hai."))
     body = _ask(client, user, "hello").json()
+    assert body["answer_text"] == MESSAGES["out_of_scope"]["hinglish"]
     assert body["verified"] is True and body["data_source"] == "none"
+    llm(_resp("I can help with your account."))
+    body = _ask(client, user, "hello", language_hint="en").json()
+    assert body["answer_text"] == MESSAGES["out_of_scope"]["en"]
 
 
 def test_altered_amount_after_tool_call_is_rejected(merchant, client, llm):

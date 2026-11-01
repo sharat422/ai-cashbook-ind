@@ -80,5 +80,20 @@
         "additionalProperties": false
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_help_docs",
+      "description": "Search the Bolcash help guide for how to use the app (add customer, add entry, reminders, export, staff, language, backup, deleting entries...). Returns up to 3 docs with their steps; an empty list means it is not in the help guide. Call this for EVERY question about using the app, not about the merchant's money.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string", "description": "The how-to question in a few keywords, e.g. 'send reminder whatsapp'."}
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    }
   }
 ]

@@ -1,12 +1,18 @@
 """Ask AI chat loop: direct OpenAI tool calling, at most two LLM calls per question.
 
-1. Call 1: system prompt + question, with the six account tools available.
+1. Call 1: system prompt + question, with the six account tools and the
+   help-guide search available.
 2. If the model calls tools, run them server-side with the authenticated
    merchant_id, then Call 2 (tools disabled) writes the answer from the results.
 3. Guards, applied by the server, not the model:
-   - No tool called + the answer contains a number -> rejected (unverified).
+   - No tool called + the answer contains a number -> rejected (unverified);
+     no tool called otherwise -> a fixed "what I can help with" reply.
    - Every number in the final answer must appear in the tool results (or the
      question). Otherwise the answer is replaced with the "unverified" message.
+   - App how-to questions: if the model skips search_help_docs but the guide
+     covers the question, the server runs the search itself; if the guide has
+     nothing, a fixed "not in the help guide" reply is returned (no call 2);
+     an app answer without a closing next-step question gets one appended.
 
 Prompt, tool definitions and fixed replies live in the files next to this one.
 """
@@ -25,7 +31,8 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..crypto import encrypt
 from ..models import AiDecision
-from .tools import _today, run_tool
+from . import help_search
+from .tools import HELP_TOOL, _today, run_tool
 
 log = logging.getLogger("cashbook.chatbot")
 
@@ -81,8 +88,11 @@ def numbers_in_results(value) -> set[Decimal]:
         elif m := _MASKED_PHONE.match(value):
             found.add(Decimal(m.group(1)).normalize())
     elif isinstance(value, dict):
-        for v in value.values():
-            found |= numbers_in_results(v)
+        for k, v in value.items():
+            if k in ("content", "title") and isinstance(v, str):
+                found |= numbers_in_text(v)  # help-doc text: step numbers, limits
+            else:
+                found |= numbers_in_results(v)
     elif isinstance(value, list):
         for v in value:
             found |= numbers_in_results(v)
@@ -152,44 +162,79 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
     reply = first.choices[0].message
     tools_used: list[str] = []
     results: list = []
+    help_docs: list[dict] = []
+    help_searched = False
 
-    if reply.tool_calls:
+    tool_calls = [(tc.id, tc.function.name, tc.function.arguments) for tc in (reply.tool_calls or [])]
+    forced_help = False
+    if not tool_calls and help_search.search(question):
+        # The model skipped the help guide for a question the guide covers. Run
+        # the search server-side so the answer still comes only from the docs.
+        tool_calls = [("server_help_search", HELP_TOOL, json.dumps({"query": question}))]
+        forced_help = True
+
+    if tool_calls:
         messages.append({
             "role": "assistant",
-            "content": reply.content,
+            "content": None if forced_help else reply.content,
             "tool_calls": [
-                {"id": tc.id, "type": "function",
-                 "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
-                for tc in reply.tool_calls
+                {"id": call_id, "type": "function", "function": {"name": name, "arguments": arguments}}
+                for call_id, name, arguments in tool_calls
             ],
         })
-        for i, tc in enumerate(reply.tool_calls):
+        for i, (call_id, name, arguments) in enumerate(tool_calls):
             if i >= MAX_TOOL_CALLS:
                 result = {"error": "too many tool calls; answer with what you have"}
             else:
                 try:
-                    args = json.loads(tc.function.arguments or "{}")
+                    args = json.loads(arguments or "{}")
                 except json.JSONDecodeError:
                     args = None
-                result = run_tool(db, merchant_id, tc.function.name, args)
-                tools_used.append(tc.function.name)
+                result = run_tool(db, merchant_id, name, args)
+                tools_used.append(name)
                 results.append(result)
-            messages.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
+                if name == HELP_TOOL:
+                    help_searched = True
+                    help_docs += result.get("results", [])
+            messages.append({"role": "tool", "tool_call_id": call_id, "content": json.dumps(result)})
 
-        second = _complete(client, messages, "none")
-        _add_usage(usage, second)
-        llm_calls = 2
-        model_answer = second.choices[0].message.content or ""
-        allowed = numbers_in_results(results) | numbers_in_text(question)
-        ungrounded = numbers_in_text(model_answer) - allowed
-        outcome = "rejected_ungrounded" if (ungrounded or not model_answer.strip()) else "answered"
+        account_used = any(name != HELP_TOOL for name in tools_used)
+        if help_searched and not help_docs and not account_used:
+            # Nothing in the help guide: fixed reply, no chance to improvise.
+            model_answer, outcome = "", "not_in_help"
+        else:
+            second = _complete(client, messages, "none")
+            _add_usage(usage, second)
+            llm_calls = 2
+            model_answer = second.choices[0].message.content or ""
+            allowed = numbers_in_results(results) | numbers_in_text(question)
+            ungrounded = numbers_in_text(model_answer) - allowed
+            outcome = "rejected_ungrounded" if (ungrounded or not model_answer.strip()) else "answered"
     else:
         model_answer = reply.content or ""
-        # No tool was called, so no number in the answer can be verified.
+        # No tool was called, so nothing in the answer is backed by data or docs.
+        # Numbers -> "couldn't verify" (phase 2 rule); anything else -> a fixed
+        # reply about what the bot can do, so it can't invent a feature either.
         invented = numbers_in_text(model_answer) - numbers_in_text(question)
-        outcome = "rejected_no_tool" if (invented or not model_answer.strip()) else "answered"
+        outcome = "rejected_no_tool" if invented else "out_of_scope"
 
-    answer = model_answer.strip() if outcome == "answered" else MESSAGES["unverified"]
+    lang = language_hint or "hinglish"
+    if outcome == "not_in_help":
+        answer = MESSAGES["not_in_help"][lang]
+    elif outcome == "out_of_scope":
+        answer = MESSAGES["out_of_scope"][lang]
+    elif outcome == "answered":
+        answer = model_answer.strip()
+        if help_docs and not answer.endswith("?"):  # every app answer ends with a next step
+            answer += " " + MESSAGES["next_step"][lang].format(screen=help_docs[0]["screen_label"])
+    else:
+        answer = MESSAGES["unverified"]
+
+    sources = list(dict.fromkeys(d["source"] for d in help_docs))
+    data_source = "+".join(
+        label for label, used in (("database", any(n != HELP_TOOL for n in tools_used)),
+                                  ("help_docs", help_searched)) if used
+    ) or "none"
     candidates = [
         {k: m.get(k) for k in ("customer_id", "name", "business_name", "mobile_masked")}
         for r in results if isinstance(r, dict) and r.get("status") == "ambiguous"
@@ -198,9 +243,14 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
     response = {
         "answer_text": answer,
         "tools_used": tools_used,
-        "data_source": "database" if tools_used else "none",
-        "verified": outcome == "answered",
+        "data_source": data_source,
+        "verified": outcome in ("answered", "not_in_help", "out_of_scope"),
         "candidates": candidates,
+        "sources": sources,
+        "suggested_screen": (
+            {"screen": help_docs[0]["screen"], "label": help_docs[0]["screen_label"]}
+            if help_docs and outcome == "answered" else None
+        ),
     }
 
     meta = {
@@ -209,6 +259,8 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
         "outcome": outcome,
         "llm_calls": llm_calls,
         "tools_used": tools_used,
+        "forced_help_search": forced_help,
+        "help_sources": sources,
         "result_customer_ids": _customer_ids(results),
         "latency_ms": round((time.monotonic() - started) * 1000),
         "tokens": usage,

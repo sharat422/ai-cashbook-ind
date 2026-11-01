@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session, selectinload
 from ..calc import IST
 from ..models import Business, Customer, Expense, Income, LedgerEntry
 from ..monitoring import _mask as mask_mobile
+from . import help_search
 
 audit_log = logging.getLogger("cashbook.chatbot.audit")
 
@@ -157,7 +158,7 @@ def _owing_since(db: Session, customer: Customer) -> str | None:
 # ---------------------------------------------------------------------------
 # Audit logging
 # ---------------------------------------------------------------------------
-_NAME_PARAMS = {"customer_name", "name"}
+_NAME_PARAMS = {"customer_name", "name", "query"}  # free text: masked in logs
 
 
 def _audit(tool: str, merchant_id, params: dict, result: dict) -> None:
@@ -335,8 +336,26 @@ def search_customer(db: Session, merchant_id: str, name: str | None = None) -> d
                         if query in _norm(c.full_name)]}
 
 
+# ---------------------------------------------------------------------------
+# Help guide (phase 3): not merchant data, but audited like the others.
+# ---------------------------------------------------------------------------
+HELP_TOOL = "search_help_docs"
+
+
+@tool(empty={"results": []})
+def search_help_docs(db: Session, merchant_id: str, query: str | None = None) -> dict:
+    """Top 2-3 help-guide docs for a how-to question, with file names as sources.
+    An empty list means the topic is not in the help guide."""
+    if not str(query or "").strip():
+        raise ToolError("query is required")
+    return {"results": help_search.search(query)}
+
+
+ACCOUNT_TOOLS = tuple(name for name in TOOLS if name != HELP_TOOL)
+
+
 def run_tool(db: Session, merchant_id: str, name: str, args) -> dict:
-    """Dispatch an LLM tool call by name (used by the chat loop in phase 2)."""
+    """Dispatch an LLM tool call by name (used by the chat loop)."""
     fn = TOOLS.get(name)
     if fn is None:
         return {"error": f"unknown tool {name!r}"}
