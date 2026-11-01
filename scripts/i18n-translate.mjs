@@ -34,16 +34,17 @@ const SOURCE = 'en';
 // Target locales the app ships. Everything except English is generated from
 // en.json by this script (run `npm run i18n:translate` after editing en.json).
 const TARGET_LOCALES = ['hi', 'te', 'ta', 'kn', 'mr', 'gu', 'bn', 'ml', 'pa'];
+// Name the script too: "Punjabi" alone once came back in Devanagari.
 const LOCALE_NAMES = {
-  hi: 'Hindi',
-  te: 'Telugu',
-  ta: 'Tamil',
-  kn: 'Kannada',
-  mr: 'Marathi',
-  gu: 'Gujarati',
-  bn: 'Bengali',
-  ml: 'Malayalam',
-  pa: 'Punjabi',
+  hi: 'Hindi (Devanagari script)',
+  te: 'Telugu (Telugu script)',
+  ta: 'Tamil (Tamil script)',
+  kn: 'Kannada (Kannada script)',
+  mr: 'Marathi (Devanagari script)',
+  gu: 'Gujarati (Gujarati script)',
+  bn: 'Bengali (Bengali script)',
+  ml: 'Malayalam (Malayalam script)',
+  pa: 'Punjabi (Gurmukhi script)',
 };
 
 const MODEL = process.env.I18N_MODEL || 'claude-haiku-4-5-20251001';
