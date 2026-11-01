@@ -19,7 +19,7 @@ from app.chatbot.tools import TOOLS
 from app.config import settings
 from app.crypto import decrypt
 from app.database import SessionLocal
-from app.models import AiDecision
+from app.models import AiDecision, User
 
 URL = "/api/v1/chatbot/ask"
 UNVERIFIED = MESSAGES["unverified"]
@@ -249,8 +249,50 @@ def test_unavailable_without_key_or_on_provider_error(merchant, client, monkeypa
 
 # --- Logging ------------------------------------------------------------------
 
+def _set_history_consent(client, user, granted: bool):
+    r = client.put("/api/v1/consents", headers=user.headers,
+                   json={"choices": [{"purpose": "ai_history", "granted": granted}]})
+    assert r.status_code == 200, r.text
+
+
+def _last_chat_row(user):
+    with SessionLocal() as s:
+        return s.query(AiDecision).filter_by(business_id=user.business["id"], kind="chatbot").all()[-1]
+
+
+def test_without_history_consent_only_metadata_is_stored(merchant, client, llm):
+    user, _, _ = merchant
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {})]), _resp("Kisi ka nahi."))
+    _ask(client, user, "TEST Ramesh kitna deta hai?", input_mode="voice")
+    row = _last_chat_row(user)
+    meta = json.loads(row.output_json)
+    assert row.input_text is None and "answer_enc" not in meta
+    assert meta["text_stored"] is False and meta["input_mode"] == "voice"
+    with SessionLocal() as s:
+        assert meta["user_id"] == s.query(User).filter_by(mobile=user.mobile).one().id
+    assert meta["tools_used"] == ["get_top_defaulters"]
+
+
+def test_delete_history_removes_text_keeps_metadata(merchant, client, llm, make_user):
+    user, _, _ = merchant
+    _set_history_consent(client, user, True)
+    llm(_resp(tool_calls=[_tool_call("get_top_defaulters", {})]), _resp("Kisi ka nahi."))
+    _ask(client, user, "TEST Ramesh kitna deta hai?")
+    assert _last_chat_row(user).input_text is not None
+
+    r = client.delete("/api/v1/chatbot/history", headers=user.headers)
+    assert r.status_code == 200 and r.json() == {"deleted": 1}
+    row = _last_chat_row(user)
+    meta = json.loads(row.output_json)
+    assert row.input_text is None and "answer_enc" not in meta and meta["text_stored"] is False
+    assert meta["tools_used"] == ["get_top_defaulters"]  # usage metadata kept
+    # Deleting again is a no-op; another merchant's delete touches nothing here.
+    assert client.delete("/api/v1/chatbot/history", headers=user.headers).json() == {"deleted": 0}
+
+
 def test_question_and_answer_logged_encrypted_metadata_in_app_log(merchant, client, llm, caplog):
     user, ramesh, traders = merchant
+    _set_history_consent(client, user, True)
     llm(_resp(tool_calls=[_tool_call("get_customer_balance", {"customer_name": "ramesh"})]),
         _resp("Kaun sa Ramesh?"))
     with caplog.at_level(logging.INFO, logger="cashbook.chatbot"):

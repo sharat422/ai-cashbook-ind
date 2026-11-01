@@ -16,9 +16,9 @@ def test_new_user_has_all_purposes_ungranted(make_user, client):
     snap = client.get("/api/v1/consents", headers=u.headers).json()
     assert snap["policy_version"] == CURRENT_POLICY_VERSION
     assert snap["required"] == ["core"]
-    assert set(snap["optional"]) == {"marketing", "ai"}
+    assert set(snap["optional"]) == {"marketing", "ai", "ai_history"}
     by = {c["purpose"]: c for c in snap["consents"]}
-    assert {"core", "marketing", "ai"} <= set(by)
+    assert {"core", "marketing", "ai", "ai_history"} <= set(by)
     for c in by.values():
         assert c["granted"] is False
         assert c["updated_at"] is None  # nothing decided yet

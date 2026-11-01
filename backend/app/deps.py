@@ -9,18 +9,23 @@ from .rbac import role_can
 from .security import get_current_user
 
 
+def consent_granted(db: Session, user_id: str, purpose: str) -> bool:
+    """True only if the user has explicitly granted this consent purpose."""
+    row = db.scalars(
+        select(UserConsent).where(
+            UserConsent.user_id == user_id, UserConsent.purpose == purpose
+        )
+    ).first()
+    return bool(row and row.granted)
+
+
 def ai_consent_granted(db: Session, user_id: str) -> bool:
     """True only if the user has explicitly granted AI-processing consent.
 
     This is the gate that keeps a user's data from ever being sent to an
     external AI provider without opt-in — no consent, no scraping.
     """
-    row = db.scalars(
-        select(UserConsent).where(
-            UserConsent.user_id == user_id, UserConsent.purpose == PURPOSE_AI
-        )
-    ).first()
-    return bool(row and row.granted)
+    return consent_granted(db, user_id, PURPOSE_AI)
 
 
 def require_ai_consent(

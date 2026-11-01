@@ -127,3 +127,78 @@ def test_live_allows_only_one_session_per_user(client, user, muse):
             assert second.receive_json()["status"] == 429
         assert live._active
     assert_sessions_closed(client)
+
+
+# --- Ask AI (purpose="chatbot"): view permission, 60 s cap, usage per merchant ---
+
+def _usage_rows(business_id):
+    from app.database import SessionLocal
+    from app.models import AiDecision
+
+    with SessionLocal() as s:
+        rows = s.query(AiDecision).filter_by(business_id=business_id, kind="voice_usage").all()
+        return [json.loads(r.output_json) for r in rows]
+
+
+def _speak(ws, frames=1):
+    pcm = b"\x00\x00" * 1920  # 0.08 s at 24 kHz, 16-bit mono
+    for _ in range(frames):
+        ws.send_json({"type": "audio", "audio": base64.b64encode(pcm).decode()})
+    return len(pcm) * frames
+
+
+def test_chatbot_purpose_transcribes_and_logs_minutes(client, user, muse):
+    with client.websocket_connect("/api/v1/voice/live") as ws:
+        ws.send_json(hello(user, purpose="chatbot", language="hi"))
+        assert ws.receive_json() == {"type": "ready"}
+        _speak(ws)
+        ws.receive_json(), ws.receive_json()
+        ws.send_json({"type": "endStream"})
+        assert ws.receive_json()["final"] is True
+    assert_sessions_closed(client)
+    usage = _usage_rows(user.business["id"])[-1]
+    assert usage["purpose"] == "chatbot" and usage["seconds"] == 0.08
+    assert usage["merchant_id"] == user.business["id"] and usage["event"] == "muse_usage"
+
+
+def test_staff_can_use_voice_entry_but_not_ask_ai(client, make_user, muse):
+    from test_rbac import _member
+    from conftest import _login
+
+    _, staff_headers = _member(make_user, client, "staff")
+    # _member logs staff in without AI consent; grant it so only the role differs.
+    client.put("/api/v1/consents", headers=staff_headers,
+               json={"choices": [{"purpose": "ai", "granted": True}]})
+    staff = type("U", (), {"headers": staff_headers})()
+    with client.websocket_connect("/api/v1/voice/live") as ws:
+        ws.send_json(hello(staff, purpose="chatbot"))
+        assert ws.receive_json()["status"] == 403
+    assert not muse
+    with client.websocket_connect("/api/v1/voice/live") as ws:
+        ws.send_json(hello(staff))  # default purpose: voice entry
+        assert ws.receive_json() == {"type": "ready"}
+    assert_sessions_closed(client)
+
+
+def test_unknown_purpose_is_rejected(client, user, muse):
+    with client.websocket_connect("/api/v1/voice/live") as ws:
+        ws.send_json(hello(user, purpose="dictation"))
+        assert ws.receive_json()["status"] == 400
+    assert not muse
+
+
+def test_recording_cap_depends_on_purpose(client, user, muse, monkeypatch):
+    # Shrink the Ask AI cap below one frame so the cap is what trips, not timing.
+    monkeypatch.setitem(live.PURPOSES, "chatbot", {**live.PURPOSES["chatbot"], "max_seconds": 0.05})
+    assert live.PURPOSES["entry"]["max_seconds"] == 120
+    with client.websocket_connect("/api/v1/voice/live") as ws:
+        ws.send_json(hello(user, purpose="chatbot"))
+        assert ws.receive_json()["type"] == "ready"
+        _speak(ws)
+        # The over-cap frame is refused before it is accepted or relayed.
+        assert ws.receive_json()["type"] == "error"
+    assert_sessions_closed(client)
+
+
+def test_production_cap_for_ask_ai_is_60_seconds():
+    assert live.PURPOSES["chatbot"] == {"permission": "data.view", "max_seconds": 60}

@@ -142,7 +142,10 @@ def _add_usage(total: dict, response) -> None:
 
 
 def ask(db: Session, merchant_id: str, question: str, language_hint: str | None = None,
-        selected_customer_id: str | None = None) -> dict:
+        selected_customer_id: str | None = None, *, user_id: str | None = None,
+        store_text: bool = False, input_mode: str = "text") -> dict:
+    """Answer one question. `store_text` (the user's ai_history consent) decides
+    whether the question/answer text is kept; metadata is always logged."""
     if not settings.openai_api_key:
         raise ChatbotUnavailable("OPENAI_API_KEY is not set")
     from openai import OpenAI
@@ -256,6 +259,8 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
     meta = {
         "event": "chatbot_ask",
         "merchant_id": merchant_id,
+        "user_id": user_id,
+        "input_mode": input_mode,
         "outcome": outcome,
         "llm_calls": llm_calls,
         "tools_used": tools_used,
@@ -267,16 +272,41 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
         "model": settings.chatbot_model,
     }
     log.info(json.dumps(meta))  # metadata only: no question/answer text in app logs
+    # Text (encrypted) only with the user's ai_history consent; see
+    # delete_history() for the one-tap delete.
+    text = {
+        "answer_enc": encrypt(answer),
+        "model_answer_enc": encrypt(model_answer) if outcome != "answered" else None,
+    } if store_text else {}
     db.add(AiDecision(
         business_id=merchant_id,
         kind="chatbot",
-        input_text=encrypt(question),
-        output_json=json.dumps({
-            **meta,
-            "answer_enc": encrypt(answer),
-            "model_answer_enc": encrypt(model_answer) if outcome != "answered" else None,
-        }),
+        input_text=encrypt(question) if store_text else None,
+        output_json=json.dumps({**meta, "text_stored": store_text, **text}),
         confidence=None,
     ))
     db.commit()
     return response
+
+
+def delete_history(db: Session, merchant_id: str, user_id: str) -> int:
+    """Remove the stored question/answer text of this user's Ask AI chats in
+    this business. Usage metadata (tools, minutes, tokens) is kept. Returns the
+    number of chats whose text was removed."""
+    removed = 0
+    rows = db.query(AiDecision).filter(
+        AiDecision.business_id == merchant_id, AiDecision.kind == "chatbot"
+    ).all()
+    for row in rows:
+        meta = json.loads(row.output_json)
+        # Rows from before per-user history (no user_id) are cleared too.
+        if meta.get("user_id") not in (user_id, None) or not (row.input_text or "answer_enc" in meta):
+            continue
+        for key in ("answer_enc", "model_answer_enc"):
+            meta.pop(key, None)
+        meta["text_stored"] = False
+        row.output_json = json.dumps(meta)
+        row.input_text = None
+        removed += 1
+    db.commit()
+    return removed

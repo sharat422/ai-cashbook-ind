@@ -18,10 +18,13 @@ PURPOSE_MARKETING = "marketing"
 # Optional, opt-in (unchecked by default): sending the user's data to AI models
 # for insights/parsing. Required only if the user wants AI features.
 PURPOSE_AI = "ai"
+# Optional, opt-in (unchecked by default): keep the text of Ask AI questions
+# (voice transcripts and typed) and answers. Without it only metadata is kept.
+PURPOSE_AI_HISTORY = "ai_history"
 
-CONSENT_PURPOSES = (PURPOSE_CORE, PURPOSE_MARKETING, PURPOSE_AI)
+CONSENT_PURPOSES = (PURPOSE_CORE, PURPOSE_MARKETING, PURPOSE_AI, PURPOSE_AI_HISTORY)
 REQUIRED_PURPOSES = (PURPOSE_CORE,)
-OPTIONAL_PURPOSES = (PURPOSE_MARKETING, PURPOSE_AI)
+OPTIONAL_PURPOSES = (PURPOSE_MARKETING, PURPOSE_AI, PURPOSE_AI_HISTORY)
 
 
 def is_required(purpose: str) -> bool:
