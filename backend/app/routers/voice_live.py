@@ -11,6 +11,8 @@ from fastapi.security import HTTPAuthorizationCredentials
 from websockets.asyncio.client import connect
 
 from ..ai import MUSE_LANGUAGES
+from ..chatbot.guardrails import voice_seconds_left
+from ..chatbot.loop import MESSAGES
 from ..config import settings
 from ..database import SessionLocal
 from ..deps import get_current_membership, require, require_ai_consent
@@ -34,12 +36,21 @@ PURPOSES = {
 }
 
 
-def _authorize(token: str, purpose: str) -> tuple[str, str]:
+def _authorize(token: str, purpose: str) -> tuple[str, str, float]:
+    """(user_id, business_id, max seconds for this session)."""
     with SessionLocal() as db:
         user = get_current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials=token), db)
         require_ai_consent(user, db)
         business = require(PURPOSES[purpose]["permission"])(get_current_membership(user, db))
-        return user.id, business.id
+        max_seconds = PURPOSES[purpose]["max_seconds"]
+        if purpose == "chatbot":
+            # Daily Ask AI voice budget per merchant (voice entry isn't capped).
+            left = voice_seconds_left(db, business.id)
+            if left <= 0:
+                raise HTTPException(429, MESSAGES["limit_voice"]["hinglish"].format(
+                    minutes=settings.chatbot_voice_seconds_per_day // 60))
+            max_seconds = min(max_seconds, left)
+        return user.id, business.id, max_seconds
 
 
 def _log_usage(business_id: str, user_id: str, purpose: str, seconds: float) -> None:
@@ -148,7 +159,7 @@ async def voice_live(client: WebSocket):
         purpose = hello.get("purpose", "entry")
         if purpose not in PURPOSES:
             raise HTTPException(400, "Unknown voice purpose.")
-        authenticated_id, business_id = await asyncio.to_thread(_authorize, hello["token"], purpose)
+        authenticated_id, business_id, max_seconds = await asyncio.to_thread(_authorize, hello["token"], purpose)
         if authenticated_id in _active:
             raise HTTPException(429, "A voice recording is already active.")
         if not settings.meta_model_api_key:
@@ -163,7 +174,7 @@ async def voice_live(client: WebSocket):
                 if not ack.get("sessionId"):
                     raise RuntimeError("Muse handshake failed.")
                 await client.send_json({"type": "ready"})
-                await _relay(client, upstream, PURPOSES[purpose]["max_seconds"], usage)
+                await _relay(client, upstream, max_seconds, usage)
         await client.close(code=1000)
     except WebSocketDisconnect:
         pass
@@ -178,7 +189,11 @@ async def voice_live(client: WebSocket):
         except (RuntimeError, WebSocketDisconnect):
             pass
     finally:
-        if user_id is not None:
-            _active.discard(user_id)
-        if session is not None and usage["seconds"] > 0:
-            await asyncio.to_thread(_log_usage, *session, usage["seconds"])
+        try:
+            # Record minutes BEFORE releasing the session, so anything that sees
+            # the session as closed (a new session, the daily cap) also sees them.
+            if session is not None and usage["seconds"] > 0:
+                await asyncio.to_thread(_log_usage, *session, usage["seconds"])
+        finally:
+            if user_id is not None:
+                _active.discard(user_id)

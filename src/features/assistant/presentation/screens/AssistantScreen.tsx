@@ -14,19 +14,26 @@ import {Text} from '@components/ui';
 import {isLiveVoiceAvailable} from '@features/ai-entry/data/liveVoice';
 import {useLiveVoice} from '@features/ai-entry/presentation/hooks/useLiveVoice';
 import type {
+  AnswerPeriod,
   ChatbotAnswer,
   CustomerChoice,
+  ViewDetails,
 } from '@features/assistant/data/assistant.remote';
 import {
   formatRecordingTime,
   highlightKeyFacts,
   isUnclearTranscript,
 } from '@features/assistant/domain/transcript';
-import {useAsk} from '@features/assistant/presentation/hooks';
+import {
+  useAnswerFeedback,
+  useAsk,
+} from '@features/assistant/presentation/hooks';
+import {customerRepository} from '@features/customers/data/customer.repository';
 import {useVoiceSettingsStore} from '@features/settings/store/voiceSettings.store';
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps, AppStackParamList} from '@navigation/types';
 import {colors} from '@theme/colors';
+import {formatDisplayDate} from '@utils/date';
 
 /** Ask AI recordings: 60 s on the server; stop a little early on the phone. */
 export const MAX_RECORDING_MS = 60_000;
@@ -96,6 +103,9 @@ export function AssistantScreen({
       setPartial('');
       if (error instanceof ApiError && error.status === 422) {
         didntCatch(); // "No speech detected."
+      } else if (error instanceof ApiError && error.status === 429) {
+        setVoiceNotice(error.message); // daily voice limit: polite, typing still works
+        inputRef.current?.focus();
       } else {
         setVoiceNotice(t('assistant.voiceError', {message: error.message}));
       }
@@ -137,10 +147,13 @@ export function AssistantScreen({
             ...prev,
             {
               role: 'ai',
+              // A rate limit is a polite server message, shown as-is.
               text:
-                err instanceof Error
-                  ? t('assistant.errorPrefix', {message: err.message})
-                  : t('assistant.errorGeneric'),
+                err instanceof ApiError && err.status === 429
+                  ? err.message
+                  : err instanceof Error
+                    ? t('assistant.errorPrefix', {message: err.message})
+                    : t('assistant.errorGeneric'),
             },
           ]),
         onSettled: scrollToEnd,
@@ -164,6 +177,28 @@ export function AssistantScreen({
     inputRef.current?.focus(); // text fallback
   }
 
+  const newChat = () => {
+    voice.stop();
+    setMessages([]);
+    setReview(null);
+    setVoiceNotice(null);
+    setPartial('');
+    setInput('');
+  };
+
+  const openDetails = async (view: ViewDetails) => {
+    if (view.screen === 'CustomerProfile') {
+      try {
+        const customer = await customerRepository.getById(view.customerId);
+        navigation.navigate('CustomerProfile', {customer});
+      } catch (err) {
+        setVoiceNotice(err instanceof Error ? err.message : t('assistant.errorGeneric'));
+      }
+    } else {
+      navigation.navigate(view.screen);
+    }
+  };
+
   const openScreen = (screen: string) => {
     if (OPENABLE_SCREENS.has(screen as keyof AppStackParamList)) {
       navigation.navigate(screen as 'Dashboard');
@@ -177,11 +212,24 @@ export function AssistantScreen({
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View className="px-5 pb-2 pt-4">
-          <Text variant="title">{t('assistant.title')}</Text>
-          <Text variant="subtitle" className="mt-0.5">
-            {t('assistant.subtitle')}
-          </Text>
+        <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
+          <View className="flex-1">
+            <Text variant="title">{t('assistant.title')}</Text>
+            <Text variant="subtitle" className="mt-0.5">
+              {t('assistant.subtitle')}
+            </Text>
+          </View>
+          {messages.length > 0 ? (
+            <Pressable
+              testID="new-chat"
+              accessibilityRole="button"
+              onPress={newChat}
+              className="rounded-full border border-border px-3 py-1.5">
+              <Text className="text-sm font-semibold text-primary">
+                {t('assistant.newChat')}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <ScrollView
@@ -214,6 +262,7 @@ export function AssistantScreen({
                   m.role === 'ai' && m.question ? send(m.question, 'text', choice) : undefined
                 }
                 onOpenScreen={openScreen}
+                onViewDetails={openDetails}
               />
             ))
           )}
@@ -326,14 +375,22 @@ export function AssistantScreen({
   );
 }
 
+function periodLabel(p: AnswerPeriod, t: ReturnType<typeof useT>): string {
+  return 'asOf' in p
+    ? t('assistant.asOf', {date: formatDisplayDate(p.asOf)})
+    : t('assistant.range', {from: formatDisplayDate(p.from), to: formatDisplayDate(p.to)});
+}
+
 function Bubble({
   msg,
   onChoose,
   onOpenScreen,
+  onViewDetails,
 }: {
   msg: Msg;
   onChoose?: (choice: CustomerChoice) => void;
   onOpenScreen?: (screen: string) => void;
+  onViewDetails?: (view: ViewDetails) => void;
 }): React.JSX.Element {
   const t = useT();
   const isUser = msg.role === 'user';
@@ -368,6 +425,27 @@ function Bubble({
         </Text>
       </View>
 
+      {answer?.period || answer?.viewDetails ? (
+        <View className="mt-1.5 flex-row flex-wrap items-center" style={{gap: 8}}>
+          {answer.period ? (
+            <Text
+              testID="answer-period"
+              className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {periodLabel(answer.period, t)}
+            </Text>
+          ) : null}
+          {answer.viewDetails ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onViewDetails?.(answer.viewDetails!)}>
+              <Text className="text-xs font-semibold text-primary">
+                {t('assistant.viewDetails')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
       {answer?.candidates.length ? (
         <View className="mt-2" style={{gap: 6}}>
           <Text variant="caption">{t('assistant.whichOne')}</Text>
@@ -397,6 +475,71 @@ function Bubble({
             {t('assistant.openScreen', {screen: answer.suggestedScreen.label})}
           </Text>
         </Pressable>
+      ) : null}
+
+      {answer ? <AnswerFeedback questionId={answer.questionId} /> : null}
+    </View>
+  );
+}
+
+/** Thumbs up / down on an answer, then an optional note. Stored with the question id. */
+function AnswerFeedback({questionId}: {questionId: string}): React.JSX.Element {
+  const t = useT();
+  const feedback = useAnswerFeedback();
+  const [rating, setRating] = useState<'up' | 'down' | null>(null);
+  const [note, setNote] = useState('');
+  const [done, setDone] = useState(false);
+
+  const rate = (r: 'up' | 'down') => {
+    setRating(r);
+    feedback.mutate({questionId, rating: r});
+  };
+  const sendNote = () => {
+    if (!rating || !note.trim()) {
+      return;
+    }
+    feedback.mutate({questionId, rating, note}, {onSuccess: () => setDone(true)});
+  };
+
+  if (done) {
+    return <Text className="mt-1 text-xs text-slate-500">{t('assistant.feedbackThanks')}</Text>;
+  }
+  return (
+    <View className="mt-1" style={{gap: 6}}>
+      <View className="flex-row" style={{gap: 4}}>
+        {(['up', 'down'] as const).map(r => (
+          <Pressable
+            key={r}
+            testID={'feedback-' + r}
+            accessibilityRole="button"
+            accessibilityLabel={t(r === 'up' ? 'assistant.helpful' : 'assistant.notHelpful')}
+            accessibilityState={{selected: rating === r}}
+            onPress={() => rate(r)}
+            className={rating === r ? 'rounded-full bg-slate-200 px-2 py-1' : 'rounded-full px-2 py-1'}>
+            <Text className="text-sm">{r === 'up' ? '👍' : '👎'}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {rating ? (
+        <View className="flex-row items-center" style={{gap: 6}}>
+          <TextInput
+            testID="feedback-note"
+            className="h-9 flex-1 rounded-full border border-border bg-white px-3 text-sm text-slate-900"
+            value={note}
+            onChangeText={setNote}
+            maxLength={500}
+            placeholder={t('assistant.feedbackNote')}
+            placeholderTextColor={colors.muted}
+          />
+          <Pressable
+            testID="feedback-send"
+            accessibilityRole="button"
+            disabled={!note.trim()}
+            onPress={sendNote}
+            className={note.trim() ? 'rounded-full bg-primary px-3 py-1.5' : 'rounded-full bg-slate-300 px-3 py-1.5'}>
+            <Text className="text-xs font-semibold text-white">{t('assistant.send')}</Text>
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );

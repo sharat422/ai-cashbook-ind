@@ -4,6 +4,10 @@ import {Text, TextInput} from 'react-native';
 
 import {AssistantScreen} from './AssistantScreen';
 
+// The first render loads the whole screen (~1.3 s on a fast laptop); slower CI
+// runners can pass Jest's default 5 s limit, so allow more.
+jest.setTimeout(20_000);
+
 const mockVoice = {
   state: 'idle',
   start: jest.fn(),
@@ -20,8 +24,14 @@ jest.mock('@features/ai-entry/presentation/hooks/useLiveVoice', () => ({
 jest.mock('@features/ai-entry/data/liveVoice', () => ({isLiveVoiceAvailable: () => true}));
 
 const mockMutate = jest.fn();
+const mockFeedback = jest.fn();
 jest.mock('@features/assistant/presentation/hooks', () => ({
   useAsk: () => ({mutate: mockMutate, isPending: false}),
+  useAnswerFeedback: () => ({mutate: mockFeedback}),
+}));
+const mockGetCustomer = jest.fn();
+jest.mock('@features/customers/data/customer.repository', () => ({
+  customerRepository: {getById: (id: string) => mockGetCustomer(id)},
 }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({children}: {children: React.ReactNode}) => children,
@@ -138,4 +148,88 @@ it('never navigates to a screen outside the allow-list', () => {
   const open = button(tree, 'Open Delete account');
   act(() => open.props.onPress());
   expect(navigation.navigate).not.toHaveBeenCalled();
+});
+
+
+// --- Phase 5: New chat, date range, View details, feedback, limits ----------
+
+const ANSWER = {
+  questionId: 'q1',
+  answer: 'As of today TEST Ramesh owes ₹3,500.',
+  verified: true,
+  blocked: null,
+  dataSource: 'database',
+  candidates: [],
+  sources: [],
+  suggestedScreen: null,
+  period: {asOf: '2026-10-31'},
+  viewDetails: {screen: 'CustomerProfile', customerId: 'c1'},
+};
+
+const askAndAnswer = (tree: ReactTestRenderer, answer: object = ANSWER) => {
+  act(() => mockVoice.options.onComplete('TEST Ramesh ka balance'));
+  act(() => button(tree, 'Send').props.onPress());
+  act(() => mockMutate.mock.calls.at(-1)[1].onSuccess(answer));
+};
+
+it('shows the date range and opens the customer from View details', async () => {
+  const tree = render();
+  askAndAnswer(tree);
+  expect(byTestId(tree, 'answer-period').props.children).toBe('As of 31 Oct 2026');
+  const customer = {id: 'c1', fullName: 'TEST Ramesh'};
+  mockGetCustomer.mockResolvedValueOnce(customer);
+  await act(async () => {
+    await button(tree, 'View details').props.onPress();
+  });
+  expect(mockGetCustomer).toHaveBeenCalledWith('c1');
+  expect(navigation.navigate).toHaveBeenCalledWith('CustomerProfile', {customer});
+});
+
+it('shows a from-to range and opens a list screen directly', () => {
+  const tree = render();
+  askAndAnswer(tree, {
+    ...ANSWER,
+    period: {from: '2026-10-01', to: '2026-10-31'},
+    viewDetails: {screen: 'TransactionHistory'},
+  });
+  expect(byTestId(tree, 'answer-period').props.children).toBe('01 Oct 2026 – 31 Oct 2026');
+  act(() => button(tree, 'View details').props.onPress());
+  expect(navigation.navigate).toHaveBeenCalledWith('TransactionHistory');
+});
+
+it('thumbs down with a note is sent with the question id', () => {
+  const tree = render();
+  askAndAnswer(tree);
+  act(() => byTestId(tree, 'feedback-down').props.onPress());
+  expect(mockFeedback).toHaveBeenLastCalledWith({questionId: 'q1', rating: 'down'});
+  act(() => byTestId(tree, 'feedback-note').props.onChangeText('amount is wrong'));
+  act(() => byTestId(tree, 'feedback-send').props.onPress());
+  expect(mockFeedback.mock.calls.at(-1)[0]).toEqual({
+    questionId: 'q1',
+    rating: 'down',
+    note: 'amount is wrong',
+  });
+});
+
+it('New chat clears the conversation and stops the mic', () => {
+  const tree = render();
+  askAndAnswer(tree);
+  expect(byTestId(tree, 'answer-period')).toBeDefined();
+  act(() => byTestId(tree, 'new-chat').props.onPress());
+  expect(byTestId(tree, 'answer-period')).toBeUndefined();
+  expect(byTestId(tree, 'new-chat')).toBeUndefined();
+  expect(mockVoice.stop).toHaveBeenCalled();
+});
+
+it('a rate limit shows the polite server message, not an error dump', () => {
+  const {ApiError} = require('@api/client');
+  const tree = render();
+  act(() => mockVoice.options.onComplete('TEST Ramesh ka balance'));
+  act(() => button(tree, 'Send').props.onPress());
+  const polite = "You've reached this hour's limit of 30 questions. Please try again a little later.";
+  act(() => mockMutate.mock.calls.at(-1)[1].onError(new ApiError(429, polite)));
+  // AI answers render as highlighted segments, so join each Text's children.
+  const shown = tree.root.findAllByType(Text).map(t => [t.props.children].flat().join(''));
+  expect(shown).toContain(polite);
+  expect(shown.some(c => c.startsWith('Sorry'))).toBe(false);
 });

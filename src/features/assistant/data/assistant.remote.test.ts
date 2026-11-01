@@ -46,3 +46,35 @@ it('deletes history', async () => {
   await expect(assistantRemote.deleteHistory()).resolves.toBe(3);
   expect(api).toHaveBeenCalledWith('/chatbot/history', {method: 'DELETE'});
 });
+
+it('maps period, view-details and question id; drops unknown screens', async () => {
+  api.mockResolvedValueOnce({
+    question_id: 'q1', answer_text: 'a', verified: true, data_source: 'database',
+    period: {from: '2026-10-01', to: '2026-10-31'},
+    view_details: {screen: 'CustomerProfile', customer_id: 'c1'},
+  });
+  expect(await assistantRemote.ask({text: 'x', inputMode: 'text'})).toMatchObject({
+    questionId: 'q1',
+    period: {from: '2026-10-01', to: '2026-10-31'},
+    viewDetails: {screen: 'CustomerProfile', customerId: 'c1'},
+    blocked: null,
+  });
+  api.mockResolvedValueOnce({
+    question_id: 'q2', answer_text: 'a', verified: true, data_source: 'database',
+    period: {as_of: '2026-10-31'}, view_details: {screen: 'DeleteAccount'},
+  });
+  expect(await assistantRemote.ask({text: 'x', inputMode: 'text'})).toMatchObject({
+    period: {asOf: '2026-10-31'},
+    viewDetails: null,
+  });
+});
+
+it('sends feedback with an optional trimmed note', async () => {
+  api.mockResolvedValue({ok: true});
+  await assistantRemote.feedback('q1', 'down', '  wrong amount ');
+  await assistantRemote.feedback('q1', 'up', '   ');
+  expect(api.mock.calls.map(c => c[1].body)).toEqual([
+    {question_id: 'q1', rating: 'down', note: 'wrong amount'},
+    {question_id: 'q1', rating: 'up'},
+  ]);
+});

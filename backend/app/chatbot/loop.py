@@ -23,6 +23,7 @@ import json
 import logging
 import re
 import time
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -31,7 +32,7 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..crypto import encrypt
 from ..models import AiDecision
-from . import help_search
+from . import guardrails, help_search
 from .tools import HELP_TOOL, _today, run_tool
 
 log = logging.getLogger("cashbook.chatbot")
@@ -141,11 +142,89 @@ def _add_usage(total: dict, response) -> None:
         total[key] += int(getattr(usage, key, 0) or 0)
 
 
+_EMPTY_USAGE = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+
+def _details(calls: list[tuple[str, dict]], outcome: str) -> tuple[dict | None, dict | None]:
+    """Date range and "View details" target for an account answer, taken from
+    the tool results themselves (not from the model's wording)."""
+    if outcome != "answered":
+        return None, None
+    period = view = None
+    for name, r in calls:
+        if not isinstance(r, dict) or name == HELP_TOOL or "error" in r:
+            continue
+        if period is None:
+            if r.get("from") and r.get("to"):
+                period = {"from": r["from"], "to": r["to"]}
+            elif r.get("month_from") and r.get("month_to"):
+                period = {"from": r["month_from"], "to": r["month_to"]}
+            elif r.get("as_of"):
+                period = {"as_of": r["as_of"]}
+            elif r.get("status") == "found" or r.get("matches"):
+                period = {"as_of": _today().isoformat()}
+        one = r.get("customer") if r.get("status") == "found" else (
+            r["matches"][0] if len(r.get("matches") or []) == 1 else None)
+        if one and one.get("customer_id"):
+            view = {"screen": "CustomerProfile", "customer_id": one["customer_id"]}
+        elif view is None and name == "list_recent_transactions":
+            view = {"screen": "TransactionHistory"}
+        elif view is None and name in ("get_top_defaulters", "get_business_summary", "get_collections_summary"):
+            view = {"screen": "KhataDashboard"}
+    return period, view
+
+
+def _record(db: Session, merchant_id: str, question: str, answer: str, model_answer: str,
+            outcome: str, store_text: bool, started: float, **meta_fields) -> str:
+    """Log one question: metadata to the app log; a row (text encrypted, only
+    with ai_history consent) to ai_decisions. Returns the row id = question_id."""
+    meta = {
+        "event": "chatbot_ask",
+        "merchant_id": merchant_id,
+        "outcome": outcome,
+        "llm_calls": 0,
+        "tools_used": [],
+        "tokens": dict(_EMPTY_USAGE),
+        **meta_fields,
+        "latency_ms": round((time.monotonic() - started) * 1000),
+    }
+    log.info(json.dumps(meta))  # metadata only: no question/answer text in app logs
+    # Text (encrypted) only with the user's ai_history consent; see
+    # delete_history() for the one-tap delete.
+    text = {
+        "answer_enc": encrypt(answer),
+        "model_answer_enc": encrypt(model_answer) if model_answer and outcome != "answered" else None,
+    } if store_text else {}
+    row = AiDecision(
+        business_id=merchant_id,
+        kind="chatbot",
+        input_text=encrypt(question) if store_text else None,
+        output_json=json.dumps({**meta, "text_stored": store_text, **text}),
+        confidence=None,
+    )
+    db.add(row)
+    db.commit()
+    return row.id
+
+
 def ask(db: Session, merchant_id: str, question: str, language_hint: str | None = None,
         selected_customer_id: str | None = None, *, user_id: str | None = None,
         store_text: bool = False, input_mode: str = "text") -> dict:
     """Answer one question. `store_text` (the user's ai_history consent) decides
     whether the question/answer text is kept; metadata is always logged."""
+    lang = language_hint or "hinglish"
+    category = guardrails.blocked_category(question)
+    if category:
+        # Refused before any LLM call: read-only bot, fixed safe reply.
+        answer = guardrails.refusal(category, lang)
+        return {
+            "answer_text": answer, "tools_used": [], "data_source": "none", "verified": True,
+            "blocked": category, "candidates": [], "sources": [], "suggested_screen": None,
+            "period": None, "view_details": None,
+            "question_id": _record(db, merchant_id, question, answer, "", f"blocked_{category}",
+                                   store_text, time.monotonic(), user_id=user_id,
+                                   input_mode=input_mode),
+        }
     if not settings.openai_api_key:
         raise ChatbotUnavailable("OPENAI_API_KEY is not set")
     from openai import OpenAI
@@ -221,7 +300,6 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
         invented = numbers_in_text(model_answer) - numbers_in_text(question)
         outcome = "rejected_no_tool" if invented else "out_of_scope"
 
-    lang = language_hint or "hinglish"
     if outcome == "not_in_help":
         answer = MESSAGES["not_in_help"][lang]
     elif outcome == "out_of_scope":
@@ -243,56 +321,35 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
         for r in results if isinstance(r, dict) and r.get("status") == "ambiguous"
         for m in r.get("matches", [])
     ]
+    period, view_details = _details(list(zip(tools_used, results)), outcome)
     response = {
         "answer_text": answer,
         "tools_used": tools_used,
         "data_source": data_source,
         "verified": outcome in ("answered", "not_in_help", "out_of_scope"),
+        "blocked": None,
         "candidates": candidates,
         "sources": sources,
         "suggested_screen": (
             {"screen": help_docs[0]["screen"], "label": help_docs[0]["screen_label"]}
             if help_docs and outcome == "answered" else None
         ),
+        "period": period,
+        "view_details": view_details,
     }
-
-    meta = {
-        "event": "chatbot_ask",
-        "merchant_id": merchant_id,
-        "user_id": user_id,
-        "input_mode": input_mode,
-        "outcome": outcome,
-        "llm_calls": llm_calls,
-        "tools_used": tools_used,
-        "forced_help_search": forced_help,
-        "help_sources": sources,
-        "result_customer_ids": _customer_ids(results),
-        "latency_ms": round((time.monotonic() - started) * 1000),
-        "tokens": usage,
-        "model": settings.chatbot_model,
-    }
-    log.info(json.dumps(meta))  # metadata only: no question/answer text in app logs
-    # Text (encrypted) only with the user's ai_history consent; see
-    # delete_history() for the one-tap delete.
-    text = {
-        "answer_enc": encrypt(answer),
-        "model_answer_enc": encrypt(model_answer) if outcome != "answered" else None,
-    } if store_text else {}
-    db.add(AiDecision(
-        business_id=merchant_id,
-        kind="chatbot",
-        input_text=encrypt(question) if store_text else None,
-        output_json=json.dumps({**meta, "text_stored": store_text, **text}),
-        confidence=None,
-    ))
-    db.commit()
+    response["question_id"] = _record(
+        db, merchant_id, question, answer, model_answer, outcome, store_text, started,
+        user_id=user_id, input_mode=input_mode, llm_calls=llm_calls, tools_used=tools_used,
+        forced_help_search=forced_help, help_sources=sources,
+        result_customer_ids=_customer_ids(results), tokens=usage, model=settings.chatbot_model,
+    )
     return response
 
 
 def delete_history(db: Session, merchant_id: str, user_id: str) -> int:
-    """Remove the stored question/answer text of this user's Ask AI chats in
-    this business. Usage metadata (tools, minutes, tokens) is kept. Returns the
-    number of chats whose text was removed."""
+    """Remove the stored question/answer text (and feedback notes) of this
+    user's Ask AI chats in this business. Usage metadata (tools, minutes,
+    tokens, ratings) is kept. Returns the number of chats changed."""
     removed = 0
     rows = db.query(AiDecision).filter(
         AiDecision.business_id == merchant_id, AiDecision.kind == "chatbot"
@@ -300,13 +357,37 @@ def delete_history(db: Session, merchant_id: str, user_id: str) -> int:
     for row in rows:
         meta = json.loads(row.output_json)
         # Rows from before per-user history (no user_id) are cleared too.
-        if meta.get("user_id") not in (user_id, None) or not (row.input_text or "answer_enc" in meta):
+        note = (meta.get("feedback") or {}).get("note_enc")
+        if meta.get("user_id") not in (user_id, None) or not (row.input_text or "answer_enc" in meta or note):
             continue
         for key in ("answer_enc", "model_answer_enc"):
             meta.pop(key, None)
+        if note:  # the user's own feedback note is text too; the rating stays
+            meta["feedback"]["note_enc"] = None
         meta["text_stored"] = False
         row.output_json = json.dumps(meta)
         row.input_text = None
         removed += 1
     db.commit()
     return removed
+
+
+def record_feedback(db: Session, merchant_id: str, user_id: str, question_id: str,
+                    rating: str, note: str | None) -> bool:
+    """Thumbs up/down (+ optional note, encrypted) on one answer. Only a
+    question of this merchant counts; anything else returns False (404)."""
+    row = db.get(AiDecision, question_id)
+    if row is None or row.kind != "chatbot" or row.business_id != merchant_id:
+        return False
+    meta = json.loads(row.output_json)
+    meta["feedback"] = {
+        "rating": rating,
+        "note_enc": encrypt(note) if note else None,
+        "user_id": user_id,
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    row.output_json = json.dumps(meta)
+    db.commit()
+    log.info(json.dumps({"event": "chatbot_feedback", "merchant_id": merchant_id,
+                         "question_id": question_id, "rating": rating, "has_note": bool(note)}))
+    return True

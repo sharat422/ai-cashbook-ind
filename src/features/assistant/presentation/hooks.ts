@@ -14,3 +14,10 @@ export function useAsk() {
 export function useDeleteAskAiHistory() {
   return useMutation({mutationFn: () => assistantRemote.deleteHistory()});
 }
+
+export function useAnswerFeedback() {
+  return useMutation({
+    mutationFn: (v: {questionId: string; rating: 'up' | 'down'; note?: string}) =>
+      assistantRemote.feedback(v.questionId, v.rating, v.note),
+  });
+}

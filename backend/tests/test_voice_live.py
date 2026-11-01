@@ -152,10 +152,15 @@ def test_chatbot_purpose_transcribes_and_logs_minutes(client, user, muse):
         ws.send_json(hello(user, purpose="chatbot", language="hi"))
         assert ws.receive_json() == {"type": "ready"}
         _speak(ws)
-        ws.receive_json(), ws.receive_json()
         ws.send_json({"type": "endStream"})
-        assert ws.receive_json()["final"] is True
-    assert_sessions_closed(client)
+        # audioAccepted / partial / final can interleave: read until the final one.
+        for _ in range(10):
+            event = ws.receive_json()
+            if event.get("type") == "transcript" and event.get("final") is True:
+                break
+        else:
+            pytest.fail("no final transcript")
+    assert_sessions_closed(client)  # usage is now logged before the session is released
     usage = _usage_rows(user.business["id"])[-1]
     assert usage["purpose"] == "chatbot" and usage["seconds"] == 0.08
     assert usage["merchant_id"] == user.business["id"] and usage["event"] == "muse_usage"

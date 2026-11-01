@@ -703,7 +703,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "gu": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -1409,7 +1417,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "hi": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2115,7 +2131,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "kn": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -2821,7 +2845,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "ml": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -3527,7 +3559,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "mr": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -4233,7 +4273,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "pa": {
     "auth.business.languageLabel": "38326d6c3118",
@@ -4939,7 +4987,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "ta": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -5645,7 +5701,15 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   },
   "te": {
     "ai.checkConnection": "943dddd7a3d4",
@@ -6351,6 +6415,14 @@
     "consent.aiHistory.title": "bd67ea59c145",
     "consent.deleteHistory": "af25f0eb9212",
     "consent.deleteHistoryDone": "308c9f318423",
-    "consent.deleteHistoryError": "0ef610f12153"
+    "consent.deleteHistoryError": "0ef610f12153",
+    "assistant.asOf": "2c461304ec37",
+    "assistant.feedbackNote": "c9414f7e6bae",
+    "assistant.feedbackThanks": "629814075e42",
+    "assistant.helpful": "45e36dd93e0f",
+    "assistant.newChat": "009bf6b90cde",
+    "assistant.notHelpful": "85efce01b3b3",
+    "assistant.range": "d6fc469c947c",
+    "assistant.viewDetails": "badd385121c5"
   }
 }

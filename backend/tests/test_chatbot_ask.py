@@ -98,14 +98,19 @@ def test_who_owes_most_returns_real_top_defaulters(merchant, client, llm):
     r = _ask(client, user, "who owes me most?")
     assert r.status_code == 200, r.text
     body = r.json()
+    assert isinstance(body.pop("question_id"), str)
     assert body == {
         "answer_text": "Sabse zyada: TEST Ramesh ₹3,500.00 (10 din se); TEST Ramesh Traders ₹800.20 (0 din se).",
         "tools_used": ["get_top_defaulters"],
         "data_source": "database",
         "verified": True,
+        "blocked": None,
         "candidates": [],
         "sources": [],
         "suggested_screen": None,
+        # Date range and "View details" come from the tool result, not the model.
+        "period": {"as_of": today_iso()},
+        "view_details": {"screen": "KhataDashboard"},
     }
     # Exactly two LLM calls; the second can't call tools; tokens capped.
     assert len(fake.calls) == 2
@@ -143,8 +148,10 @@ def test_number_without_tool_call_is_rejected(merchant, client, llm):
     user, _, _ = merchant
     fake = llm(_resp("Your total outstanding is ₹4,300."))
     body = _ask(client, user, "total outstanding kitna hai?").json()
+    assert isinstance(body.pop("question_id"), str)
     assert body == {"answer_text": UNVERIFIED, "tools_used": [], "data_source": "none",
-                    "verified": False, "candidates": [], "sources": [], "suggested_screen": None}
+                    "verified": False, "blocked": None, "candidates": [], "sources": [],
+                    "suggested_screen": None, "period": None, "view_details": None}
     assert len(fake.calls) == 1
 
 

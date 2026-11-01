@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # on tokens the model may generate per LLM call.
     chatbot_model: str = "gpt-4o-mini"
     chatbot_max_tokens: int = 300
+    # v1 limits per merchant (business): questions per rolling hour, and Muse
+    # seconds per IST day for Ask AI voice (voice entry is not capped).
+    chatbot_questions_per_hour: int = 30
+    chatbot_voice_seconds_per_day: int = 600
     # Speech-to-text model for voice entry. whisper-1 auto-detects the spoken
     # language (Hindi/Telugu/Tamil/…); swap for gpt-4o-transcribe when preferred.
     openai_transcribe_model: str = "whisper-1"

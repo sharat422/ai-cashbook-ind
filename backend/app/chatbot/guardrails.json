@@ -1,0 +1,46 @@
+{
+  "_comment": "Requests Ask AI refuses before any LLM call (read-only v1). Each category: regex patterns (case-insensitive, matched against the question) and the fixed reply per language. Replies must describe only what the app really does.",
+  "delete_data": {
+    "patterns": [
+      "\\b(delete|remove|erase|wipe|undo)\\b",
+      "\\b(hata|hatao|hata do|hatana|mita|mitao|mita do|mitana|uda do|udao|saaf kar)\\b",
+      "हटा|मिटा|डिलीट"
+    ],
+    "reply": {
+      "hinglish": "Main kuch delete nahi kar sakta, main sirf padh sakta hoon. Bolcash mein abhi saved entries delete ya edit nahi hoti; galat entry ke liye Settings → 💬 Help & support se hamari team ko bataiye. Apni Ask AI history mitane ke liye: Settings → 🔐 Privacy & consent → Delete voice history.",
+      "hi": "मैं कुछ भी डिलीट नहीं कर सकता, मैं सिर्फ़ पढ़ सकता हूँ। Bolcash में अभी सेव की गई एंट्री डिलीट या एडिट नहीं होती; गलत एंट्री के लिए Settings → 💬 Help & support से हमारी टीम को बताइए। अपनी Ask AI हिस्ट्री मिटाने के लिए: Settings → 🔐 Privacy & consent → Delete voice history।",
+      "en": "I can't delete anything — I can only read. Bolcash can't delete or edit saved entries yet; for a wrong entry, tell our team via Settings → 💬 Help & support. To clear your Ask AI history: Settings → 🔐 Privacy & consent → Delete voice history."
+    }
+  },
+  "transfer_money": {
+    "patterns": [
+      "\\btransfer\\b",
+      "\\bsend (the )?(money|payment|rs|₹|rupees)",
+      "\\bpay (him|her|them)\\b",
+      "\\b(neft|imps|rtgs)\\b",
+      "(paise|paisa|payment|rupaye|rupees) (bhej|bhejo|bhejdo|bhej do|transfer|kar do|kardo|karo)",
+      "\\bbhej (do|dena|de) .*(paise|paisa|rupaye)",
+      "\\b(upi|rs|rupaye|rupees|rupay)\\b.{0,25}\\b(bhej|send)",
+      "₹.{0,25}\\b(bhej|send)",
+      "\\d[\\d,]*\\s*(₹|rs\\.?|rupaye|rupees|rupay)?\\s*\\b(bhej|send)\\b",
+      "पैसे भेज|ट्रांसफर"
+    ],
+    "reply": {
+      "hinglish": "Main paise bhej ya transfer nahi kar sakta. Customer se payment maangne ke liye unki profile kholiye aur 💳 Request dabaiye (UPI request).",
+      "hi": "मैं पैसे भेज या ट्रांसफर नहीं कर सकता। ग्राहक से पेमेंट माँगने के लिए उनकी प्रोफ़ाइल खोलिए और 💳 Request दबाइए (UPI रिक्वेस्ट)।",
+      "en": "I can't send or transfer money. To ask a customer to pay you, open their profile and tap 💳 Request (UPI request)."
+    }
+  },
+  "other_merchant": {
+    "patterns": [
+      "\\b(other|another|someone else'?s?|competitor'?s?)\\b.{0,20}\\b(merchant|shop|store|business|dukan|dukaan|account|user|trader)",
+      "\\b(dusr[ae]|doosr[ae]|kisi aur)\\b.{0,20}\\b(merchant|dukan|dukaan|dukandar|dukaandar|vyapari|business|account|ki dukan)",
+      "दूसरे (दुकान|व्यापारी)|किसी और (की|का)"
+    ],
+    "reply": {
+      "hinglish": "Main sirf aapke apne business ka data dikha sakta hoon, kisi aur merchant ka nahi.",
+      "hi": "मैं सिर्फ़ आपके अपने बिज़नेस का डेटा दिखा सकता हूँ, किसी और व्यापारी का नहीं।",
+      "en": "I can only show your own business's data, not any other merchant's."
+    }
+  }
+}
