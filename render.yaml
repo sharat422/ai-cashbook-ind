@@ -134,12 +134,13 @@ services:
         fromDatabase:
           name: smart-cashbook-db-prod
           property: connectionString
-      # Production posture: real auth. ⚠️ With DEBUG=false the master OTP is
-      # DISABLED, so login requires a real SMS-OTP provider to be wired first.
-      # For a controlled India test BEFORE SMS is wired, temporarily set
-      # DEBUG=true + MASTER_OTP in the Render dashboard for THIS service only.
+      # ⚠️ PRE-LAUNCH: DEBUG=true + MASTER_OTP so login works before an SMS-OTP
+      # provider is wired. Anyone can log in to any number with the master OTP.
+      # Set DEBUG back to "false" (and remove MASTER_OTP) before real launch.
       - key: DEBUG
-        value: "false"
+        value: "true"
+      - key: MASTER_OTP
+        value: "123456"
       - key: CORS_ORIGINS
         value: "*"
       # Breach detection: Sentry DSN (real-time error/alert email) + an owner
