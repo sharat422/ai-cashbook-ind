@@ -79,31 +79,33 @@ export function AssistantScreen({
   const languageHint = chatLanguageHint(useAuthStore(s => s.preferredLanguage));
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
-  const [partial, setPartial] = useState('');
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [review, setReview] = useState<string | null>(null);
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
+  // True while the text box holds a spoken question (for logs: input_mode).
+  const fromVoice = useRef(false);
   const inputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
   const voiceAvailable = isLiveVoiceAvailable();
 
-  // Push-to-talk via the shared hook: mic permission, and cancel on blur or
-  // app background (nothing is sent in that case).
+  // Tap to speak (like AI Entry), via the shared hook: mic permission, and
+  // cancel on blur or app background. The words go into the text box as they
+  // are heard, so the user can edit them and tap ➤; nothing is sent by itself.
   const voice = useLiveVoice({
     language: voiceLanguage,
     purpose: 'chatbot',
     maxMs: AUTO_STOP_MS,
-    onText: setPartial,
+    onText: setInput,
+    // The final transcript (usually a bit more accurate) replaces the live text.
     onComplete: text => {
-      setPartial('');
       if (isUnclearTranscript(text)) {
+        setInput('');
         didntCatch();
       } else {
-        setReview(text);
+        setInput(text);
       }
     },
     onError: error => {
-      setPartial('');
+      // Whatever was heard stays in the box and can still be sent.
       if (error instanceof ApiError && error.status === 422) {
         didntCatch(); // "No speech detected."
       } else if (error instanceof ApiError && error.status === 429) {
@@ -135,9 +137,10 @@ export function AssistantScreen({
   ) => {
     const q = question.trim();
     if (!q || ask.isPending) return;
+    if (voice.state !== 'idle') voice.stop(); // drop a late transcript update
     setMessages(prev => [...prev, {role: 'user', text: choice ? `→ ${choice.name}` : q}]);
     setInput('');
-    setReview(null);
+    fromVoice.current = false;
     setVoiceNotice(null);
     scrollToEnd();
     ask.mutate(
@@ -164,16 +167,18 @@ export function AssistantScreen({
     );
   };
 
-  // --- Push-to-talk ----------------------------------------------------------
-  const startRecording = () => {
-    if (voiceState !== 'idle' || ask.isPending) return;
-    setReview(null);
+  // --- Tap to speak ------------------------------------------------------------
+  const onMic = () => {
+    if (voiceState === 'recording') {
+      voice.finish(); // stop; the final transcript arrives in the text box
+      return;
+    }
+    if (voiceState !== 'idle' || ask.isPending) return; // connecting / finishing
     setVoiceNotice(null);
-    setPartial('');
+    setInput('');
+    fromVoice.current = true;
     voice.start();
   };
-
-  const stopRecording = () => voice.finish();
 
   function didntCatch() {
     setVoiceNotice(t('assistant.didntCatch'));
@@ -183,10 +188,9 @@ export function AssistantScreen({
   const newChat = () => {
     voice.stop();
     setMessages([]);
-    setReview(null);
     setVoiceNotice(null);
-    setPartial('');
     setInput('');
+    fromVoice.current = false;
   };
 
   const openDetails = async (view: ViewDetails) => {
@@ -208,7 +212,7 @@ export function AssistantScreen({
     }
   };
 
-  const recording = voiceState !== 'idle';
+  const recording = voiceState === 'recording';
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -274,8 +278,8 @@ export function AssistantScreen({
           ) : null}
         </ScrollView>
 
-        {/* Recording indicator with live partial transcript */}
-        {recording ? (
+        {/* Recording indicator (the words appear in the text box below) */}
+        {voiceState !== 'idle' ? (
           <View testID="recording-indicator" className="mx-4 mb-2 rounded-2xl bg-red-50 px-4 py-3">
             <View className="flex-row items-center" style={{gap: 8}}>
               <View className="h-2.5 w-2.5 rounded-full bg-red-600" />
@@ -289,39 +293,6 @@ export function AssistantScreen({
                       })}
               </Text>
             </View>
-            {partial ? <Text className="mt-1 text-sm text-slate-700">{partial}</Text> : null}
-          </View>
-        ) : null}
-
-        {/* Transcript review: shown BEFORE anything is sent */}
-        {review !== null ? (
-          <View testID="transcript-review" className="mx-4 mb-2 rounded-2xl border border-border bg-white p-3">
-            <Text variant="label">{t('assistant.reviewTitle')}</Text>
-            <TextInput
-              testID="transcript-edit"
-              className="mt-1 rounded-xl border border-border px-3 py-2 text-base text-slate-900"
-              value={review}
-              onChangeText={setReview}
-              multiline
-            />
-            <Text variant="caption" className="mt-1">
-              {t('assistant.reviewHint')}
-            </Text>
-            <View className="mt-2 flex-row justify-end" style={{gap: 8}}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setReview(null)}
-                className="rounded-full border border-border px-4 py-2">
-                <Text className="text-sm text-slate-800">{t('assistant.tryAgain')}</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                disabled={!review.trim() || ask.isPending}
-                onPress={() => send(review, 'voice')}
-                className="rounded-full bg-primary px-4 py-2">
-                <Text className="text-sm font-semibold text-white">{t('assistant.send')}</Text>
-              </Pressable>
-            </View>
           </View>
         ) : null}
 
@@ -331,46 +302,51 @@ export function AssistantScreen({
           </Text>
         ) : null}
 
-        {/* Input bar: text fallback + push-to-talk mic */}
+        {/* Input bar: text box (typed or spoken) + mic + send */}
         <View className="flex-row items-center border-t border-border px-4 py-2.5" style={{gap: 8}}>
           <TextInput
+            testID="question-input"
             ref={inputRef}
-            className="h-11 flex-1 rounded-full border border-border bg-white px-4 text-base text-slate-900"
+            className="min-h-11 flex-1 rounded-3xl border border-border bg-white px-4 py-2 text-base text-slate-900"
             value={input}
             onChangeText={setInput}
             placeholder={t('assistant.placeholder')}
             placeholderTextColor={colors.muted}
+            multiline
             returnKeyType="send"
-            onSubmitEditing={() => send(input, 'text')}
+            blurOnSubmit
+            onSubmitEditing={() => send(input, fromVoice.current ? 'voice' : 'text')}
           />
-          {voiceAvailable && !input.trim() ? (
+          {voiceAvailable ? (
             <Pressable
               testID="mic-button"
               accessibilityRole="button"
-              accessibilityLabel={t('assistant.holdToSpeak')}
-              onPressIn={startRecording}
-              onPressOut={stopRecording}
+              accessibilityLabel={t(recording ? 'assistant.stopSpeaking' : 'assistant.startSpeaking')}
+              onPress={onMic}
+              disabled={ask.isPending || voiceState === 'connecting' || voiceState === 'finishing'}
+              className={`h-11 w-11 items-center justify-center rounded-full ${
+                recording ? 'bg-red-600' : voiceState === 'idle' ? 'bg-primary' : 'bg-slate-300'
+              }`}>
+              <Text className="text-lg text-white">{recording ? '⏹' : '🎤'}</Text>
+            </Pressable>
+          ) : null}
+          {input.trim() ? (
+            <Pressable
+              testID="send-button"
+              accessibilityRole="button"
+              accessibilityLabel={t('assistant.send')}
+              onPress={() => send(input, fromVoice.current ? 'voice' : 'text')}
               disabled={ask.isPending}
               className={`h-11 w-11 items-center justify-center rounded-full ${
-                recording ? 'bg-red-600' : 'bg-primary'
-              }`}>
-              <Text className="text-lg text-white">🎤</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => send(input, 'text')}
-              disabled={!input.trim() || ask.isPending}
-              className={`h-11 w-11 items-center justify-center rounded-full ${
-                !input.trim() || ask.isPending ? 'bg-slate-300' : 'bg-primary'
+                ask.isPending ? 'bg-slate-300' : 'bg-primary'
               }`}>
               <Text className="text-lg text-white">➤</Text>
             </Pressable>
-          )}
+          ) : null}
         </View>
-        {voiceAvailable && !recording && review === null && messages.length === 0 ? (
+        {voiceAvailable && voiceState === 'idle' && !input && messages.length === 0 ? (
           <Text variant="caption" className="pb-2 text-center">
-            {t('assistant.holdToSpeak')}
+            {t('assistant.tapToSpeak')}
           </Text>
         ) : null}
       </KeyboardAvoidingView>

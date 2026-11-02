@@ -58,24 +58,34 @@ beforeEach(() => {
   mockVoice.state = 'idle';
 });
 
-it('hold to record, release to finish; Ask AI purpose with a 60 s cap', () => {
+it('tap the mic to start (no holding); Ask AI purpose with a 60 s cap', () => {
   const tree = render();
-  const mic = byTestId(tree, 'mic-button');
-  act(() => mic.props.onPressIn());
+  act(() => byTestId(tree, 'mic-button').props.onPress());
   expect(mockVoice.start).toHaveBeenCalledTimes(1);
-  act(() => mic.props.onPressOut());
-  expect(mockVoice.finish).toHaveBeenCalledTimes(1);
   expect(mockVoice.options).toMatchObject({purpose: 'chatbot', maxMs: 59_500});
 });
 
-it('shows the transcript for review, lets the user edit it, and only then sends', () => {
+it('tap again (⏹) to stop: finishes the recording', () => {
+  mockVoice.state = 'recording';
   const tree = render();
-  act(() => mockVoice.options.onComplete('Ramesh ka balanse kitna hai'));
-  expect(mockMutate).not.toHaveBeenCalled(); // nothing sent before review
-  const edit = byTestId(tree, 'transcript-edit');
-  expect(edit.props.value).toBe('Ramesh ka balanse kitna hai');
-  act(() => edit.props.onChangeText('Ramesh ka balance kitna hai'));
-  const send = button(tree, 'Send');
+  const mic = byTestId(tree, 'mic-button');
+  expect(mic.findAllByType(Text)[0].props.children).toBe('⏹');
+  act(() => mic.props.onPress());
+  expect(mockVoice.finish).toHaveBeenCalledTimes(1);
+  expect(mockVoice.start).not.toHaveBeenCalled();
+});
+
+it('words appear in the text box as spoken; the user edits and taps ➤ to ask', () => {
+  const tree = render();
+  act(() => byTestId(tree, 'mic-button').props.onPress());
+  act(() => mockVoice.options.onText('Ramesh ka'));
+  expect(byTestId(tree, 'question-input').props.value).toBe('Ramesh ka');
+  act(() => mockVoice.options.onComplete('Ramesh ka balanse kitna hai')); // final replaces live text
+  expect(mockMutate).not.toHaveBeenCalled(); // nothing is sent by itself
+  const box = byTestId(tree, 'question-input');
+  expect(box.props.value).toBe('Ramesh ka balanse kitna hai');
+  act(() => box.props.onChangeText('Ramesh ka balance kitna hai'));
+  const send = byTestId(tree, 'send-button');
   act(() => send.props.onPress());
   expect(mockMutate.mock.calls[0][0]).toEqual({
     text: 'Ramesh ka balance kitna hai',
@@ -94,7 +104,6 @@ it.each([
   expect(byTestId(tree, 'voice-notice').props.children).toBe(
     "I didn't catch that - try again or type it.",
   );
-  expect(byTestId(tree, 'transcript-review')).toBeUndefined();
   expect(mockMutate).not.toHaveBeenCalled();
   expect(tree.root.findAllByType(TextInput).length).toBe(1); // typed fallback
 });
@@ -102,7 +111,7 @@ it.each([
 it('renders the answer with amounts bold, customer choices, and an open-screen button', () => {
   const tree = render();
   act(() => mockVoice.options.onComplete('ramesh ka balance batao'));
-  const send = button(tree, 'Send');
+  const send = byTestId(tree, 'send-button');
   act(() => send.props.onPress());
   const {onSuccess} = mockMutate.mock.calls[0][1];
   act(() =>
@@ -139,7 +148,7 @@ it('renders the answer with amounts bold, customer choices, and an open-screen b
 it('never navigates to a screen outside the allow-list', () => {
   const tree = render();
   act(() => mockVoice.options.onComplete('kuch bhi poocho'));
-  const send = button(tree, 'Send');
+  const send = byTestId(tree, 'send-button');
   act(() => send.props.onPress());
   act(() =>
     mockMutate.mock.calls[0][1].onSuccess({
@@ -170,7 +179,7 @@ const ANSWER = {
 
 const askAndAnswer = (tree: ReactTestRenderer, answer: object = ANSWER) => {
   act(() => mockVoice.options.onComplete('TEST Ramesh ka balance'));
-  act(() => button(tree, 'Send').props.onPress());
+  act(() => byTestId(tree, 'send-button').props.onPress());
   act(() => mockMutate.mock.calls.at(-1)[1].onSuccess(answer));
 };
 
@@ -227,7 +236,7 @@ it('a rate limit shows the polite server message, not an error dump', () => {
   const {ApiError} = require('@api/client');
   const tree = render();
   act(() => mockVoice.options.onComplete('TEST Ramesh ka balance'));
-  act(() => button(tree, 'Send').props.onPress());
+  act(() => byTestId(tree, 'send-button').props.onPress());
   const polite = "You've reached this hour's limit of 30 questions. Please try again a little later.";
   act(() => mockMutate.mock.calls.at(-1)[1].onError(new ApiError(429, polite)));
   // AI answers render as highlighted segments, so join each Text's children.
@@ -241,7 +250,34 @@ it('asks in the app language (Telugu)', () => {
   act(() => useAuthStore.getState().setPreferredLanguage('te'));
   const tree = render();
   act(() => mockVoice.options.onComplete('నా మొత్తం బాకీ ఎంత'));
-  act(() => button(tree, 'పంపండి').props.onPress());
+  act(() => byTestId(tree, 'send-button').props.onPress());
   expect(mockMutate.mock.calls.at(-1)[0].languageHint).toBe('te');
   act(() => useAuthStore.getState().setPreferredLanguage('en'));
+});
+
+
+it('sending while the final transcript is pending drops the late update', () => {
+  mockVoice.state = 'finishing';
+  const tree = render();
+  act(() => mockVoice.options.onText('aaj ka collection'));
+  act(() => byTestId(tree, 'send-button').props.onPress());
+  expect(mockVoice.stop).toHaveBeenCalledTimes(1); // late onComplete can't refill the box
+  expect(mockMutate.mock.calls[0][0].text).toBe('aaj ka collection');
+});
+
+it('a voice error keeps the words heard so far, and they can still be sent', () => {
+  const tree = render();
+  act(() => byTestId(tree, 'mic-button').props.onPress());
+  act(() => mockVoice.options.onText('total udhaar kitna'));
+  act(() => mockVoice.options.onError(new Error('Live transcription timed out.')));
+  expect(byTestId(tree, 'question-input').props.value).toBe('total udhaar kitna');
+  act(() => byTestId(tree, 'send-button').props.onPress());
+  expect(mockMutate.mock.calls[0][0]).toMatchObject({text: 'total udhaar kitna', inputMode: 'voice'});
+});
+
+it('typed questions are sent as text', () => {
+  const tree = render();
+  act(() => byTestId(tree, 'question-input').props.onChangeText('who owes me most'));
+  act(() => byTestId(tree, 'send-button').props.onPress());
+  expect(mockMutate.mock.calls[0][0]).toMatchObject({text: 'who owes me most', inputMode: 'text'});
 });
