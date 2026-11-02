@@ -47,11 +47,12 @@ function required(key: string, fallback?: string): string {
 
 export const ENV = {
   /**
-   * FastAPI base URL.
-   * Android emulator reaches host machine via 10.0.2.2; iOS simulator via
-   * localhost. Override per environment in `.env`.
+   * FastAPI base URL. Set per environment in `.env` (CI/Codemagic always do).
+   * The fallback is the STAGING backend, used only if a build has no value.
+   * For a local backend: Android emulator http://10.0.2.2:8000, iOS
+   * simulator http://localhost:8000.
    */
-  apiBaseUrl: required('API_BASE_URL', 'http://10.0.2.2:8000'),
+  apiBaseUrl: required('API_BASE_URL', 'https://smart-cashbook-api.onrender.com'),
   apiVersion: required('API_VERSION', 'v1'),
   apiTimeoutMs: Number(Config.API_TIMEOUT_MS ?? 15000),
   /** Page size for paginated lists (e.g. transaction history). */
@@ -77,5 +78,5 @@ export const ENV = {
     (Config.WHATSAPP_ENABLED ?? 'false').toLowerCase() === 'true',
 } as const;
 
-/** Fully-qualified API root, e.g. http://10.0.2.2:8000/api/v1 */
+/** Fully-qualified API root, e.g. https://smart-cashbook-api.onrender.com/api/v1 */
 export const API_ROOT = `${ENV.apiBaseUrl}/api/${ENV.apiVersion}`;

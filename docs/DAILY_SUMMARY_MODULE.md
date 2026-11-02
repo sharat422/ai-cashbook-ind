@@ -120,7 +120,7 @@ App `.env`, read via [`src/config/env.ts`](../src/config/env.ts):
 
 | Variable                     | Required | Default                | Description                                          |
 | ---------------------------- | -------- | ---------------------- | ---------------------------------------------------- |
-| `API_BASE_URL`               | yes      | `http://10.0.2.2:8000` | FastAPI host.                                        |
+| `API_BASE_URL`               | yes      | `https://smart-cashbook-api.onrender.com` (staging) | FastAPI host.                                        |
 | `API_VERSION`                | yes      | `v1`                   | Version segment.                                     |
 | `DAILY_SUMMARY_DEFAULT_HOUR` | no       | `20`                   | Default delivery hour (0–23, local).                 |
 | `WHATSAPP_ENABLED`           | no       | `false`                | Turns on the WhatsApp channel (needs backend ready). |

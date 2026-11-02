@@ -54,7 +54,7 @@ rebuild the app after any change.**
 
 | Variable         | Required | Default                 | Description                                              |
 | ---------------- | -------- | ----------------------- | -------------------------------------------------------- |
-| `API_BASE_URL`   | yes      | `http://10.0.2.2:8000`  | FastAPI host, no trailing slash, no `/api`.              |
+| `API_BASE_URL`   | yes      | `https://smart-cashbook-api.onrender.com` (staging)  | FastAPI host, no trailing slash, no `/api`.              |
 | `API_VERSION`    | yes      | `v1`                    | Version segment; requests hit `{BASE}/api/{VERSION}/…`.  |
 | `API_TIMEOUT_MS` | no       | `15000`                 | Per-request timeout in ms.                               |
 
