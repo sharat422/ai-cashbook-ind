@@ -40,10 +40,14 @@ export interface ChatbotAnswer {
   suggestedScreen: {screen: string; label: string} | null;
 }
 
+/** Languages Ask AI answers in (fixed replies are translated for these). */
+export type ChatLanguage = 'hinglish' | 'hi' | 'en' | 'te' | 'ta' | 'ml';
+
 export interface AskInput {
   text: string;
   inputMode: 'voice' | 'text';
   selectedCustomerId?: string;
+  languageHint?: ChatLanguage;
 }
 
 interface ChatbotAnswerDto {
@@ -107,6 +111,7 @@ export const assistantRemote = {
       body: {
         transcript_text: input.text,
         input_mode: input.inputMode,
+        ...(input.languageHint ? {language_hint: input.languageHint} : {}),
         ...(input.selectedCustomerId
           ? {selected_customer_id: input.selectedCustomerId}
           : {}),

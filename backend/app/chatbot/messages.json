@@ -1,30 +1,59 @@
 {
   "_comment": "Fixed user-facing replies the server returns instead of (or appends to) a model answer. Per-language entries are picked by language_hint (default hinglish).",
-  "unverified": "I couldn't verify that - please try again.",
-  "unavailable": "The assistant is unavailable right now. Please try again in a moment.",
+  "unverified": {
+    "en": "I couldn't verify that - please try again.",
+    "hinglish": "I couldn't verify that - please try again.",
+    "hi": "I couldn't verify that - please try again.",
+    "te": "నేను దానిని సరిచేయలేకపోయాను - దయచేసి మళ్లీ ప్రయత్నించండి.",
+    "ta": "என்னால் அதை சரிபார்க்க முடியவில்லை - மீண்டும் முயற்சி செய்யவும்.",
+    "ml": "എനിക്ക് അത് സ്ഥിരീകരിക്കാൻ കഴിഞ്ഞില്ല - വീണ്ടും ശ്രമിക്കുക."
+  },
+  "unavailable": {
+    "en": "The assistant is unavailable right now. Please try again in a moment.",
+    "hinglish": "The assistant is unavailable right now. Please try again in a moment.",
+    "hi": "The assistant is unavailable right now. Please try again in a moment.",
+    "te": "సహాయకుడు ఇప్పుడు అందుబాటులో లేరు. దయచేసి కొద్దిగా క్షణం తర్వాత మళ్లీ ప్రయత్నించండి.",
+    "ta": "உதவியாளர் இப்போது கிடைக்கவில்லை. தயவுசெய்து சிறிது நேரத்தில் மீண்டும் முயற்சி செய்யவும்.",
+    "ml": "സഹായി ഇപ്പോൾ ലഭ്യമല്ല. കുറച്ച് നിമിഷത്തിനുശേഷം വീണ്ടും ശ്രമിക്കുക."
+  },
   "not_in_help": {
     "hinglish": "Yeh help guide mein nahi hai. Aap Settings → 💬 Help & support se hamari team se baat kar sakte hain.",
     "hi": "यह हेल्प गाइड में नहीं है। आप Settings → 💬 Help & support से हमारी टीम से बात कर सकते हैं।",
-    "en": "That's not in the help guide. You can reach our team from Settings → 💬 Help & support."
+    "en": "That's not in the help guide. You can reach our team from Settings → 💬 Help & support.",
+    "te": "అది సహాయ గైడ్‌లో లేదు. సెట్టింగ్‌లు → 💬 సహాయం & మద్దతు నుండి మా టీమ్‌కు చేరుకోవచ్చు.",
+    "ta": "இது உதவி வழிகாட்டியில் இல்லை. அமைப்புகள் → 💬 உதவி & ஆதரவு இலிருந்து எங்கள் குழுவை அணுகலாம்.",
+    "ml": "അത് സഹായ ഗൈഡിലില്ല. ക്രമീകരണങ്ങൾ → 💬 സഹായം & പിന്തുണ വഴി ഞങ്ങളുടെ ടീമിനെ ബന്ധപ്പെടാം."
   },
   "out_of_scope": {
     "hinglish": "Main aapke khate (balance, udhaar, collection, recent entries) aur Bolcash app ke use ke sawaalon mein madad kar sakta hoon. Kisi aur cheez ke liye Settings → 💬 Help & support se hamari team se baat kariye.",
     "hi": "मैं आपके खाते (बैलेंस, उधार, कलेक्शन, हाल की एंट्री) और Bolcash ऐप के इस्तेमाल के सवालों में मदद कर सकता हूँ। किसी और चीज़ के लिए Settings → 💬 Help & support से हमारी टीम से बात करें।",
-    "en": "I can help with your account (balances, dues, collections, recent entries) and with using the Bolcash app. For anything else, reach our team from Settings → 💬 Help & support."
+    "en": "I can help with your account (balances, dues, collections, recent entries) and with using the Bolcash app. For anything else, reach our team from Settings → 💬 Help & support.",
+    "te": "నేను మీ ఖాతా (బ్యాలెన్సులు, పకుమతులు, సేకరణలు, ఇటీవలి ఎంట్రీలు) మరియు Bolcash యాప్‌ని ఉపయోగించడంలో సహాయం చేయగలను. మరేదైనా విషయానికి, సెట్టింగ్‌లు → 💬 సహాయం & మద్దతు నుండి మా టీమ్‌కు చేరుకోండి.",
+    "ta": "உங்கள் கணக்கு (இருப்பு, கடன், சேகரணை, சமீபத்திய உள்ளீடுகள்) மற்றும் Bolcash பயன்பாட்டைப் பயன்படுத்துவதற்கு என்னால் உதவ முடியும். வேறு எதற்காவது, அமைப்புகள் → 💬 உதவி & ஆதரவு இலிருந்து எங்கள் குழுவை அணுகவும்.",
+    "ml": "നിങ്ങളുടെ അക്കൗണ്ട് (ബാലൻസ്, കടങ്ങൾ, ശേഖരണം, സമീപകാല എന്ത്രികൾ) കൂടാതെ Bolcash ആപ്പ് ഉപയോഗിക്കുന്നതിനെ കുറിച്ച് ഞാൻ സഹായിക്കാം. മറ്റെന്തെങ്കിലുമായി, ക്രമീകരണങ്ങൾ → 💬 സഹായം & പിന്തുണ വഴി ഞങ്ങളുടെ ടീമിനെ ബന്ധപ്പെടുക."
   },
   "limit_questions": {
     "hinglish": "Is ghante ke sawaal poore ho gaye ({limit} per hour). Thodi der baad phir poochhiye.",
     "hi": "इस घंटे के सवाल पूरे हो गए ({limit} प्रति घंटा)। थोड़ी देर बाद फिर पूछिए।",
-    "en": "You've reached this hour's limit of {limit} questions. Please try again a little later."
+    "en": "You've reached this hour's limit of {limit} questions. Please try again a little later.",
+    "te": "మీరు ఈ గంటలో {limit} ప్రశ్నల పరిమితికి చేరుకున్నారు. దయచేసి కొద్దిగా తర్వాత ప్రయత్నించండి.",
+    "ta": "இந்த மணிநேரத்தின் {limit} கேள்விகளின் வரம்பை நீங்கள் அடைந்துவிட்டீர்கள். தயவுசெய்து சிறிது நேரத்தில் மீண்டும் முயற்சி செய்யவும்.",
+    "ml": "ഈ മണിക്കൂറിലെ {limit} ചോദ്യങ്ങളുടെ പരിധിയിൽ എത്തിയിരിക്കുന്നു. കുറച്ച് സമയത്തിനുശേഷം വീണ്ടും ശ്രമിക്കുക."
   },
   "limit_voice": {
     "hinglish": "Aaj ke Ask AI voice minutes poore ho gaye ({minutes} min per day). Aap sawaal type kar sakte hain.",
     "hi": "आज के Ask AI वॉइस मिनट पूरे हो गए ({minutes} मिनट प्रतिदिन)। आप सवाल टाइप कर सकते हैं।",
-    "en": "You've used today's {minutes} minutes of Ask AI voice. You can still type your question."
+    "en": "You've used today's {minutes} minutes of Ask AI voice. You can still type your question.",
+    "te": "మీరు Ask AI వాయిస్‌కు ఈ రోజు {minutes} నిమిషాలను ఉపయోగించారు. మీరు ఇప్పటికీ మీ ప్రశ్నను టైప్ చేయవచ్చు.",
+    "ta": "நீங்கள் AI ஐ கேட்கவும் குரலின் {minutes} நிமிடங்களைப் பயன்படுத்திவிட்டீர்கள். நீங்கள் இன்னும் உங்கள் கேள்வியைத் தட்டச்சு செய்யலாம்.",
+    "ml": "നിങ്ങൾ ഇന്ന് AI യോടു ചോദിക്കുക ന്റെ {minutes} മിനിറ്റ് ഉപയോഗിച്ചിരിക്കുന്നു. നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യാൻ ഇപ്പോഴും കഴിയും."
   },
   "next_step": {
     "hinglish": "Kya main {screen} screen khol doon?",
     "hi": "क्या मैं {screen} स्क्रीन खोल दूँ?",
-    "en": "Want me to open the {screen} screen?"
+    "en": "Want me to open the {screen} screen?",
+    "te": "{screen} స్క్రీన్‌ను నేను తెరవాలనుకుంటున్నారా?",
+    "ta": "{screen} திரையைத் திறக்க வேண்டுமா?",
+    "ml": "{screen} സ്ക്രീൻ തുറക്കാൻ ഞാൻ സഹായിക്കട്ടെ?"
   }
 }

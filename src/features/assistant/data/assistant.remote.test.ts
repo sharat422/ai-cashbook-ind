@@ -78,3 +78,9 @@ it('sends feedback with an optional trimmed note', async () => {
     {question_id: 'q1', rating: 'up'},
   ]);
 });
+
+it('sends the language hint when given', async () => {
+  api.mockResolvedValueOnce({answer_text: 'ok', verified: true, data_source: 'none'});
+  await assistantRemote.ask({text: 'x', inputMode: 'text', languageHint: 'ta'});
+  expect(api.mock.calls[0][1].body.language_hint).toBe('ta');
+});

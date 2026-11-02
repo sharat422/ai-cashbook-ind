@@ -1,4 +1,5 @@
 import {
+  chatLanguageHint,
   formatRecordingTime,
   highlightKeyFacts,
   isUnclearTranscript,
@@ -43,4 +44,18 @@ describe('highlightKeyFacts', () => {
 it('formats the recording timer against the cap', () => {
   expect(formatRecordingTime(7_400, 60_000)).toBe('0:07 / 1:00');
   expect(formatRecordingTime(65_000, 60_000)).toBe('1:00 / 1:00');
+});
+
+describe('chatLanguageHint', () => {
+  it.each([
+    ['te', 'te'],
+    ['ta', 'ta'],
+    ['ml', 'ml'],
+    ['hi', 'hi'],
+    ['en', 'en'],
+    ['kn', undefined], // no fixed replies yet: let the model match the question
+    ['bn', undefined],
+  ])('%p -> %p', (app, hint) => {
+    expect(chatLanguageHint(app)).toBe(hint);
+  });
 });

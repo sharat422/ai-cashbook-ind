@@ -22,7 +22,7 @@ from app.database import SessionLocal
 from app.models import AiDecision, User
 
 URL = "/api/v1/chatbot/ask"
-UNVERIFIED = MESSAGES["unverified"]
+UNVERIFIED = MESSAGES["unverified"]["hinglish"]
 
 
 # --- Fake OpenAI --------------------------------------------------------------
@@ -243,7 +243,7 @@ def test_unavailable_without_key_or_on_provider_error(merchant, client, monkeypa
     user, _, _ = merchant
     monkeypatch.setattr(settings, "openai_api_key", "")
     r = _ask(client, user, "who owes me")
-    assert r.status_code == 503 and r.json()["detail"] == MESSAGES["unavailable"]
+    assert r.status_code == 503 and r.json()["detail"] == MESSAGES["unavailable"]["hinglish"]
 
     monkeypatch.setattr(settings, "openai_api_key", "test-key")
 

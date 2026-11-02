@@ -12,7 +12,7 @@ from websockets.asyncio.client import connect
 
 from ..ai import MUSE_LANGUAGES
 from ..chatbot.guardrails import voice_seconds_left
-from ..chatbot.loop import MESSAGES
+from ..chatbot.loop import LANGUAGE_HINTS, message
 from ..config import settings
 from ..database import SessionLocal
 from ..deps import get_current_membership, require, require_ai_consent
@@ -36,7 +36,7 @@ PURPOSES = {
 }
 
 
-def _authorize(token: str, purpose: str) -> tuple[str, str, float]:
+def _authorize(token: str, purpose: str, language=None) -> tuple[str, str, float]:
     """(user_id, business_id, max seconds for this session)."""
     with SessionLocal() as db:
         user = get_current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials=token), db)
@@ -47,7 +47,9 @@ def _authorize(token: str, purpose: str) -> tuple[str, str, float]:
             # Daily Ask AI voice budget per merchant (voice entry isn't capped).
             left = voice_seconds_left(db, business.id)
             if left <= 0:
-                raise HTTPException(429, MESSAGES["limit_voice"]["hinglish"].format(
+                # The voice language code (te, ta, hi, ...) picks the message language.
+                lang = language if language in LANGUAGE_HINTS else None
+                raise HTTPException(429, message("limit_voice", lang).format(
                     minutes=settings.chatbot_voice_seconds_per_day // 60))
             max_seconds = min(max_seconds, left)
         return user.id, business.id, max_seconds
@@ -159,7 +161,7 @@ async def voice_live(client: WebSocket):
         purpose = hello.get("purpose", "entry")
         if purpose not in PURPOSES:
             raise HTTPException(400, "Unknown voice purpose.")
-        authenticated_id, business_id, max_seconds = await asyncio.to_thread(_authorize, hello["token"], purpose)
+        authenticated_id, business_id, max_seconds = await asyncio.to_thread(_authorize, hello["token"], purpose, hello.get("language"))
         if authenticated_id in _active:
             raise HTTPException(429, "A voice recording is already active.")
         if not settings.meta_model_api_key:

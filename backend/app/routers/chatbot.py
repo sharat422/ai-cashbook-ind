@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from ..chatbot.guardrails import question_limit_reached
-from ..chatbot.loop import MESSAGES, ChatbotUnavailable, ask, delete_history, record_feedback
+from ..chatbot.loop import ChatbotUnavailable, ask, delete_history, message, record_feedback
 from ..config import settings
 from ..consent import PURPOSE_AI_HISTORY
 from ..database import get_db
@@ -16,7 +16,7 @@ from ..security import get_current_user
 
 router = APIRouter(tags=["chatbot"])
 
-Language = Literal["hinglish", "hi", "en"]
+Language = Literal["hinglish", "hi", "en", "te", "ta", "ml"]
 
 
 class AskBody(BaseModel):
@@ -42,10 +42,9 @@ def chatbot_ask(
     """Read-only account Q&A. Every number comes from a server-side tool call
     scoped to the caller's business; unverifiable answers are replaced."""
     if question_limit_reached(db, business.id):
-        lang = body.language_hint or "hinglish"
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            MESSAGES["limit_questions"][lang].format(limit=settings.chatbot_questions_per_hour),
+            message("limit_questions", body.language_hint).format(limit=settings.chatbot_questions_per_hour),
         )
     try:
         return ask(
@@ -55,7 +54,7 @@ def chatbot_ask(
             input_mode=body.input_mode,
         )
     except ChatbotUnavailable:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, MESSAGES["unavailable"])
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, message("unavailable", body.language_hint))
 
 
 class FeedbackBody(BaseModel):

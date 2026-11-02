@@ -40,6 +40,20 @@ export function highlightKeyFacts(answer: string): AnswerSegment[] {
   return segments;
 }
 
+const CHAT_LANGUAGES = ['en', 'hi', 'te', 'ta', 'ml'] as const;
+
+/**
+ * Ask AI language hint from the app's language setting. Languages Ask AI has
+ * no fixed replies for get no hint: the model then matches the question.
+ */
+export function chatLanguageHint(
+  appLanguage: string,
+): (typeof CHAT_LANGUAGES)[number] | undefined {
+  return (CHAT_LANGUAGES as readonly string[]).includes(appLanguage)
+    ? (appLanguage as (typeof CHAT_LANGUAGES)[number])
+    : undefined;
+}
+
 /** "0:07 / 1:00" for the recording indicator. */
 export function formatRecordingTime(elapsedMs: number, maxMs: number): string {
   const fmt = (ms: number) => {

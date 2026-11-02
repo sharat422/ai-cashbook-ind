@@ -106,7 +106,7 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "query": {"type": "string", "description": "The how-to question in a few keywords, e.g. 'send reminder whatsapp'."}
+          "query": {"type": "string", "description": "The how-to question as a few ENGLISH keywords, whatever language the user asked in, e.g. 'send reminder whatsapp'."}
         },
         "required": ["query"],
         "additionalProperties": false

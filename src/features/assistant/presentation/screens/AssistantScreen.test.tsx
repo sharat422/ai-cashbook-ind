@@ -81,6 +81,7 @@ it('shows the transcript for review, lets the user edit it, and only then sends'
     text: 'Ramesh ka balance kitna hai',
     inputMode: 'voice',
     selectedCustomerId: undefined,
+    languageHint: 'en', // the default app language
   });
 });
 
@@ -127,6 +128,7 @@ it('renders the answer with amounts bold, customer choices, and an open-screen b
     text: 'ramesh ka balance batao',
     inputMode: 'text',
     selectedCustomerId: 'c2',
+    languageHint: 'en',
   });
 
   const open = button(tree, 'Open Customers');
@@ -232,4 +234,14 @@ it('a rate limit shows the polite server message, not an error dump', () => {
   const shown = tree.root.findAllByType(Text).map(t => [t.props.children].flat().join(''));
   expect(shown).toContain(polite);
   expect(shown.some(c => c.startsWith('Sorry'))).toBe(false);
+});
+
+it('asks in the app language (Telugu)', () => {
+  const {useAuthStore} = require('@store/auth.store');
+  act(() => useAuthStore.getState().setPreferredLanguage('te'));
+  const tree = render();
+  act(() => mockVoice.options.onComplete('నా మొత్తం బాకీ ఎంత'));
+  act(() => button(tree, 'పంపండి').props.onPress());
+  expect(mockMutate.mock.calls.at(-1)[0].languageHint).toBe('te');
+  act(() => useAuthStore.getState().setPreferredLanguage('en'));
 });

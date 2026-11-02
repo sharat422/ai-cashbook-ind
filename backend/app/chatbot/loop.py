@@ -53,13 +53,22 @@ _NOT_COVERED = re.compile(
     r"couldn'?t find|could not find|नहीं दिख|नहीं मिल",
     re.IGNORECASE,
 )
-LANGUAGE_HINTS = ("hinglish", "hi", "en")
+LANGUAGE_HINTS = ("hinglish", "hi", "en", "te", "ta", "ml")
 _LANGUAGE_TEXT = {
     "hinglish": "Hinglish",
-    "hi": "Hindi",
+    "hi": "Hindi (Devanagari script)",
     "en": "English",
+    "te": "Telugu (Telugu script)",
+    "ta": "Tamil (Tamil script)",
+    "ml": "Malayalam (Malayalam script)",
     None: "not given; match the language of the question",
 }
+
+
+def message(key: str, lang: str | None) -> str:
+    """A fixed reply in the user's language (Hinglish if unknown)."""
+    replies = MESSAGES[key]
+    return replies.get(lang or "hinglish") or replies["hinglish"]
 
 _NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -141,10 +150,22 @@ def _system_prompt(language_hint: str | None) -> str:
             .replace("{{LANGUAGE_HINT}}", _LANGUAGE_TEXT.get(language_hint, _LANGUAGE_TEXT[None])))
 
 
-def _complete(client, messages: list, tool_choice: str):
+REGIONAL_LANGUAGES = {"te", "ta", "ml"}
+_REGIONAL_SCRIPT = re.compile(r"[஀-௿ఀ-౿ഀ-ൿ]")  # Tamil, Telugu, Malayalam
+
+
+def model_for(language_hint: str | None, question: str) -> str:
+    """gpt-4o for Telugu/Tamil/Malayalam (by hint or by the question's script);
+    the cheaper default model otherwise."""
+    if language_hint in REGIONAL_LANGUAGES or _REGIONAL_SCRIPT.search(question or ""):
+        return settings.chatbot_model_regional
+    return settings.chatbot_model
+
+
+def _complete(client, messages: list, tool_choice: str, model: str):
     try:
         return client.chat.completions.create(
-            model=settings.chatbot_model,
+            model=model,
             messages=messages,
             tools=TOOL_DEFINITIONS,
             tool_choice=tool_choice,
@@ -259,7 +280,8 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
     ]
     usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
-    first = _complete(client, messages, "auto")
+    model = model_for(language_hint, question)
+    first = _complete(client, messages, "auto", model)
     _add_usage(usage, first)
     llm_calls = 1
     reply = first.choices[0].message
@@ -306,7 +328,12 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
             # Nothing in the help guide: fixed reply, no chance to improvise.
             model_answer, outcome = "", "not_in_help"
         else:
-            second = _complete(client, messages, "none")
+            if language_hint in _LANGUAGE_TEXT and language_hint not in (None, "hinglish"):
+                # Tool results and help docs are in English, which pulls the model
+                # back to Hinglish; restate the language right before it answers.
+                messages.append({"role": "system", "content":
+                                 f"Write the final answer in {_LANGUAGE_TEXT[language_hint]}."})
+            second = _complete(client, messages, "none", model)
             _add_usage(usage, second)
             llm_calls = 2
             model_answer = second.choices[0].message.content or ""
@@ -328,15 +355,15 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
         outcome = "rejected_no_tool" if invented else "out_of_scope"
 
     if outcome == "not_in_help":
-        answer = MESSAGES["not_in_help"][lang]
+        answer = message("not_in_help", lang)
     elif outcome == "out_of_scope":
-        answer = MESSAGES["out_of_scope"][lang]
+        answer = message("out_of_scope", lang)
     elif outcome == "answered":
         answer = model_answer.strip()
         if help_docs and not answer.endswith("?"):  # every app answer ends with a next step
-            answer += " " + MESSAGES["next_step"][lang].format(screen=help_docs[0]["screen_label"])
+            answer += " " + message("next_step", lang).format(screen=help_docs[0]["screen_label"])
     else:
-        answer = MESSAGES["unverified"]
+        answer = message("unverified", lang)
 
     # Docs that were searched but didn't answer the question aren't sources.
     sources = [] if outcome == "not_in_help" else list(dict.fromkeys(d["source"] for d in help_docs))
@@ -369,7 +396,7 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
         db, merchant_id, question, answer, model_answer, outcome, store_text, started,
         user_id=user_id, input_mode=input_mode, llm_calls=llm_calls, tools_used=tools_used,
         forced_help_search=forced_help, help_sources=sources,
-        result_customer_ids=_customer_ids(results), tokens=usage, model=settings.chatbot_model,
+        result_customer_ids=_customer_ids(results), tokens=usage, model=model,
     )
     return response
 

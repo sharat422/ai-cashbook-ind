@@ -135,7 +135,7 @@ def test_help_answer_with_number_not_in_doc_is_rejected(merchant, client, llm):
     llm(_resp(tool_calls=[_tool_call("search_help_docs", {"query": "add staff"})]),
         _resp("Aap 25 staff tak add kar sakte hain. Kya main Team & roles screen khol doon?"))
     body = _ask(client, user, "kitne staff add kar sakte hain").json()
-    assert body["answer_text"] == MESSAGES["unverified"]
+    assert body["answer_text"] == MESSAGES["unverified"]["hinglish"]
 
 
 def test_help_search_is_audited_with_masked_query(merchant, client, llm, caplog):

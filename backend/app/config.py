@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Ask AI chatbot (app/chatbot): model for the tool-calling loop and the cap
     # on tokens the model may generate per LLM call.
     chatbot_model: str = "gpt-4o-mini"
+    # Telugu/Tamil/Malayalam: gpt-4o-mini made factual errors in words there
+    # ("no debt" for a customer who owes, wrong dates); gpt-4o did not.
+    chatbot_model_regional: str = "gpt-4o"
     chatbot_max_tokens: int = 300
     # v1 limits per merchant (business): questions per rolling hour, and Muse
     # seconds per IST day for Ask AI voice (voice entry is not capped).

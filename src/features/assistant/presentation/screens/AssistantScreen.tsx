@@ -20,6 +20,7 @@ import type {
   ViewDetails,
 } from '@features/assistant/data/assistant.remote';
 import {
+  chatLanguageHint,
   formatRecordingTime,
   highlightKeyFacts,
   isUnclearTranscript,
@@ -30,6 +31,7 @@ import {
 } from '@features/assistant/presentation/hooks';
 import {customerRepository} from '@features/customers/data/customer.repository';
 import {useVoiceSettingsStore} from '@features/settings/store/voiceSettings.store';
+import {useAuthStore} from '@store/auth.store';
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps, AppStackParamList} from '@navigation/types';
 import {colors} from '@theme/colors';
@@ -74,6 +76,7 @@ export function AssistantScreen({
   const t = useT();
   const ask = useAsk();
   const voiceLanguage = useVoiceSettingsStore(s => s.language);
+  const languageHint = chatLanguageHint(useAuthStore(s => s.preferredLanguage));
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [partial, setPartial] = useState('');
@@ -138,7 +141,7 @@ export function AssistantScreen({
     setVoiceNotice(null);
     scrollToEnd();
     ask.mutate(
-      {text: q, inputMode, selectedCustomerId: choice?.customerId},
+      {text: q, inputMode, selectedCustomerId: choice?.customerId, languageHint},
       {
         onSuccess: answer =>
           setMessages(prev => [...prev, {role: 'ai', text: answer.answer, answer, question: q}]),

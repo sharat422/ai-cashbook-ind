@@ -9,7 +9,10 @@
     "reply": {
       "hinglish": "Main kuch delete nahi kar sakta, main sirf padh sakta hoon. Bolcash mein abhi saved entries delete ya edit nahi hoti; galat entry ke liye Settings → 💬 Help & support se hamari team ko bataiye. Apni Ask AI history mitane ke liye: Settings → 🔐 Privacy & consent → Delete voice history.",
       "hi": "मैं कुछ भी डिलीट नहीं कर सकता, मैं सिर्फ़ पढ़ सकता हूँ। Bolcash में अभी सेव की गई एंट्री डिलीट या एडिट नहीं होती; गलत एंट्री के लिए Settings → 💬 Help & support से हमारी टीम को बताइए। अपनी Ask AI हिस्ट्री मिटाने के लिए: Settings → 🔐 Privacy & consent → Delete voice history।",
-      "en": "I can't delete anything — I can only read. Bolcash can't delete or edit saved entries yet; for a wrong entry, tell our team via Settings → 💬 Help & support. To clear your Ask AI history: Settings → 🔐 Privacy & consent → Delete voice history."
+      "en": "I can't delete anything — I can only read. Bolcash can't delete or edit saved entries yet; for a wrong entry, tell our team via Settings → 💬 Help & support. To clear your Ask AI history: Settings → 🔐 Privacy & consent → Delete voice history.",
+      "te": "నేను ఏదీ తొలగించలేను — నేను కేవలం చదువుకోగలను. Bolcash ఇంకా సేవ్ చేసిన ఎంట్రీలను తొలగించలేదా సవరించలేము; తప్పు ఎంట్రీ కోసం, సెట్టింగ్‌లు → 💬 సహాయం & మద్దతు ద్వారా మా టీమ్‌కు చెప్పండి. మీ Ask AI చరిత్రను క్లియర్ చేయడానికి: సెట్టింగ్‌లు → 🔐 గోప్యత & సమ్మతి → వాయిస్ చరిత్ర తొలగించండి.",
+      "ta": "என்னால் எதையும் நீக்க முடியாது — என்னால் படிக்க மட்டுமே முடியும். Bolcash இன்னும் சேமிக்கப்பட்ட உள்ளீடுகளை நீக்க அல்லது திருத்த முடியாது; தவறான உள்ளீட்டுக்கு, அமைப்புகள் → 💬 உதவி & ஆதரவு வழியாக எங்கள் குழுவிடம் சொல்லவும். உங்கள் Ask AI வரலாறை அழிக்க: அமைப்புகள் → 🔐 தனியுரிமை & ஒப்புதல் → குரல் வரலாறு நீக்கவும்.",
+      "ml": "എനിക്ക് എന്തെങ്കിലും ഡിലിറ്റ് ചെയ്യാൻ കഴിയില്ല — ഞാൻ വായനയ്ക്കായി മാത്രമാണ്. Bolcash ഇതുവരെ സേവ് ചെയ്ത എന്ത്രികൾ ഡിലിറ്റ് അല്ലെങ്കിൽ എഡിറ്റ് ചെയ്യാൻ കഴിയില്ല; തെറ്റായ എന്ത്രിക്കായി, ക്രമീകരണങ്ങൾ → 💬 സഹായം & പിന്തുണ വഴി ഞങ്ങളുടെ ടീമിനോട് പറയുക. Ask AI ചരിത്രം മായ്ക്കാൻ: ക്രമീകരണങ്ങൾ → 🔐 പ്രൈവസി & സമ്മതി → വോയ്സ് ചരിത്രം ഡിലിറ്റ് ചെയ്യുക."
     }
   },
   "transfer_money": {
@@ -28,7 +31,10 @@
     "reply": {
       "hinglish": "Main paise bhej ya transfer nahi kar sakta. Customer se payment maangne ke liye unki profile kholiye aur 💳 Request dabaiye (UPI request).",
       "hi": "मैं पैसे भेज या ट्रांसफर नहीं कर सकता। ग्राहक से पेमेंट माँगने के लिए उनकी प्रोफ़ाइल खोलिए और 💳 Request दबाइए (UPI रिक्वेस्ट)।",
-      "en": "I can't send or transfer money. To ask a customer to pay you, open their profile and tap 💳 Request (UPI request)."
+      "en": "I can't send or transfer money. To ask a customer to pay you, open their profile and tap 💳 Request (UPI request).",
+      "te": "నేను డబ్బు పంపలేదా బదిలీ చేయలేను. గ్రాహకుడిని మీకు చెల్లించమని అడగడానికి, వారి ప్రొఫైల్‌ను తెరిచి 💳 అభ్యర్థన (UPI అభ్యర్థన)ను ట్యాప్ చేయండి.",
+      "ta": "என்னால் பணம் அனுப்ப அல்லது மாற்ற முடியாது. ஒரு வாடிக்கையாளரிடம் நீங்கள் பணம் செலுத்த கேட்க, அவர்களின் சுயவிவரத்தைத் திறந்து 💳 கோரிக்கை (UPI கோரிக்கை) ஐ தட்டவும்.",
+      "ml": "എനിക്ക് പണം അയയ്ക്കാനോ കൈമാറാനോ കഴിയില്ല. ഒരു കസ്റ്റമറിനോട് നിങ്ങൾക്ക് പണം കൊടുക്കാൻ ചോദിക്കാൻ, അവരുടെ പ്രൊഫൈൽ തുറന്ന് 💳 അഭ്യർത്ഥന ടാപ് ചെയ്യുക (UPI അഭ്യർത്ഥന)."
     }
   },
   "other_merchant": {
@@ -40,7 +46,10 @@
     "reply": {
       "hinglish": "Main sirf aapke apne business ka data dikha sakta hoon, kisi aur merchant ka nahi.",
       "hi": "मैं सिर्फ़ आपके अपने बिज़नेस का डेटा दिखा सकता हूँ, किसी और व्यापारी का नहीं।",
-      "en": "I can only show your own business's data, not any other merchant's."
+      "en": "I can only show your own business's data, not any other merchant's.",
+      "te": "నేను మీ స్వంత వ్యాపారం యొక్క డేటా మాత్రమే చూపగలను, ఇతర వర్తకుని యొక్క డేటా కాదు.",
+      "ta": "என்னால் உங்கள் சொந்த வியாபாரத்தின் தரவு மட்டுமே காட்ட முடியும், வேறு எந்த வணிகரின் தரவும் இல்லை.",
+      "ml": "എനിക്ക് നിങ്ങളുടെ സ്വന്തം ബിസിനെസ്സിന്റെ ഡാറ്റ മാത്രം കാണിക്കാൻ കഴിയും, മറ്റ് വ്യാപാരികളുടെ ഡാറ്റ കാണിക്കില്ല."
     }
   }
 }
