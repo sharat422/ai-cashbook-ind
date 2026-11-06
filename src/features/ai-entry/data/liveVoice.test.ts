@@ -241,3 +241,28 @@ describe('Ask AI push-to-talk', () => {
     expect(socket.sent.at(-1)).toEqual({type: 'endStream'});
   });
 });
+
+it('keeps the final transcript even if the connection then drops without a clean close', async () => {
+  const cb = callbacks();
+  const session = createLiveVoice(cb);
+  const socket = FakeSocket.latest;
+  await socket.message({type: 'ready'});
+  await session.stop();
+  await socket.message({type: 'transcript', transcript: 'Who owes me the most?', final: true});
+  socket.onclose?.({code: 1006}); // abnormal close, as seen on staging
+  await flush();
+  expect(cb.onComplete).toHaveBeenCalledWith('Who owes me the most?');
+  expect(cb.onError).not.toHaveBeenCalled();
+});
+
+it('a drop before any final transcript is still an error', async () => {
+  const cb = callbacks();
+  createLiveVoice(cb);
+  const socket = FakeSocket.latest;
+  await socket.message({type: 'ready'});
+  await socket.message({type: 'transcript', transcript: 'Who owes', final: false});
+  socket.onclose?.({code: 1006});
+  await flush();
+  expect(cb.onComplete).not.toHaveBeenCalled();
+  expect(cb.onError.mock.calls[0][0].message).toBe('Live transcription disconnected before completion.');
+});

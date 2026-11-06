@@ -91,15 +91,17 @@ async def _relay(client: WebSocket, upstream, max_seconds: int, usage: dict) -> 
     started = time.monotonic()
     audio_bytes = 0
     final = False
+    stream_ended = False  # the client sent endStream
 
     async def send_audio():
-        nonlocal audio_bytes
+        nonlocal audio_bytes, stream_ended
         while True:
             raw = await asyncio.wait_for(client.receive_text(), timeout=15)
             if len(raw) > 65536:
                 raise ValueError("Audio frame is too large.")
             event = json.loads(raw)
             if event.get("type") == "endStream":
+                stream_ended = True
                 await upstream.send(json.dumps({"type": "endStream"}))
                 return
             if event.get("type") != "audio" or not isinstance(event.get("audio"), str):
@@ -126,6 +128,11 @@ async def _relay(client: WebSocket, upstream, max_seconds: int, usage: dict) -> 
                 await client.send_json({
                     "type": "transcript", "transcript": event["transcript"], "final": final,
                 })
+                if final and stream_ended:
+                    # Done. Muse keeps its side open after the final transcript,
+                    # so don't wait for it: waiting let the connection drop ~20 s
+                    # later without a close, and the app discarded the text.
+                    return
         if not final:
             raise RuntimeError("Muse disconnected before completing the transcript.")
 

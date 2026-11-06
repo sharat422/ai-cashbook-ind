@@ -211,3 +211,51 @@ def test_recording_cap_depends_on_purpose(client, user, muse, monkeypatch):
 
 def test_production_cap_for_ask_ai_is_60_seconds():
     assert live.PURPOSES["chatbot"] == {"permission": "data.view", "max_seconds": 60}
+
+
+def test_session_closes_right_after_the_final_transcript_even_if_muse_stays_open(client, user, monkeypatch):
+    """Real Muse keeps its side open after the final transcript. The relay must
+    still close normally (1000) at once, or the connection drops ~20 s later
+    and the app discards the finished text (seen on staging)."""
+    monkeypatch.setattr(live.settings, "meta_model_api_key", "test-meta-key")
+
+    class StaysOpen:
+        def __init__(self):
+            self.events = asyncio.Queue()
+
+        async def recv(self):
+            return json.dumps({"sessionId": "s"})
+
+        async def send(self, message):
+            if not isinstance(message, bytes) and json.loads(message).get("type") == "endStream":
+                await self.events.put(json.dumps({"type": "transcript", "transcript": "Who owes me", "final": True}))
+                # ...and never closes.
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            return await self.events.get()
+
+    @asynccontextmanager
+    async def connect(url, **kwargs):
+        yield StaysOpen()
+
+    monkeypatch.setattr(live, "connect", connect)
+    import time
+    with client.websocket_connect("/api/v1/voice/live") as ws:
+        ws.send_json(hello(user, purpose="chatbot"))
+        assert ws.receive_json() == {"type": "ready"}
+        _speak(ws)
+        started = time.monotonic()
+        ws.send_json({"type": "endStream"})
+        for _ in range(5):
+            event = ws.receive_json()
+            if event.get("final"):
+                break
+        assert event == {"type": "transcript", "transcript": "Who owes me", "final": True}
+        with pytest.raises(WebSocketDisconnect) as closed:
+            ws.receive_json()
+        assert closed.value.code == 1000
+        assert time.monotonic() - started < 5
+    assert_sessions_closed(client)

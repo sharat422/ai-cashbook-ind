@@ -182,9 +182,11 @@ export function createLiveVoice(callbacks: Callbacks) {
   socket.onerror = () => {
     finish(new Error('Could not connect to live transcription.'));
   };
-  socket.onclose = event => {
+  socket.onclose = () => {
+    // Once the final transcript has arrived the session is complete, however
+    // the connection then closes (a dropped close used to discard the text).
     finish(
-      event.code === 1000 && finalText !== undefined
+      finalText !== undefined
         ? undefined
         : new Error('Live transcription disconnected before completion.'),
     );
