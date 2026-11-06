@@ -21,6 +21,8 @@ export interface Customer {
   createdAt: string;
   /** Optimistic-concurrency token; sent back on edit to detect two-device conflicts. */
   version?: number;
+  /** Credit limit in INR (server-side, shared by every device); undefined = none. */
+  creditLimit?: number;
 }
 
 /** The editable fields collected on the add/edit form. */

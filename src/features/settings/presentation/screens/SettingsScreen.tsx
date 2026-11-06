@@ -378,6 +378,30 @@ export function SettingsScreen({
             onPress={() => navigation.navigate('Team')}
           />
         ) : null}
+        {can(PERMISSIONS.BEATS_MANAGE) ? (
+          <Button
+            title={t('beats.planTitle')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('BeatPlan')}
+          />
+        ) : null}
+        {can(PERMISSIONS.DATA_VIEW) ? (
+          <Button
+            title={t('recon.title')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('Reconciliation')}
+          />
+        ) : null}
+        {can(PERMISSIONS.DATA_VIEW) ? (
+          <Button
+            title={t('close.title')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('DailyClose')}
+          />
+        ) : null}
         {canManageSettings ? (
           <Button
             title={t('settings.itemCatalog')}

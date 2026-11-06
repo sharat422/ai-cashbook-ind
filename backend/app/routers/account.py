@@ -20,6 +20,11 @@ from ..database import get_db
 from ..models import (
     AccountDeletionLog,
     AiDecision,
+    BankImport,
+    BankLine,
+    Beat,
+    BeatRetailer,
+    Visit,
     Business,
     BusinessMember,
     Customer,
@@ -132,6 +137,19 @@ def delete_account(
         ]
         # Children first, then parents — explicit so it works regardless of
         # whether the DB enforces ON DELETE CASCADE (SQLite often doesn't).
+        beat_ids = [b.id for b in db.scalars(
+            select(Beat).where(Beat.business_id.in_(biz_ids))).all()]
+        counts["bank_lines"] += db.query(BankLine).filter(
+            BankLine.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        counts["bank_imports"] += db.query(BankImport).filter(
+            BankImport.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        counts["visits"] += db.query(Visit).filter(
+            Visit.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        if beat_ids:
+            counts["beat_retailers"] += db.query(BeatRetailer).filter(
+                BeatRetailer.beat_id.in_(beat_ids)).delete(synchronize_session=False)
+        counts["beats"] += db.query(Beat).filter(
+            Beat.business_id.in_(biz_ids)).delete(synchronize_session=False)
         if cust_ids:
             counts["ledger_entries"] += db.query(LedgerEntry).filter(
                 LedgerEntry.customer_id.in_(cust_ids)

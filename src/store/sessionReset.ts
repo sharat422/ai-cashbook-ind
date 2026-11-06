@@ -1,5 +1,6 @@
 import {useEffect, useRef} from 'react';
 
+import {useVisitQueue} from '@features/beats/data/visitQueue';
 import {useCategorizationStore} from '@features/categorization/presentation/store/categorization.store';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {useCreditLimitStore} from '@features/customer-intel/store/creditLimit.store';
@@ -33,6 +34,7 @@ export function resetBusinessData(): void {
   usePendingLedgerStore.setState({entries: [], cached: {}, customers: {}});
   useCreditDraftStore.setState({drafts: {}});
   useCreditLimitStore.setState({limits: {}});
+  useVisitQueue.setState({pending: []});
   useCategorizationStore.setState({decisions: []});
   useCollectionSettingsStore.setState({upiId: '', payeeName: ''});
   useReminderHistoryStore.setState({reminders: []});

@@ -20,6 +20,7 @@ REPORTS_VIEW = "reports.view"  # view reports
 REPORTS_EXPORT = "reports.export"
 SETTINGS_MANAGE = "settings.manage"  # items, recurring, business config
 TEAM_MANAGE = "team.manage"    # invite / change role / remove members
+BEATS_MANAGE = "beats.manage"  # create beats, assign staff, order retailers
 
 ALL_PERMISSIONS = {
     ENTRY_CREATE,
@@ -30,6 +31,7 @@ ALL_PERMISSIONS = {
     REPORTS_EXPORT,
     SETTINGS_MANAGE,
     TEAM_MANAGE,
+    BEATS_MANAGE,
 }
 
 ROLES = ("owner", "accountant", "staff")

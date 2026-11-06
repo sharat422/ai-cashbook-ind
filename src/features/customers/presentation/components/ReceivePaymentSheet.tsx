@@ -5,10 +5,12 @@ import {FilterChip} from '@components/filters';
 import {AmountInput, DateField, FormField, NotesInput, TextField} from '@components/form';
 import {BottomSheet, Button, Text} from '@components/ui';
 import {
+  isUtrMissing,
   PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
   type PaymentMethod,
 } from '@features/customers/domain/ledger';
+import {useT} from '@/i18n';
 import {formatINR} from '@utils/currency';
 import {toISODate} from '@utils/date';
 
@@ -61,6 +63,8 @@ export function ReceivePaymentSheet({
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [refError, setRefError] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     if (visible) {
@@ -70,6 +74,7 @@ export function ReceivePaymentSheet({
       setReference('');
       setNotes('');
       setError(null);
+      setRefError(null);
     }
   }, [visible]);
 
@@ -83,6 +88,10 @@ export function ReceivePaymentSheet({
   const submit = () => {
     if (Number.isNaN(amount) || amount <= 0) {
       setError('Enter an amount greater than ₹0');
+      return;
+    }
+    if (isUtrMissing(method, reference)) {
+      setRefError(t('payments.utrRequired'));
       return;
     }
     onSubmit({
@@ -174,7 +183,10 @@ export function ReceivePaymentSheet({
                   key={m}
                   label={PAYMENT_METHOD_LABEL[m]}
                   selected={method === m}
-                  onPress={() => setMethod(m)}
+                  onPress={() => {
+                    setMethod(m);
+                    setRefError(null);
+                  }}
                 />
               ))}
             </View>
@@ -185,11 +197,16 @@ export function ReceivePaymentSheet({
           </FormField>
 
           <FormField
-            label="Reference number"
+            label={method === 'upi' ? t('payments.utrLabel') : 'Reference number'}
+            required={method === 'upi'}
+            error={refError}
             hint={method === 'cash' ? 'Optional' : undefined}>
             <TextField
               value={reference}
-              onChangeText={setReference}
+              onChangeText={v => {
+                setReference(v);
+                if (refError) setRefError(null);
+              }}
               placeholder={REFERENCE_HINT[method]}
               autoCapitalize="characters"
               maxLength={40}

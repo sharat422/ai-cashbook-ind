@@ -40,6 +40,15 @@ export function StaffHome({
 
         <View className="mt-8" style={{gap: 12}}>
           <Button
+            title={t('beats.todayTitle')}
+            onPress={() => navigation.navigate('BeatDayList')}
+          />
+          <Button
+            title={t('close.title')}
+            variant="secondary"
+            onPress={() => navigation.navigate('DailyClose')}
+          />
+          <Button
             title={t('dashboard.aiEntry')}
             onPress={() => navigation.navigate('AITransaction')}
           />

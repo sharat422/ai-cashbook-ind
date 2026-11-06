@@ -11,10 +11,7 @@ import {
 } from '@components/form';
 import {Button, Screen, SuccessOverlay, Text} from '@components/ui';
 import type {Attachment} from '@/shared/types/attachment';
-import {
-  creditLimitStatus,
-  useCreditLimit,
-} from '@features/customer-intel/store/creditLimit.store';
+import {creditLimitStatus} from '@features/customer-intel/store/creditLimit.store';
 import {useLedgerMutations} from '@features/customers/presentation/hooks';
 import {useCreditDraftStore} from '@features/customers/presentation/store/creditDraft.store';
 import {useConnectivity} from '@features/income/presentation/hooks';
@@ -35,9 +32,9 @@ export function AddCreditScreen({
   route,
 }: AppScreenProps<'AddCredit'>): React.JSX.Element {
   const t = useT();
-  const {customer} = route.params;
+  const {customer, beatId} = route.params;
   const online = useConnectivity();
-  const creditLimit = useCreditLimit(customer.id);
+  const creditLimit = customer.creditLimit;
   const {addCredit} = useLedgerMutations(customer.id);
   const saveDraft = useCreditDraftStore(s => s.saveDraft);
   const clearDraft = useCreditDraftStore(s => s.clearDraft);
@@ -106,6 +103,7 @@ export function AddCreditScreen({
         invoiceNumber: invoiceNumber.trim() || undefined,
         notes: notes.trim() || undefined,
         attachment,
+        beatId,
       },
       {
         onSuccess: () => {

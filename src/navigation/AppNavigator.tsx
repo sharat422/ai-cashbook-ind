@@ -27,6 +27,10 @@ import {ItemListScreen} from '@features/items/presentation/screens/ItemListScree
 import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScreen';
 import {RecurringListScreen} from '@features/recurring/presentation/screens/RecurringListScreen';
 import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
+import {BeatDayListScreen} from '@features/beats/presentation/screens/BeatDayListScreen';
+import {BeatPlanScreen} from '@features/beats/presentation/screens/BeatPlanScreen';
+import {DailyCloseScreen} from '@features/reconciliation/presentation/screens/DailyCloseScreen';
+import {ReconciliationScreen} from '@features/reconciliation/presentation/screens/ReconciliationScreen';
 import {TeamScreen} from '@features/team/presentation/screens/TeamScreen';
 import {DiagnosticsScreen} from '@features/diagnostics/presentation/screens/DiagnosticsScreen';
 import {HelpScreen} from '@features/support/presentation/screens/HelpScreen';
@@ -76,6 +80,10 @@ export function AppNavigator(): React.JSX.Element {
         options={{presentation: 'modal'}}
       />
       <Stack.Screen name="Team" component={TeamScreen} />
+      <Stack.Screen name="BeatPlan" component={BeatPlanScreen} />
+      <Stack.Screen name="BeatDayList" component={BeatDayListScreen} />
+      <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
+      <Stack.Screen name="DailyClose" component={DailyCloseScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen

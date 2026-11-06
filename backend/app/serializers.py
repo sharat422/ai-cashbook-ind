@@ -51,6 +51,7 @@ def customer_dto(m: Customer) -> dict:
         "outstanding_amount": m.outstanding_amount,
         "last_transaction_date": m.last_transaction_date,
         "is_overdue": m.is_overdue,
+        "credit_limit": m.credit_limit,
         "created_at": m.created_at,
         "updated_at": m.updated_at or m.created_at,
         # Optimistic-concurrency token the client echoes back on edit.
@@ -70,6 +71,8 @@ def ledger_dto(m: LedgerEntry) -> dict:
         "payment_method": m.payment_method,
         "reference_number": m.reference_number,
         "attachment_url": m.attachment_url,
+        "salesman_id": m.salesman_id,
+        "beat_id": m.beat_id,
         "created_at": m.created_at,
     }
 

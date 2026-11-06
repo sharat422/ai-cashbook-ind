@@ -46,6 +46,11 @@ export type AppStackParamList = {
   Recurring: undefined;
   RecurringForm: {recurring?: RecurringExpense} | undefined;
   Team: undefined;
+  BeatPlan: undefined;
+  /** No beatId = today's beat(s) for the signed-in user. */
+  BeatDayList: {beatId?: string} | undefined;
+  Reconciliation: undefined;
+  DailyClose: {beatId?: string} | undefined;
   Diagnostics: undefined;
   Help: undefined;
   Feedback: {kind?: 'bug' | 'feedback'} | undefined;
@@ -66,7 +71,8 @@ export type AppStackParamList = {
   Customers: {search?: string} | undefined;
   CustomerProfile: {customer: Customer};
   CustomerForm: {customer?: Customer} | undefined;
-  AddCredit: {customer: Customer};
+  /** beatId: recorded from a beat day-list, for that beat's daily close. */
+  AddCredit: {customer: Customer; beatId?: string};
   CustomerStatement: {customer: Customer};
   RequestPayment: {customer: Customer};
   CollectionAssistant: {

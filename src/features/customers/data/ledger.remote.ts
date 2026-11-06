@@ -37,6 +37,7 @@ export const ledgerRemote = {
     if (draft.referenceNumber) {
       form.append('reference_number', draft.referenceNumber);
     }
+    if (draft.beatId) form.append('beat_id', draft.beatId);
     if (draft.attachment) {
       form.append('attachment', {
         uri: draft.attachment.uri,

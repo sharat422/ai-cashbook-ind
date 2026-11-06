@@ -1,3 +1,4 @@
+import {useMutation, useQueryClient} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
@@ -33,11 +34,9 @@ import {
   useRiskPrediction,
 } from '@features/customers/presentation/hooks';
 import {CreditLimitSheet} from '@features/customer-intel/presentation/components/CreditLimitSheet';
-import {
-  creditLimitStatus,
-  useCreditLimit,
-  useCreditLimitStore,
-} from '@features/customer-intel/store/creditLimit.store';
+import {creditLimitStatus} from '@features/customer-intel/store/creditLimit.store';
+import {customerRemote} from '@features/customers/data/customer.remote';
+import {CUSTOMERS_KEY} from '@features/customers/presentation/hooks/useCustomers';
 import {useConnectivity} from '@features/income/presentation/hooks';
 import {SendReminderSheet} from '@features/reminders/presentation/components';
 import {useT, type TKey} from '@/i18n';
@@ -70,9 +69,17 @@ export function CustomerProfileScreen({
   const [limitOpen, setLimitOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
 
-  const creditLimit = useCreditLimit(customer.id);
-  const setCreditLimit = useCreditLimitStore(s => s.setLimit);
-  const clearCreditLimit = useCreditLimitStore(s => s.clearLimit);
+  const queryClient = useQueryClient();
+  const [creditLimit, setCreditLimitValue] = useState(customer.creditLimit);
+  const saveLimit = useMutation({
+    mutationFn: (amount: number | null) => customerRemote.setCreditLimit(customer.id, amount),
+    onSuccess: updated => {
+      setCreditLimitValue(updated.creditLimit);
+      setLimitOpen(false);
+      queryClient.invalidateQueries({queryKey: [CUSTOMERS_KEY]});
+    },
+    onError: err => Alert.alert(t('form.couldNotSave'), err.message),
+  });
   const businessName = useAuthStore(s => s.business?.businessName);
 
   const ledger = ledgerQuery.data;
@@ -186,7 +193,7 @@ export function CustomerProfileScreen({
         <ActionButton
           label={t('customers.addCredit')}
           tone="credit"
-          onPress={() => navigation.navigate('AddCredit', {customer})}
+          onPress={() => navigation.navigate('AddCredit', {customer: {...customer, creditLimit}})}
         />
         <ActionButton
           label={t('customers.receivePayment')}
@@ -393,14 +400,8 @@ export function CustomerProfileScreen({
         current={creditLimit}
         customerName={customer.fullName}
         onClose={() => setLimitOpen(false)}
-        onSave={amt => {
-          setCreditLimit(customer.id, amt);
-          setLimitOpen(false);
-        }}
-        onRemove={() => {
-          clearCreditLimit(customer.id);
-          setLimitOpen(false);
-        }}
+        onSave={amt => saveLimit.mutate(amt)}
+        onRemove={() => saveLimit.mutate(null)}
       />
     </Screen>
   );

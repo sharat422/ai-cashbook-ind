@@ -4,6 +4,7 @@ import {AppState} from 'react-native';
 
 import {connectivity} from '@/services/network/connectivity';
 import {syncPendingLedger} from '@features/customers/data/ledgerSync';
+import {uploadLocalCreditLimits} from '@features/customer-intel/store/creditLimit.store';
 import {CUSTOMERS_KEY} from '@features/customers/presentation/hooks/useCustomers';
 import {LEDGER_KEY} from '@features/customers/presentation/hooks/useCustomerLedger';
 
@@ -22,7 +23,8 @@ export function CreditSyncManager(): null {
     inFlight.current = true;
     try {
       const touched = await syncPendingLedger();
-      if (touched.length > 0) {
+      const limitsMoved = await uploadLocalCreditLimits();
+      if (touched.length > 0 || limitsMoved) {
         queryClient.invalidateQueries({queryKey: [CUSTOMERS_KEY]});
         touched.forEach(id =>
           queryClient.invalidateQueries({queryKey: [LEDGER_KEY, id]}),

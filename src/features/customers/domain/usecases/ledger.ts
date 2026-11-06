@@ -1,4 +1,5 @@
 import type {Attachment} from '@/shared/types/attachment';
+import {isUtrMissing} from '../ledger';
 import type {
   CustomerLedger,
   LedgerEntry,
@@ -16,6 +17,7 @@ export interface LedgerEntryInput {
   paymentMethod?: PaymentMethod;
   referenceNumber?: string;
   attachment?: Attachment | null;
+  beatId?: string;
 }
 
 function assertValid(draft: LedgerEntryDraft): void {
@@ -27,6 +29,9 @@ function assertValid(draft: LedgerEntryDraft): void {
   }
   if (!draft.date || new Date(draft.date) > new Date()) {
     throw new Error('Date cannot be in the future');
+  }
+  if (draft.type === 'payment' && isUtrMissing(draft.paymentMethod, draft.referenceNumber)) {
+    throw new Error('Enter the UPI transaction ID (UTR) for a UPI payment.');
   }
 }
 
@@ -46,6 +51,7 @@ export function makeLedgerUseCases(repo: LedgerRepository) {
       paymentMethod: input.paymentMethod,
       referenceNumber: input.referenceNumber?.trim() || undefined,
       attachment: input.attachment ?? null,
+      beatId: input.beatId,
     };
     assertValid(draft);
     return repo.addEntry(customerId, draft);

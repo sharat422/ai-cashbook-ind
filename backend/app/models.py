@@ -156,6 +156,8 @@ class Customer(Base):
     outstanding_amount: Mapped[float] = mapped_column(Float, default=0.0)
     last_transaction_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     is_overdue: Mapped[bool] = mapped_column(Boolean, default=False)
+    # INR; None = no limit. Server-side so staff on a beat see the same limit.
+    credit_limit: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
     updated_at: Mapped[str] = mapped_column(String(40), default=now_iso)
     # Monotonic optimistic-concurrency token: +1 on every edit. A stale edit
@@ -184,9 +186,127 @@ class LedgerEntry(Base):
     reference_number: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     attachment_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    # Who recorded it (set by the server from the token) and, when recorded from
+    # a beat day-list, which beat. Both feed the per-beat daily close.
+    salesman_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    beat_id: Mapped[str | None] = mapped_column(
+        ForeignKey("beats.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     customer: Mapped[Customer] = relationship(back_populates="ledger")
+
+
+class BankImport(Base):
+    """One uploaded bank statement. The file hash makes re-imports a no-op."""
+
+    __tablename__ = "bank_imports"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    file_hash: Mapped[str] = mapped_column(String(64))
+    filename: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "file_hash", name="uq_bank_import_hash"),
+    )
+
+
+class BankLine(Base):
+    """A money-in line from a bank statement, matched by hand to a collection."""
+
+    __tablename__ = "bank_lines"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    import_id: Mapped[str] = mapped_column(
+        ForeignKey("bank_imports.id", ondelete="CASCADE"), index=True
+    )
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    amount_paise: Mapped[int] = mapped_column(Integer)  # exact; no float money
+    utr: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    narration: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    # Set only by a person confirming the match. Unique: one entry, one line.
+    matched_entry_id: Mapped[str | None] = mapped_column(
+        ForeignKey("ledger_entries.id", ondelete="SET NULL"), nullable=True, unique=True
+    )
+    confirmed_by: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    confirmed_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+
+class Beat(Base):
+    """A fixed route of retailers a staff member visits on set weekdays."""
+
+    __tablename__ = "beats"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    weekdays: Mapped[str] = mapped_column(String(20))  # "0,3" = Mon + Thu (Mon=0)
+    assigned_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
+class BeatRetailer(Base):
+    __tablename__ = "beat_retailers"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    beat_id: Mapped[str] = mapped_column(
+        ForeignKey("beats.id", ondelete="CASCADE"), index=True
+    )
+    customer_id: Mapped[str] = mapped_column(
+        ForeignKey("customers.id", ondelete="CASCADE"), index=True
+    )
+    visit_order: Mapped[int] = mapped_column(Integer)
+
+    __table_args__ = (
+        UniqueConstraint("beat_id", "customer_id", name="uq_beat_retailer"),
+    )
+
+
+VISIT_OUTCOMES = ("visited_ordered", "visited_no_order", "not_visited")
+
+
+class Visit(Base):
+    __tablename__ = "visits"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    beat_id: Mapped[str] = mapped_column(
+        ForeignKey("beats.id", ondelete="CASCADE"), index=True
+    )
+    customer_id: Mapped[str] = mapped_column(
+        ForeignKey("customers.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    outcome: Mapped[str] = mapped_column(String(20))  # one of VISIT_OUTCOMES
+    reason: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    promise_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    visited_at: Mapped[str] = mapped_column(String(40))  # ISO, +05:30 (IST)
+    # Offline sync key: a retried upload returns the first row, never a second.
+    client_id: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "client_id", name="uq_visit_client"),
+    )
 
 
 class Item(Base):

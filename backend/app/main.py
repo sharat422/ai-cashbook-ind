@@ -23,6 +23,7 @@ from .routers import (
     ai_routes,
     voice_live,
     auth,
+    beats,
     business,
     chatbot,
     consent,
@@ -37,6 +38,7 @@ from .routers import (
     feedback,
     khata,
     notifications,
+    reconciliation,
     recurring,
     reports,
     restore,
@@ -140,6 +142,8 @@ for module in (
     feedback,
     account,
     consent,
+    beats,
+    reconciliation,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

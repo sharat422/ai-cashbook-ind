@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import or_, select
@@ -5,9 +7,11 @@ from sqlalchemy.orm import Session
 
 from ..calc import recompute_customer
 from ..database import get_db
-from ..deps import require
+from ..beats import assert_beat_access
+from ..deps import get_current_membership, require
 from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
-from ..models import Business, Customer, LedgerEntry, now_iso
+from ..models import BankLine, BeatRetailer, Business, Customer, LedgerEntry, User, Visit, now_iso
+from ..security import get_current_user
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
 from ..validation import validate_date, validate_text, validate_amount, validate_mobile
@@ -161,11 +165,66 @@ def delete_customer(
     db: Session = Depends(get_db),
 ) -> None:
     customer = _owned_customer(db, business, customer_id)
+    # Explicit: SQLite doesn't enforce ON DELETE CASCADE.
+    db.query(Visit).filter(Visit.customer_id == customer_id).delete(synchronize_session=False)
+    db.query(BeatRetailer).filter(BeatRetailer.customer_id == customer_id).delete(synchronize_session=False)
+    # A bank line matched to one of these entries goes back to unmatched.
+    entry_ids = select(LedgerEntry.id).where(LedgerEntry.customer_id == customer_id)
+    db.query(BankLine).filter(BankLine.matched_entry_id.in_(entry_ids)).update(
+        {BankLine.matched_entry_id: None, BankLine.confirmed_by: None, BankLine.confirmed_at: None},
+        synchronize_session=False)
     db.delete(customer)
     db.commit()
 
 
+class CreditLimitBody(BaseModel):
+    credit_limit: float | None = Field(alias="creditLimit")
+
+
+@router.put("/customers/{customer_id}/credit-limit")
+def set_credit_limit(
+    customer_id: str,
+    body: CreditLimitBody,
+    business: Business = Depends(require(ENTRY_EDIT)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Set (or clear, with null) the customer's credit limit in INR."""
+    customer = _owned_customer(db, business, customer_id)
+    customer.credit_limit = (
+        None if body.credit_limit is None else validate_amount(body.credit_limit)
+    )
+    customer.updated_at = now_iso()
+    db.commit()
+    db.refresh(customer)
+    return customer_dto(customer)
+
+
 # --- Ledger sub-resource -------------------------------------------------
+PAYMENT_METHODS = ("cash", "upi", "bank", "card", "cheque", "credit", "other")
+_REFERENCE_RE = re.compile(r"^[A-Za-z0-9/_.-]{6,40}$")
+
+
+def _validate_payment(
+    entry_type: str, method: str | None, reference: str | None
+) -> tuple[str | None, str | None]:
+    """Server-side rule: a UPI payment must carry its UTR / transaction ID, so
+    it can be checked against the bank statement. Enforced here, not only in
+    the app, so old app versions and direct API calls can't skip it."""
+    method = (method or "").strip().lower() or None
+    reference = (reference or "").strip() or None
+    if method == "upi" and reference is not None:
+        reference = reference.replace(" ", "")
+    if method is not None and method not in PAYMENT_METHODS:
+        raise HTTPException(422, "Unknown payment method.")
+    if reference is not None and len(reference) > 40:
+        raise HTTPException(422, "Reference must not exceed 40 characters.")
+    if entry_type == "payment" and method == "upi":
+        if reference is None:
+            raise HTTPException(422, "Enter the UPI transaction ID (UTR) for a UPI payment.")
+        if not _REFERENCE_RE.match(reference):
+            raise HTTPException(422, "The UTR should be 6 to 40 letters or digits.")
+    return method, reference
+
 @router.get("/customers/{customer_id}/ledger")
 def list_ledger(
     customer_id: str,
@@ -192,8 +251,11 @@ def add_ledger_entry(
     notes: str | None = Form(None),
     payment_method: str | None = Form(None),
     reference_number: str | None = Form(None),
+    beat_id: str | None = Form(None),
     attachment: UploadFile | None = File(None),
     business: Business = Depends(require(ENTRY_CREATE)),
+    membership: tuple[Business, str] = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     customer = _owned_customer(db, business, customer_id)
@@ -207,6 +269,7 @@ def add_ledger_entry(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "Entry type must be 'credit' or 'payment'.",
         )
+    payment_method, reference_number = _validate_payment(type, payment_method, reference_number)
 
     existing = db.scalars(
         select(LedgerEntry).where(
@@ -216,6 +279,14 @@ def add_ledger_entry(
     ).first()
     if existing is not None:
         return ledger_dto(existing)
+
+    if beat_id:
+        # Staff may only tag their own beat, and only a shop that is on it.
+        assert_beat_access(db, business, user, membership[1], beat_id)
+        on_beat = db.scalars(select(BeatRetailer).where(
+            BeatRetailer.beat_id == beat_id, BeatRetailer.customer_id == customer_id)).first()
+        if on_beat is None:
+            raise HTTPException(422, "This customer isn't on that beat.")
 
     row = LedgerEntry(
         customer_id=customer_id,
@@ -227,6 +298,8 @@ def add_ledger_entry(
         payment_method=payment_method,
         reference_number=reference_number,
         client_id=client_id,
+        salesman_id=user.id,
+        beat_id=beat_id or None,
         attachment_url=save_upload(attachment),
     )
     db.add(row)

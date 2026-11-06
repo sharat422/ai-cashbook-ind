@@ -2,19 +2,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 
+import {ApiError, NetworkError} from '@api/client';
+import {customerRemote} from '@features/customers/data/customer.remote';
+
 interface CreditLimitState {
-  /** Per-customer credit limit in INR, keyed by customer id. */
+  /** Limits saved on this phone before they moved to the server, by customer id. */
   limits: Record<string, number>;
-  setLimit: (customerId: string, amount: number) => void;
   clearLimit: (customerId: string) => void;
 }
 
+/** Credit limits now live on the server (Customer.creditLimit). This store only
+ *  holds limits set by older app versions until they are uploaded. */
 export const useCreditLimitStore = create<CreditLimitState>()(
   persist(
     set => ({
       limits: {},
-      setLimit: (customerId, amount) =>
-        set(s => ({limits: {...s.limits, [customerId]: amount}})),
       clearLimit: customerId =>
         set(s => {
           const {[customerId]: _removed, ...rest} = s.limits;
@@ -28,9 +30,23 @@ export const useCreditLimitStore = create<CreditLimitState>()(
   ),
 );
 
-/** The credit limit for one customer, or undefined if none set. */
-export const useCreditLimit = (customerId: string): number | undefined =>
-  useCreditLimitStore(s => s.limits[customerId]);
+/** Upload phone-only limits once, then forget them. Returns true if any moved.
+ *  Offline or not allowed (staff): kept for the next try. */
+export async function uploadLocalCreditLimits(): Promise<boolean> {
+  const {limits, clearLimit} = useCreditLimitStore.getState();
+  let moved = false;
+  for (const [customerId, amount] of Object.entries(limits)) {
+    try {
+      await customerRemote.setCreditLimit(customerId, amount);
+      clearLimit(customerId);
+      moved = true;
+    } catch (err) {
+      if (err instanceof NetworkError) break;
+      if (err instanceof ApiError && err.status === 404) clearLimit(customerId); // customer gone
+    }
+  }
+  return moved;
+}
 
 export type CreditLimitStatus = 'ok' | 'approaching' | 'exceeded';
 

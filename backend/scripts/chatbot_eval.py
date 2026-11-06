@@ -78,6 +78,8 @@ class Api:
                     "client_id": f"eval-l{i}"}
             if method:
                 data["payment_method"] = method
+            if method == "upi":  # the API requires a UTR for UPI payments
+                data["reference_number"] = f"4{i:011d}"
             self.http.post(f"/customers/{ids[key]}/ledger", headers=h, data=data).raise_for_status()
         for i, (kind, amount, days_ago, category, vendor) in enumerate(cashbook):
             data = {"amount": str(amount), "category": category, "date": cases.day(days_ago).isoformat(),

@@ -16,6 +16,7 @@ export const PERMISSIONS = {
   REPORTS_EXPORT: 'reports.export',
   SETTINGS_MANAGE: 'settings.manage',
   TEAM_MANAGE: 'team.manage',
+  BEATS_MANAGE: 'beats.manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

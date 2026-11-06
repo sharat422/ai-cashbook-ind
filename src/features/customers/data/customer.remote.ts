@@ -22,6 +22,7 @@ import {
  *   POST   /api/v1/customers                       -> CustomerDto
  *   PATCH  /api/v1/customers/{id}                  -> CustomerDto
  *   DELETE /api/v1/customers/{id}                  -> 204
+ *   PUT    /api/v1/customers/{id}/credit-limit     -> CustomerDto
  */
 export const customerRemote = {
   async list(query: CustomerQuery): Promise<CustomerPage> {
@@ -34,6 +35,15 @@ export const customerRemote = {
       method: 'GET',
     });
     return toCustomerPage(dto);
+  },
+
+  /** Set the credit limit in INR, or clear it with null. */
+  async setCreditLimit(id: string, creditLimit: number | null): Promise<Customer> {
+    const dto = await apiRequest<CustomerDto>(`/customers/${id}/credit-limit`, {
+      method: 'PUT',
+      body: {creditLimit},
+    });
+    return toCustomer(dto);
   },
 
   async getById(id: string): Promise<Customer> {

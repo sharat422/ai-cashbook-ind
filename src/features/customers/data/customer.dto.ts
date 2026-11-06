@@ -16,6 +16,7 @@ export interface CustomerDto {
   outstanding_amount: number;
   last_transaction_date: string | null;
   is_overdue: boolean;
+  credit_limit?: number | null;
   created_at: string;
   version?: number;
 }
@@ -40,6 +41,7 @@ export function toCustomer(dto: CustomerDto): Customer {
     isOverdue: Boolean(dto.is_overdue),
     createdAt: dto.created_at,
     version: dto.version ?? 1,
+    creditLimit: dto.credit_limit ?? undefined,
   };
 }
 

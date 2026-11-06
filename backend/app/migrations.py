@@ -27,6 +27,7 @@ def run_startup_migrations(engine) -> None:
     tables = set(inspector.get_table_names())
 
     _add_customer_concurrency_columns(engine, inspector, tables)
+    _add_ledger_collection_columns(engine, inspector, tables)
     _widen_encrypted_columns(engine, inspector, tables)
     _backfill_owner_memberships(engine, tables)
 
@@ -67,7 +68,7 @@ def _widen_encrypted_columns(engine, inspector, tables: set[str]) -> None:
 
 
 def _add_customer_concurrency_columns(engine, inspector, tables: set[str]) -> None:
-    """Customer.updated_at / version — added by the two-device conflict fix."""
+    """Customer.updated_at / version (two-device conflict fix) and credit_limit."""
     if "customers" not in tables:
         return
     columns = {c["name"] for c in inspector.get_columns("customers")}
@@ -77,12 +78,30 @@ def _add_customer_concurrency_columns(engine, inspector, tables: set[str]) -> No
                 conn.execute(text("ALTER TABLE customers ADD COLUMN updated_at VARCHAR(40)"))
                 conn.execute(text("UPDATE customers SET updated_at = created_at WHERE updated_at IS NULL"))
                 log.info("migration: added customers.updated_at")
+            if "credit_limit" not in columns:
+                conn.execute(text("ALTER TABLE customers ADD COLUMN credit_limit FLOAT"))
+                log.info("migration: added customers.credit_limit")
             if "version" not in columns:
                 conn.execute(text("ALTER TABLE customers ADD COLUMN version INTEGER DEFAULT 1"))
                 conn.execute(text("UPDATE customers SET version = 1 WHERE version IS NULL"))
                 log.info("migration: added customers.version")
     except Exception:  # noqa: BLE001 — never let a migration crash boot
         log.exception("migration: failed adding customer concurrency columns")
+
+
+def _add_ledger_collection_columns(engine, inspector, tables: set[str]) -> None:
+    """LedgerEntry.salesman_id / beat_id, for reconciliation's daily close."""
+    if "ledger_entries" not in tables:
+        return
+    columns = {c["name"] for c in inspector.get_columns("ledger_entries")}
+    try:
+        with engine.begin() as conn:
+            for col in ("salesman_id", "beat_id"):
+                if col not in columns:
+                    conn.execute(text(f"ALTER TABLE ledger_entries ADD COLUMN {col} VARCHAR(40)"))
+                    log.info("migration: added ledger_entries.%s", col)
+    except Exception:  # noqa: BLE001 — never let a migration crash boot
+        log.exception("migration: failed adding ledger collection columns")
 
 
 def _backfill_owner_memberships(engine, tables: set[str]) -> None:

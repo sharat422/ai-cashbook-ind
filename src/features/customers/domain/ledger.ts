@@ -39,6 +39,14 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'other',
 ];
 
+const UTR_RE = /^[A-Za-z0-9/_.-]{6,40}$/;
+
+/** Server rule, mirrored here: a UPI payment must carry its UTR / transaction
+ *  ID (6–40 letters or digits) so it can be matched to the bank statement. */
+export function isUtrMissing(method: PaymentMethod | undefined, reference?: string): boolean {
+  return method === 'upi' && !UTR_RE.test((reference ?? '').replace(/\s/g, ''));
+}
+
 /** Sync state of an entry created locally relative to the backend. */
 export type LedgerSyncStatus = 'synced' | 'pending';
 
@@ -89,6 +97,8 @@ export interface LedgerEntryDraft {
   paymentMethod?: PaymentMethod;
   referenceNumber?: string;
   attachment?: Attachment | null;
+  /** Set when recorded from a beat day-list; feeds that beat's daily close. */
+  beatId?: string;
 }
 
 /** Chronological signed delta of an entry on the outstanding balance. */

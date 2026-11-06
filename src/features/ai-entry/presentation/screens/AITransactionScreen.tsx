@@ -27,6 +27,7 @@ import {useLiveVoice} from '@features/ai-entry/presentation/hooks/useLiveVoice';
 import {logError} from '@/services/diagnostics/errorLog.store';
 import type {Customer} from '@features/customers/domain/entities';
 import {
+  isUtrMissing,
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABEL,
   type PaymentMethod,
@@ -72,10 +73,11 @@ export function AITransactionScreen({
   const [amount, setAmount] = useState<number>(NaN);
   const [date, setDate] = useState<string>(toISODate(new Date()));
   const [method, setMethod] = useState<PaymentMethod>('cash');
+  const [utr, setUtr] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Which review field the error belongs to, so it renders inline under it.
-  const [errorField, setErrorField] = useState<'name' | 'amount' | null>(null);
+  const [errorField, setErrorField] = useState<'name' | 'amount' | 'utr' | null>(null);
   const clearFieldError = () => {
     if (error) {
       setError(null);
@@ -146,6 +148,7 @@ export function AITransactionScreen({
         amount,
         date,
         paymentMethod: method,
+        referenceNumber: type === 'payment' ? utr.trim() || undefined : undefined,
         notes: parsed ? `Voice/AI: ${parsed.rawText}` : undefined,
       });
       setBusy(false);
@@ -192,6 +195,11 @@ export function AITransactionScreen({
     if (Number.isNaN(amount) || amount <= 0) {
       setError(t('ai.enterAmount'));
       setErrorField('amount');
+      return;
+    }
+    if (type === 'payment' && isUtrMissing(method, utr)) {
+      setError(t('payments.utrRequired'));
+      setErrorField('utr');
       return;
     }
     setError(null);
@@ -359,6 +367,24 @@ export function AITransactionScreen({
                         />
                       ))}
                     </View>
+                  </FormField>
+                ) : null}
+
+                {type === 'payment' && method === 'upi' ? (
+                  <FormField
+                    label={t('payments.utrLabel')}
+                    required
+                    error={errorField === 'utr' ? error : null}>
+                    <TextField
+                      value={utr}
+                      onChangeText={v => {
+                        setUtr(v);
+                        clearFieldError();
+                      }}
+                      autoCapitalize="characters"
+                      maxLength={40}
+                      error={errorField === 'utr' ? error : null}
+                    />
                   </FormField>
                 ) : null}
 

@@ -30,6 +30,7 @@ export interface LedgerInput {
   date: string;
   /** Only used for payment entries. */
   paymentMethod?: PaymentMethod;
+  referenceNumber?: string;
   notes?: string;
 }
 
@@ -45,6 +46,7 @@ export async function addLedgerForCustomer(
       amount: input.amount,
       date: input.date,
       paymentMethod: input.type === 'payment' ? input.paymentMethod : undefined,
+      referenceNumber: input.type === 'payment' ? input.referenceNumber : undefined,
       notes: input.notes,
     },
   );

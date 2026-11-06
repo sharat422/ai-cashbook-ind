@@ -45,7 +45,7 @@ def _seed(client, user):
     add_ledger(client, h, ramesh["id"], type="credit", amount=5000, date=days_ago_iso(40), client_id="t-c1")
     add_ledger(client, h, ramesh["id"], type="credit", amount=2000, date=days_ago_iso(10), client_id="t-c2")
     add_ledger(client, h, ramesh["id"], type="payment", amount=5000.1, date=today_iso(),
-               client_id="t-p1", payment_method="upi")
+               client_id="t-p1", payment_method="upi", reference_number="412300000001")
     add_ledger(client, h, traders["id"], type="credit", amount=800.2, date=today_iso(), client_id="t-c3")
     add_ledger(client, h, suresh["id"], type="credit", amount=300, date=days_ago_iso(40), client_id="t-c4")
     add_ledger(client, h, suresh["id"], type="payment", amount=300, date=today_iso(),
