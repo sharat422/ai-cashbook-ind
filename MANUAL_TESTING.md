@@ -1251,6 +1251,76 @@ Manual only: the app never collects money, logs in to a bank, or moves funds. Yo
 - **Steps:** Delete a customer whose payment was matched; separately delete the owner account.
 - **Expected:** The bank line goes back to "Bank payments with no collection". Account deletion removes imported statements too.
 
+## 37C. GST invoices & CA/Tally export
+
+GST-ready bookkeeping for the CA. **Bolcash does not file GST returns and does not create e-invoices**, and no screen, file or help text may say it does.
+
+**Set-up:** a business in **Karnataka** with **GST registered = Yes** (Settings → business details). Customers: one with a Karnataka GSTIN, one with a Maharashtra GSTIN (e.g. `27AAPFU0939F1ZV`), one with none. **Before release, the CA confirms the GST rate list** (0, 5, 12, 18, 28, 40%, plus 0.25 and 3% for items) and the B2CL limit (₹1 lakh).
+
+### 37C.1 Intra-state: CGST + SGST
+- **Steps:** Karnataka customer → **Add credit** → ₹1,000 → **GST invoice? Yes** → invoice `A-1`, HSN `1006`, 18%, **Before GST**.
+- **Expected:** The box under the fields shows Taxable ₹1,000.00, CGST ₹90.00, SGST ₹90.00, Invoice total ₹1,180.00, Place of supply 29-Karnataka. No IGST line. After saving, the customer owes ₹1,180.
+- Switch to **Including GST** with ₹1,180 → Taxable ₹1,000.00, total stays exactly ₹1,180.00. CGST and SGST are always equal.
+
+### 37C.2 Inter-state: IGST only
+- **Steps:** Maharashtra customer → same sale.
+- **Expected:** IGST ₹180.00 only, no CGST/SGST, place of supply 27-Maharashtra. Customer without a GSTIN: pick **Customer's state** = Kerala → IGST; leave it empty → CGST + SGST (your own state).
+
+### 37C.3 The tax comes from the server
+- **Steps:** Turn on airplane mode, add a GST sale.
+- **Expected:** "You're offline. The tax will be worked out when this syncs." — no tax figures shown. It saves to the queue and after sync the entry shows the invoice total the server computed.
+
+### 37C.4 Wrong inputs are stopped
+- **Expected:** No invoice number, an invoice number over 16 characters, HSN `12`, or a GSTIN with a typo (change its last character) → message under that field, nothing saved. A business that isn't GST registered sees no **GST invoice?** switch.
+
+### 37C.5 Rate change keeps old invoices
+- **Steps:** Item catalog → an item at 18% → change to 5% → save. Open GST reports for this month.
+- **Expected:** "1 GST rate change(s) this month". The GSTR-1-ready file's **rate changes** sheet lists it (item, 18 → 5). Invoices saved before still show 18% and their old tax in every file.
+
+### 37C.6 GST reports and files
+- **Steps:** Settings → **🧾 GST reports for your CA** → this month → each of the four download buttons.
+- **Expected:** Totals match the invoices entered. Files: `GSTR1_ready_<from>_<to>.xlsx` (sheets b2b, b2cl, b2cs, hsn(b2b), hsn(b2c), rate changes), `GSTR3B_summary_….xlsx` (3.1, 3.2, Notes — no input tax credit), `Tally_sales_….xlsx` and `.csv`. Tally columns: Voucher Date, Party Name, GSTIN, HSN, Taxable Value, CGST, SGST, IGST, Bill Reference, GST Rate, Place of Supply, Invoice Value. Plain credits without GST are not in any file. Open the CSV in Excel: names in Hindi/Telugu show correctly; a name starting with `=` shows as text, not a formula.
+- **Permissions:** staff don't see the button; staff token → `GET /reports/tally-export.csv` → **403**.
+
+### 37C.7 CA test (pilot month) — required before release
+- **Steps:** Enter one real month of GST sales. Download the Tally export and send it to the CA. The CA imports it into Tally and counts the records imported and every field they had to re-type or correct. Enter both numbers in **CA test**.
+- **Expected:** **Passed** only with every record imported and **0** fields re-typed. More than 10% of fields re-typed (fields = records × 9) or any record not imported → **Failed**: tap **Share result** and report it to the team with the CA's notes on which columns were re-typed. In between → **Needs fixes**.
+
+### 37C.8 No filing / e-invoice claims
+- **Expected:** Every screen, file and help answer says the files are for the CA; nothing says Bolcash files GSTR-1/3B or creates e-invoices or IRNs. Ask the assistant "Does Bolcash do GST filing?" → it says it's not in the guide.
+
+
+## 37D. Stock basics (godown & van)
+
+Phase 1 only: no warehouses/bins, batches, expiry or manufacturing.
+
+**Set-up:** owner, staff A and staff B (§37). Item catalog → **Biscuits**, product, unit `box`, **Track stock: On**, **Opening stock 50**, **Low-stock alert below 10**.
+
+### 37D.1 Purchase and godown stock
+- **Steps:** Settings → **📦 Stock** → Biscuits → **Purchase** → 30.
+- **Expected:** Total 80, Godown 80. Opening the item again in the catalog shows "In stock now: 80 box" with no stock field to type over.
+
+### 37D.2 Load a van (godown → van)
+- **Steps:** Biscuits → **Load van** → staff A's van → 20.
+- **Expected:** Godown 60, 🚚 A 20, total unchanged at 80. Loading more than the godown has → "Only 60 box of Biscuits in the godown", nothing saved. Staff can't load vans.
+
+### 37D.3 Sale from a van leaves the godown alone
+- **Steps:** Staff A → home → **🚚 My van stock** → Biscuits → **Sale** → 10.
+- **Expected:** A's van 10, **godown still 60**. Staff A sees only their own van; staff B's van is empty and B can't sell A's stock. Owner → Sale → **Sold from** Godown → 5 → godown 55, A's van still 10. Selling more than a place holds is refused.
+
+### 37D.4 Low-stock alert
+- **Steps:** Bring Biscuits' total to exactly 10, then to 9.5.
+- **Expected:** At 10 it is **not** in **Low stock**; at 9.5 it is, with a red **Low stock** badge. Van stock counts toward the total. An item with no alert level never appears.
+
+### 37D.5 Monthly stock count
+- **Steps:** **Stock count** → Godown → enter Biscuits as counted (try 1.5% under the system figure, then 6% under for another item) → **Save count**.
+- **Expected:** Before saving each row shows the difference. After saving: within ±2% → green "within ±2%"; outside → red with the exact difference and % (e.g. −3 (−6.00%)). System stock now equals the count. Each van is counted on its own. **Stock history** lists the count with the counted figure.
+
+### 37D.6 History and retries
+- **Expected:** **Stock history** shows every purchase, sale, van load (as two lines) and count, with date and place. Tapping Save twice on a slow network saves once.
+- **API check (QA):** staff token → `GET /stock`, `/stock/moves` → **403**; `POST /stock/transfers` → **403**; `GET /stock/van?userId=<another staff>` → **403**.
+
+
 ---
 
 # PART L — Backend, connectivity & production readiness
@@ -1329,7 +1399,9 @@ Manual only: the app never collects money, logs in to a bank, or moves funds. Yo
 27. AI Entry → `gave ramesh 500 for groceries` → credit ₹500, category Groceries.
 28. Owner → Beat plan → create a beat for staff with 3 shops → staff → Today's beat shows them in order → record a visit offline → reconnect → owner sees one visit.
 29. Receive a UPI payment without a UTR → blocked; with a UTR → saved. Import a bank CSV twice → second time "already imported". Confirm a suggestion → Daily close difference drops by that amount.
-30. Log out → back to Login.
+30. GST-registered business: add a GST sale to a Maharashtra GSTIN → IGST only; download the Tally CSV → the sale is in it.
+31. Stock: load 20 into staff A's van, staff A sells 10 → van 10, godown unchanged; Stock count with one item 6% off → exact difference shown and logged.
+32. Log out → back to Login.
 
 ---
 
@@ -1355,6 +1427,7 @@ Tick before shipping to production:
 - [ ] Native-speaker review of Telugu, Tamil and Malayalam done (§19.12, §36.4).
 - [ ] TestFlight build shows no "Missing Compliance" warning (§0.9).
 - [ ] Staff beat isolation verified with two staff accounts, including the direct-ID 403 check (§37A.3).
+- [ ] GST rate list and B2CL limit confirmed with the CA, and the CA test passed for a pilot month with 0 fields re-typed (§37C.7).
 - [ ] Reconciliation checked with real statement exports from the banks your users use (CSV and .xlsx), and Daily close reaches ₹0.00 after confirming (§37B).
 - [ ] Regression smoke checklist (all 29) passes on both iOS and Android.
 

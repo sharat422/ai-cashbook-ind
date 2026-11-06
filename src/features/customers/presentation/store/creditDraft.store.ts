@@ -3,6 +3,7 @@ import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 
 import type {Attachment} from '@/shared/types/attachment';
+import type {GstForm} from '@features/gst/presentation/GstInvoiceSection';
 
 /** A saved (unsubmitted) Add-Credit form, persisted per customer. */
 export interface CreditDraft {
@@ -11,6 +12,7 @@ export interface CreditDraft {
   invoiceNumber: string;
   notes: string;
   attachment: Attachment | null;
+  gst?: GstForm | null;
 }
 
 interface CreditDraftState {

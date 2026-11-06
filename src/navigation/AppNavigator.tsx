@@ -29,6 +29,11 @@ import {RecurringListScreen} from '@features/recurring/presentation/screens/Recu
 import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
 import {BeatDayListScreen} from '@features/beats/presentation/screens/BeatDayListScreen';
 import {BeatPlanScreen} from '@features/beats/presentation/screens/BeatPlanScreen';
+import {StockCountScreen} from '@features/stock/presentation/screens/StockCountScreen';
+import {StockHistoryScreen} from '@features/stock/presentation/screens/StockHistoryScreen';
+import {StockScreen} from '@features/stock/presentation/screens/StockScreen';
+import {VanStockScreen} from '@features/stock/presentation/screens/VanStockScreen';
+import {GstReportsScreen} from '@features/gst/presentation/GstReportsScreen';
 import {DailyCloseScreen} from '@features/reconciliation/presentation/screens/DailyCloseScreen';
 import {ReconciliationScreen} from '@features/reconciliation/presentation/screens/ReconciliationScreen';
 import {TeamScreen} from '@features/team/presentation/screens/TeamScreen';
@@ -84,6 +89,11 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="BeatDayList" component={BeatDayListScreen} />
       <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
       <Stack.Screen name="DailyClose" component={DailyCloseScreen} />
+      <Stack.Screen name="GstReports" component={GstReportsScreen} />
+      <Stack.Screen name="Stock" component={StockScreen} />
+      <Stack.Screen name="StockCount" component={StockCountScreen} />
+      <Stack.Screen name="StockHistory" component={StockHistoryScreen} />
+      <Stack.Screen name="VanStock" component={VanStockScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen

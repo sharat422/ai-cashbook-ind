@@ -99,6 +99,18 @@ export interface LedgerEntryDraft {
   attachment?: Attachment | null;
   /** Set when recorded from a beat day-list; feeds that beat's daily close. */
   beatId?: string;
+  /** Credit only: a GST invoice. The server computes and saves the tax split;
+   *  `amount` is then the price (with or without GST, per `priceIncludesGst`). */
+  gst?: GstInvoiceInput;
+}
+
+export interface GstInvoiceInput {
+  rate: string;
+  hsn: string;
+  priceIncludesGst: boolean;
+  customerGstin?: string;
+  /** Customer's state when they have no GSTIN; defaults to the seller's. */
+  placeOfSupply?: string;
 }
 
 /** Chronological signed delta of an entry on the outstanding balance. */

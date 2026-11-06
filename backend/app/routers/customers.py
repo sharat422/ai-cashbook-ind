@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from .. import gst
 from ..calc import recompute_customer
 from ..database import get_db
 from ..beats import assert_beat_access
@@ -29,6 +30,47 @@ class CustomerBody(BaseModel):
     business_name: str | None = Field(default=None, max_length=200)
     address: str | None = Field(default=None, max_length=1000)
     notes: str | None = Field(default=None, max_length=5000)
+
+
+_GST_COLUMNS = ("customer_gstin", "hsn_code", "place_of_supply", "gst_rate",
+                "price_includes_gst", "taxable_value", "cgst", "sgst", "igst")
+# GSTR-1 limit: up to 16 letters, digits, / or -.
+_GST_INVOICE_RE = re.compile(r"^[A-Za-z0-9/-]{1,16}$")
+
+
+def _gst_invoice_number(value: str | None) -> str:
+    v = (value or "").strip().upper()
+    if not _GST_INVOICE_RE.match(v):
+        raise HTTPException(
+            422, "A GST invoice needs an invoice number: up to 16 letters, digits, / or -."
+        )
+    return v
+
+
+class GstPreviewBody(BaseModel):
+    amount: float
+    rate: str
+    price_includes_gst: bool = False
+    customer_gstin: str | None = None
+    place_of_supply: str | None = None
+
+
+@router.post("/gst/preview")
+def gst_preview(
+    body: GstPreviewBody,
+    business: Business = Depends(require(ENTRY_CREATE)),
+) -> dict:
+    """The tax split the server will save for these inputs (nothing is saved).
+    The app shows this instead of computing tax itself."""
+    tax = gst.invoice(business, amount=validate_amount(body.amount), rate=body.rate,
+                      inclusive=body.price_includes_gst, hsn=None,
+                      customer_gstin=body.customer_gstin,
+                      place_of_supply=body.place_of_supply)
+    return {
+        "place_of_supply": gst.place_label(tax["place_of_supply"]),
+        "inter_state": tax["inter_state"],
+        **{k: gst.money(tax[k]) for k in ("taxable_value", "cgst", "sgst", "igst", "total")},
+    }
 
 
 def _owned_customer(db: Session, business: Business, customer_id: str) -> Customer:
@@ -252,6 +294,12 @@ def add_ledger_entry(
     payment_method: str | None = Form(None),
     reference_number: str | None = Form(None),
     beat_id: str | None = Form(None),
+    # GST invoice (credit only): the server computes the tax split from these.
+    gst_rate: str | None = Form(None),
+    hsn_code: str | None = Form(None),
+    customer_gstin: str | None = Form(None),
+    price_includes_gst: bool = Form(False),
+    place_of_supply: str | None = Form(None),
     attachment: UploadFile | None = File(None),
     business: Business = Depends(require(ENTRY_CREATE)),
     membership: tuple[Business, str] = Depends(get_current_membership),
@@ -270,6 +318,15 @@ def add_ledger_entry(
             "Entry type must be 'credit' or 'payment'.",
         )
     payment_method, reference_number = _validate_payment(type, payment_method, reference_number)
+    tax: dict = {}
+    if gst_rate not in (None, ""):
+        if type != "credit":
+            raise HTTPException(422, "GST applies to a sale (credit), not a payment.")
+        invoice_number = _gst_invoice_number(invoice_number)
+        tax = gst.invoice(business, amount=amount, rate=gst_rate, inclusive=price_includes_gst,
+                          hsn=hsn_code or "", customer_gstin=customer_gstin,
+                          place_of_supply=place_of_supply)
+        amount = float(tax["total"])
 
     existing = db.scalars(
         select(LedgerEntry).where(
@@ -301,6 +358,7 @@ def add_ledger_entry(
         salesman_id=user.id,
         beat_id=beat_id or None,
         attachment_url=save_upload(attachment),
+        **{k: tax[k] for k in _GST_COLUMNS if tax},
     )
     db.add(row)
     db.flush()

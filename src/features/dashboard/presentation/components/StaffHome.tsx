@@ -49,6 +49,11 @@ export function StaffHome({
             onPress={() => navigation.navigate('DailyClose')}
           />
           <Button
+            title={t('stock.myVan')}
+            variant="secondary"
+            onPress={() => navigation.navigate('VanStock')}
+          />
+          <Button
             title={t('dashboard.aiEntry')}
             onPress={() => navigation.navigate('AITransaction')}
           />

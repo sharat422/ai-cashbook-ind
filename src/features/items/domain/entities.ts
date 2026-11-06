@@ -15,7 +15,7 @@ export const ITEM_UNITS = [
 ] as const;
 
 /** Standard Indian GST slabs. */
-export const GST_RATES = [0, 5, 12, 18, 28] as const;
+export const GST_RATES = [0, 5, 12, 18, 28, 40] as const;
 
 export type ItemType = 'product' | 'service';
 
@@ -31,7 +31,11 @@ export interface ItemDraft {
   /** GST rate percentage (0/5/12/18/28). */
   gstRate: number;
   trackStock: boolean;
+  /** Opening stock when creating (goes into the godown). After that the
+   *  server keeps it as the total of godown + vans; the item form can't set it. */
   stockQty: number;
+  /** Low-stock alert below this total; null = no alert. */
+  lowStockThreshold?: number | null;
 }
 
 export interface Item extends ItemDraft {

@@ -43,7 +43,10 @@ export function ItemFormScreen({
   const [hsnSac, setHsnSac] = useState(editing?.hsnSac ?? '');
   const [gstRate, setGstRate] = useState<number>(editing?.gstRate ?? 0);
   const [trackStock, setTrackStock] = useState(editing?.trackStock ?? false);
-  const [stockQty, setStockQty] = useState<number>(editing?.stockQty ?? NaN);
+  const [stockQty, setStockQty] = useState(''); // opening stock, create only
+  const [threshold, setThreshold] = useState(
+    editing?.lowStockThreshold == null ? '' : String(editing.lowStockThreshold),
+  );
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<'name' | 'price' | null>(null);
   const clearError = () => {
@@ -73,7 +76,8 @@ export function ItemFormScreen({
       hsnSac: hsnSac.trim() || null,
       gstRate,
       trackStock,
-      stockQty: trackStock && !Number.isNaN(stockQty) ? stockQty : 0,
+      stockQty: trackStock && !editing ? Number(stockQty) || 0 : 0,
+      lowStockThreshold: trackStock && threshold.trim() ? Number(threshold) : null,
     };
 
     const onSuccess = () => navigation.goBack();
@@ -192,9 +196,29 @@ export function ItemFormScreen({
             />
           </FormField>
 
+          {trackStock && !editing ? (
+            <FormField label={t('items.openingStock')} hint={t('items.openingStockHint')}>
+              <TextField
+                value={stockQty}
+                onChangeText={v => setStockQty(v.replace(/[^\d.]/g, ''))}
+                keyboardType="decimal-pad"
+                placeholder="0"
+              />
+            </FormField>
+          ) : null}
+          {trackStock && editing ? (
+            <Text variant="caption">
+              {t('items.stockNow', {qty: editing.stockQty, unit: editing.unit ?? ''})}
+            </Text>
+          ) : null}
           {trackStock ? (
-            <FormField label={t('items.stockLabel')}>
-              <AmountInput value={stockQty} onChange={setStockQty} />
+            <FormField label={t('items.lowStockThreshold')} hint={t('items.lowStockHint')}>
+              <TextField
+                value={threshold}
+                onChangeText={v => setThreshold(v.replace(/[^\d.]/g, ''))}
+                keyboardType="decimal-pad"
+                placeholder="10"
+              />
             </FormField>
           ) : null}
         </View>

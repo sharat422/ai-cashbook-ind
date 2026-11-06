@@ -38,6 +38,13 @@ export const ledgerRemote = {
       form.append('reference_number', draft.referenceNumber);
     }
     if (draft.beatId) form.append('beat_id', draft.beatId);
+    if (draft.gst) {
+      form.append('gst_rate', draft.gst.rate);
+      form.append('hsn_code', draft.gst.hsn);
+      form.append('price_includes_gst', String(draft.gst.priceIncludesGst));
+      if (draft.gst.customerGstin) form.append('customer_gstin', draft.gst.customerGstin);
+      if (draft.gst.placeOfSupply) form.append('place_of_supply', draft.gst.placeOfSupply);
+    }
     if (draft.attachment) {
       form.append('attachment', {
         uri: draft.attachment.uri,

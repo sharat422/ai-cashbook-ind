@@ -1,12 +1,16 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from .. import gst, stock
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW, SETTINGS_MANAGE
-from ..models import Business, Item
+from ..models import Business, GstRateChangeLog, Item, StockMove, User
+from ..security import get_current_user
 from ..serializers import item_dto
 from ..validation import _reject
 
@@ -22,11 +26,10 @@ class ItemBody(BaseModel):
     hsn_sac: str | None = None
     gst_rate: float = 0.0
     track_stock: bool = False
+    # Opening stock (into the godown) when creating; ignored on update — stock
+    # then changes only through purchases, sales, transfers and counts.
     stock_qty: float = 0.0
-
-
-# Rates the GST council actually uses (0.25% cut diamonds, 3% gold/silver).
-GST_RATES = {0, 0.25, 3, 5, 12, 18, 28}
+    low_stock_threshold: float | None = None
 
 
 def _validated(body: ItemBody) -> dict:
@@ -34,9 +37,13 @@ def _validated(body: ItemBody) -> dict:
         raise _reject("Sale price can't be negative.")
     if body.purchase_price < 0:
         raise _reject("Purchase price can't be negative.")
-    if body.gst_rate not in GST_RATES:
-        raise _reject("GST rate must be one of 0, 0.25, 3, 5, 12, 18 or 28%.")
-    return body.model_dump()
+    gst.clean_rate(body.gst_rate)  # one rate list, in app/gst.py
+    values = body.model_dump()
+    if body.low_stock_threshold is not None:
+        values["low_stock_threshold"] = stock.quantity(body.low_stock_threshold, allow_zero=True)
+    if body.stock_qty:
+        stock.quantity(body.stock_qty)
+    return values
 
 
 def _owned_item(db: Session, business: Business, item_id: str) -> Item:
@@ -91,10 +98,16 @@ def get_item(
 def create_item(
     body: ItemBody,
     business: Business = Depends(require(SETTINGS_MANAGE)),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    row = Item(business_id=business.id, **_validated(body))
+    values = _validated(body)
+    opening = values.pop("stock_qty")
+    row = Item(business_id=business.id, stock_qty=0.0, **values)
     db.add(row)
+    db.flush()
+    if row.type == "product":
+        stock.opening(db, business, user, row, opening)
     db.commit()
     db.refresh(row)
     return item_dto(row)
@@ -105,10 +118,20 @@ def update_item(
     item_id: str,
     body: ItemBody,
     business: Business = Depends(require(SETTINGS_MANAGE)),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     item = _owned_item(db, business, item_id)
-    for key, value in _validated(body).items():
+    values = _validated(body)
+    values.pop("stock_qty")  # stock is the move ledger's; see app/stock.py
+    if item.stock_qty:
+        values["track_stock"] = True
+    old_rate, new_rate = Decimal(str(item.gst_rate)), Decimal(str(values["gst_rate"]))
+    if old_rate != new_rate:
+        # Logged, never applied backwards: saved invoices keep their own rate and tax.
+        db.add(GstRateChangeLog(business_id=business.id, item_id=item.id, item_name=item.name,
+                                old_rate=old_rate, new_rate=new_rate, changed_by=user.id))
+    for key, value in values.items():
         setattr(item, key, value)
     db.commit()
     db.refresh(item)
@@ -121,5 +144,8 @@ def delete_item(
     business: Business = Depends(require(SETTINGS_MANAGE)),
     db: Session = Depends(get_db),
 ) -> None:
-    db.delete(_owned_item(db, business, item_id))
+    item = _owned_item(db, business, item_id)
+    # Explicit for SQLite, which doesn't enforce the cascade.
+    db.query(StockMove).filter(StockMove.item_id == item.id).delete(synchronize_session=False)
+    db.delete(item)
     db.commit()

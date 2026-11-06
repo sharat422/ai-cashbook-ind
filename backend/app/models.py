@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from datetime import datetime, timezone
 
 from sqlalchemy import (
@@ -6,6 +7,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -194,6 +196,19 @@ class LedgerEntry(Base):
     beat_id: Mapped[str | None] = mapped_column(
         ForeignKey("beats.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # GST invoice fields — credit entries only, all null for a non-GST sale.
+    # The tax split is computed by the server (app/gst.py) when the entry is
+    # saved and never recomputed, so a later rate change can't alter it.
+    # `amount` is then the invoice total (taxable + taxes).
+    customer_gstin: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    hsn_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    place_of_supply: Mapped[str | None] = mapped_column(String(2), nullable=True)  # state code
+    gst_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    price_includes_gst: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    taxable_value: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    cgst: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    sgst: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    igst: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     customer: Mapped[Customer] = relationship(back_populates="ledger")
@@ -326,8 +341,72 @@ class Item(Base):
     hsn_sac: Mapped[str | None] = mapped_column(String(20), nullable=True)  # HSN/SAC code
     gst_rate: Mapped[float] = mapped_column(Float, default=0.0)  # 0/5/12/18/28
     track_stock: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Total across godown and vans, kept in step with StockMove by app/stock.py.
     stock_qty: Mapped[float] = mapped_column(Float, default=0.0)
+    # Alert when total stock is below this; None = no alert.
+    low_stock_threshold: Mapped[Decimal | None] = mapped_column(Numeric(12, 3), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
+STOCK_KINDS = ("opening", "purchase", "sale", "transfer", "count")
+
+
+class StockMove(Base):
+    """One change to one item's stock at one place — the stock ledger and its
+    audit log. Stock at a place = the sum of its moves; nothing else stores it.
+
+    location: 'godown', or 'van' with van_user_id = the salesperson. A transfer
+    is two moves (godown −q, van +q) sharing group_id; a stock count writes one
+    move per counted item (quantity = counted − system, 0 when it matched).
+    """
+
+    __tablename__ = "stock_moves"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    item_id: Mapped[str] = mapped_column(ForeignKey("items.id", ondelete="CASCADE"), index=True)
+    location: Mapped[str] = mapped_column(String(10))  # godown | van
+    # No FK: a van's history stays attributed after the salesperson leaves.
+    van_user_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    kind: Mapped[str] = mapped_column(String(20))  # STOCK_KINDS
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3))  # signed
+    # Count moves only: the physical count (system stock = counted − quantity).
+    counted: Mapped[Decimal | None] = mapped_column(Numeric(12, 3), nullable=True)
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    group_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    client_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        # Retry-safe: the app's client_id goes on the first move of a request only.
+        UniqueConstraint("business_id", "client_id", name="uq_stock_move_client"),
+    )
+
+
+class GstRateChangeLog(Base):
+    """Every change to an item's GST rate. Old invoices keep the rate and tax
+    they were saved with; this log is the audit trail for the CA."""
+
+    __tablename__ = "gst_rate_change_logs"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    item_id: Mapped[str | None] = mapped_column(
+        ForeignKey("items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    item_name: Mapped[str] = mapped_column(String(200))
+    old_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    new_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    changed_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    changed_by: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class Feedback(Base):

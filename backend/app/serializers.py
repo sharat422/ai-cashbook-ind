@@ -3,6 +3,7 @@
 The app's auth/business DTOs are camelCase; all other DTOs are snake_case.
 """
 
+from .gst import money
 from .models import (
     Business,
     Customer,
@@ -73,7 +74,25 @@ def ledger_dto(m: LedgerEntry) -> dict:
         "attachment_url": m.attachment_url,
         "salesman_id": m.salesman_id,
         "beat_id": m.beat_id,
+        "gst": gst_dto(m),
         "created_at": m.created_at,
+    }
+
+
+def gst_dto(m: LedgerEntry) -> dict | None:
+    """The saved tax split of a GST invoice (exact strings), else None."""
+    if m.gst_rate is None:
+        return None
+    return {
+        "rate": f"{m.gst_rate.normalize():f}",
+        "hsn": m.hsn_code,
+        "customer_gstin": m.customer_gstin,
+        "place_of_supply": m.place_of_supply,
+        "price_includes_gst": bool(m.price_includes_gst),
+        "taxable_value": money(m.taxable_value),
+        "cgst": money(m.cgst),
+        "sgst": money(m.sgst),
+        "igst": money(m.igst),
     }
 
 
@@ -89,6 +108,8 @@ def item_dto(m: Item) -> dict:
         "gst_rate": m.gst_rate,
         "track_stock": m.track_stock,
         "stock_qty": m.stock_qty,
+        "low_stock_threshold": None if m.low_stock_threshold is None
+        else float(m.low_stock_threshold),
         "created_at": m.created_at,
     }
 

@@ -9,14 +9,21 @@ import {
   NotesInput,
   TextField,
 } from '@components/form';
-import {Button, Screen, SuccessOverlay, Text} from '@components/ui';
+import {Button, SegmentedControl, Screen, SuccessOverlay, Text} from '@components/ui';
 import type {Attachment} from '@/shared/types/attachment';
 import {creditLimitStatus} from '@features/customer-intel/store/creditLimit.store';
 import {useLedgerMutations} from '@features/customers/presentation/hooks';
 import {useCreditDraftStore} from '@features/customers/presentation/store/creditDraft.store';
+import {cleanGstin, gstInputError, type GstField} from '@features/gst/domain/gst';
+import {
+  GstInvoiceSection,
+  emptyGstForm,
+  type GstForm,
+} from '@features/gst/presentation/GstInvoiceSection';
 import {useConnectivity} from '@features/income/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
+import {useAuthStore} from '@store/auth.store';
 import {formatINR} from '@utils/currency';
 import {toISODate} from '@utils/date';
 
@@ -47,6 +54,10 @@ export function AddCreditScreen({
   const [error, setError] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
   const [success, setSuccess] = useState(false);
+  // GST invoice: only for a GST-registered business; null = a plain credit.
+  const gstRegistered = useAuthStore(s => s.business?.gstRegistered ?? false);
+  const [gst, setGst] = useState<GstForm | null>(null);
+  const [gstError, setGstError] = useState<{field: GstField; message: string} | null>(null);
 
   // Restore a saved draft for this customer on first mount.
   useEffect(() => {
@@ -57,6 +68,7 @@ export function AddCreditScreen({
       setInvoiceNumber(draft.invoiceNumber);
       setNotes(draft.notes);
       setAttachment(draft.attachment);
+      setGst(draft.gst ?? null);
       setRestored(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,6 +85,7 @@ export function AddCreditScreen({
     invoiceNumber,
     notes,
     attachment,
+    gst,
   });
 
   const onSaveDraft = () => {
@@ -88,6 +101,7 @@ export function AddCreditScreen({
     setInvoiceNumber('');
     setNotes('');
     setAttachment(null);
+    setGst(null);
     setRestored(false);
   };
 
@@ -96,6 +110,19 @@ export function AddCreditScreen({
       setError(t('customers.amountError'));
       return;
     }
+    const gstin = gst ? cleanGstin(gst.customerGstin) : '';
+    const gstInput = gst
+      ? {
+          rate: gst.rate,
+          hsn: gst.hsn,
+          priceIncludesGst: gst.priceIncludesGst,
+          customerGstin: gstin || undefined,
+          placeOfSupply: gstin ? undefined : gst.placeOfSupply ?? undefined,
+        }
+      : undefined;
+    const problem = gstInput ? gstInputError(invoiceNumber, gstInput) : null;
+    setGstError(problem);
+    if (problem) return;
     addCredit.mutate(
       {
         amount,
@@ -104,6 +131,7 @@ export function AddCreditScreen({
         notes: notes.trim() || undefined,
         attachment,
         beatId,
+        gst: gstInput,
       },
       {
         onSuccess: () => {
@@ -210,15 +238,46 @@ export function AddCreditScreen({
             <DateField value={date} onChange={setDate} />
           </FormField>
 
-          <FormField label={t('customers.invoiceNumber')} hint={t('common.optional')}>
+          {gstRegistered ? (
+            <SegmentedControl
+              label={t('gst.invoiceToggle')}
+              value={gst !== null}
+              options={[
+                {label: t('common.no'), value: false},
+                {label: t('common.yes'), value: true},
+              ]}
+              onChange={on => {
+                setGst(on ? emptyGstForm(customer.gstNumber) : null);
+                setGstError(null);
+              }}
+            />
+          ) : null}
+
+          <FormField
+            label={t('customers.invoiceNumber')}
+            hint={gst ? undefined : t('common.optional')}
+            required={gst !== null}
+            error={gstError?.field === 'invoice' ? gstError.message : null}>
             <TextField
               value={invoiceNumber}
               onChangeText={v => setInvoiceNumber(v.toUpperCase())}
               placeholder={t('customers.invoicePlaceholder')}
               autoCapitalize="characters"
-              maxLength={40}
+              maxLength={gst ? 16 : 40}
+              error={gstError?.field === 'invoice' ? gstError.message : null}
             />
           </FormField>
+
+          {gst ? (
+            <GstInvoiceSection
+              value={gst}
+              onChange={setGst}
+              amount={amount}
+              online={online}
+              errorField={gstError?.field}
+              error={gstError?.message}
+            />
+          ) : null}
 
           <FormField label={t('form.notes')} hint={t('common.optional')}>
             <NotesInput

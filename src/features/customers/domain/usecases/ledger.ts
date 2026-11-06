@@ -1,7 +1,9 @@
 import type {Attachment} from '@/shared/types/attachment';
+import {gstInputError} from '@features/gst/domain/gst';
 import {isUtrMissing} from '../ledger';
 import type {
   CustomerLedger,
+  GstInvoiceInput,
   LedgerEntry,
   LedgerEntryDraft,
   PaymentMethod,
@@ -18,6 +20,7 @@ export interface LedgerEntryInput {
   referenceNumber?: string;
   attachment?: Attachment | null;
   beatId?: string;
+  gst?: GstInvoiceInput;
 }
 
 function assertValid(draft: LedgerEntryDraft): void {
@@ -32,6 +35,11 @@ function assertValid(draft: LedgerEntryDraft): void {
   }
   if (draft.type === 'payment' && isUtrMissing(draft.paymentMethod, draft.referenceNumber)) {
     throw new Error('Enter the UPI transaction ID (UTR) for a UPI payment.');
+  }
+  if (draft.gst) {
+    if (draft.type !== 'credit') throw new Error('GST applies to a sale (credit), not a payment.');
+    const problem = gstInputError(draft.invoiceNumber, draft.gst);
+    if (problem) throw new Error(problem.message);
   }
 }
 
@@ -52,6 +60,7 @@ export function makeLedgerUseCases(repo: LedgerRepository) {
       referenceNumber: input.referenceNumber?.trim() || undefined,
       attachment: input.attachment ?? null,
       beatId: input.beatId,
+      gst: input.gst,
     };
     assertValid(draft);
     return repo.addEntry(customerId, draft);

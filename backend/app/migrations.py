@@ -28,6 +28,7 @@ def run_startup_migrations(engine) -> None:
 
     _add_customer_concurrency_columns(engine, inspector, tables)
     _add_ledger_collection_columns(engine, inspector, tables)
+    _add_stock_columns(engine, inspector, tables)
     _widen_encrypted_columns(engine, inspector, tables)
     _backfill_owner_memberships(engine, tables)
 
@@ -89,19 +90,63 @@ def _add_customer_concurrency_columns(engine, inspector, tables: set[str]) -> No
         log.exception("migration: failed adding customer concurrency columns")
 
 
+# Added after launch: salesman/beat (daily close) and the GST invoice fields.
+_LEDGER_COLUMNS = {
+    "salesman_id": "VARCHAR(40)",
+    "beat_id": "VARCHAR(40)",
+    "customer_gstin": "TEXT",
+    "hsn_code": "VARCHAR(8)",
+    "place_of_supply": "VARCHAR(2)",
+    "gst_rate": "NUMERIC(5,2)",
+    "price_includes_gst": "BOOLEAN",
+    "taxable_value": "NUMERIC(12,2)",
+    "cgst": "NUMERIC(12,2)",
+    "sgst": "NUMERIC(12,2)",
+    "igst": "NUMERIC(12,2)",
+}
+
+
 def _add_ledger_collection_columns(engine, inspector, tables: set[str]) -> None:
-    """LedgerEntry.salesman_id / beat_id, for reconciliation's daily close."""
+    """New nullable LedgerEntry columns (see _LEDGER_COLUMNS)."""
     if "ledger_entries" not in tables:
         return
     columns = {c["name"] for c in inspector.get_columns("ledger_entries")}
     try:
         with engine.begin() as conn:
-            for col in ("salesman_id", "beat_id"):
+            for col, sql_type in _LEDGER_COLUMNS.items():
                 if col not in columns:
-                    conn.execute(text(f"ALTER TABLE ledger_entries ADD COLUMN {col} VARCHAR(40)"))
+                    conn.execute(text(f"ALTER TABLE ledger_entries ADD COLUMN {col} {sql_type}"))
                     log.info("migration: added ledger_entries.%s", col)
     except Exception:  # noqa: BLE001 — never let a migration crash boot
         log.exception("migration: failed adding ledger collection columns")
+
+
+def _add_stock_columns(engine, inspector, tables: set[str]) -> None:
+    """Item.low_stock_threshold, and an opening godown move for items whose
+    stock was typed on the item form before the stock ledger existed."""
+    if "items" not in tables:
+        return
+    columns = {c["name"] for c in inspector.get_columns("items")}
+    try:
+        with engine.begin() as conn:
+            if "low_stock_threshold" not in columns:
+                conn.execute(text("ALTER TABLE items ADD COLUMN low_stock_threshold NUMERIC(12,3)"))
+                log.info("migration: added items.low_stock_threshold")
+            rows = conn.execute(text(
+                "SELECT id, business_id, stock_qty, created_at FROM items "
+                "WHERE type = 'product' AND stock_qty <> 0 AND id NOT IN "
+                "(SELECT DISTINCT item_id FROM stock_moves)")).all()
+            for item_id, business_id, qty, created_at in rows:
+                conn.execute(text(
+                    "INSERT INTO stock_moves (id, business_id, item_id, location, kind, "
+                    "quantity, date, note, created_at) VALUES (:id, :b, :i, 'godown', "
+                    "'opening', :q, :d, 'opening stock (from item form)', :c)"),
+                    {"id": uuid.uuid4().hex, "b": business_id, "i": item_id,
+                     "q": round(qty, 3), "d": (created_at or "")[:10], "c": created_at})
+            if rows:
+                log.info("migration: opening stock moves for %d items", len(rows))
+    except Exception:  # noqa: BLE001 — never let a migration crash boot
+        log.exception("migration: failed adding stock columns")
 
 
 def _backfill_owner_memberships(engine, tables: set[str]) -> None:

@@ -40,6 +40,7 @@ from .routers import (
     notifications,
     reconciliation,
     recurring,
+    stock,
     reports,
     restore,
     team,
@@ -144,6 +145,7 @@ for module in (
     consent,
     beats,
     reconciliation,
+    stock,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 

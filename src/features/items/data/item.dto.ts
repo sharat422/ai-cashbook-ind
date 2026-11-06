@@ -16,6 +16,7 @@ export interface ItemDto {
   gst_rate: number;
   track_stock: boolean;
   stock_qty: number;
+  low_stock_threshold?: number | null;
   created_at: string;
 }
 
@@ -37,6 +38,7 @@ export function toItem(dto: ItemDto): Item {
     gstRate: Number(dto.gst_rate ?? 0),
     trackStock: !!dto.track_stock,
     stockQty: Number(dto.stock_qty ?? 0),
+    lowStockThreshold: dto.low_stock_threshold ?? null,
     createdAt: dto.created_at,
   };
 }
@@ -60,5 +62,6 @@ export function fromItemDraft(draft: ItemDraft): Record<string, unknown> {
     gst_rate: draft.gstRate,
     track_stock: draft.trackStock,
     stock_qty: draft.stockQty,
+    low_stock_threshold: draft.lowStockThreshold ?? null,
   };
 }

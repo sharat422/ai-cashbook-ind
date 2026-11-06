@@ -402,6 +402,22 @@ export function SettingsScreen({
             onPress={() => navigation.navigate('DailyClose')}
           />
         ) : null}
+        {can(PERMISSIONS.DATA_VIEW) ? (
+          <Button
+            title={t('stock.title')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('Stock')}
+          />
+        ) : null}
+        {can(PERMISSIONS.REPORTS_VIEW) ? (
+          <Button
+            title={t('gst.reportsTitle')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('GstReports')}
+          />
+        ) : null}
         {canManageSettings ? (
           <Button
             title={t('settings.itemCatalog')}

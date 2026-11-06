@@ -51,6 +51,11 @@ export type AppStackParamList = {
   BeatDayList: {beatId?: string} | undefined;
   Reconciliation: undefined;
   DailyClose: {beatId?: string} | undefined;
+  GstReports: undefined;
+  Stock: undefined;
+  StockCount: undefined;
+  StockHistory: {itemId?: string; name?: string};
+  VanStock: undefined;
   Diagnostics: undefined;
   Help: undefined;
   Feedback: {kind?: 'bug' | 'feedback'} | undefined;

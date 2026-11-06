@@ -22,6 +22,7 @@ from ..models import (
     AiDecision,
     BankImport,
     BankLine,
+    GstRateChangeLog,
     Beat,
     BeatRetailer,
     Visit,
@@ -34,6 +35,7 @@ from ..models import (
     Item,
     LedgerEntry,
     RecurringExpense,
+    StockMove,
     User,
     now_iso,
 )
@@ -154,7 +156,8 @@ def delete_account(
             counts["ledger_entries"] += db.query(LedgerEntry).filter(
                 LedgerEntry.customer_id.in_(cust_ids)
             ).delete(synchronize_session=False)
-        for model in (Income, Expense, Item, RecurringExpense, Customer, AiDecision):
+        for model in (GstRateChangeLog, StockMove, Income, Expense, Item, RecurringExpense, Customer,
+                      AiDecision):
             counts[model.__tablename__] += db.query(model).filter(
                 model.business_id.in_(biz_ids)
             ).delete(synchronize_session=False)
