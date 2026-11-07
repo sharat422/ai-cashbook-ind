@@ -10,26 +10,21 @@ import {
   Skeleton,
   Text,
 } from '@components/ui';
-import {ROLE_LABEL, type Role} from '@features/auth/rbac';
+import type {Role} from '@features/auth/rbac';
 import {useTeam, useTeamMutations} from '@features/team/presentation/hooks';
 import type {TeamMember} from '@features/team/data/team.remote';
+import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {onlyDigits} from '@utils/validation';
 
-const ROLE_OPTIONS = [
-  {label: 'Staff', value: 'staff' as Role},
-  {label: 'Accountant', value: 'accountant' as Role},
-  {label: 'Owner', value: 'owner' as Role},
-];
+const ROLES: Role[] = ['staff', 'accountant', 'owner'];
+const roleKey = (r: Role) => `team.role.${r}` as TKey;
+const hintKey = (r: Role) => `team.hint.${r}` as TKey;
 
-const ROLE_HINT: Record<Role, string> = {
-  owner: 'Full access',
-  accountant: 'View + export + add/edit · no delete',
-  staff: 'Add entries only',
-};
-
-export function TeamScreen(): React.JSX.Element {
+/** Owner: invite by mobile, change roles, remove access (instant), and see what accountants did. */
+export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Element {
+  const t = useT();
   const {data, isLoading, isError, error, refetch, isRefetching} = useTeam();
   const {add, updateRole, remove} = useTeamMutations();
 
@@ -37,9 +32,12 @@ export function TeamScreen(): React.JSX.Element {
   const [role, setRole] = useState<Role>('staff');
   const [formError, setFormError] = useState<string | null>(null);
 
+  const failed = (title: TKey) => (e: unknown) =>
+    Alert.alert(t(title), e instanceof Error ? e.message : t('common.tryAgainMsg'));
+
   const onAdd = () => {
     if (mobile.length !== 10) {
-      setFormError('Enter a 10-digit mobile number');
+      setFormError(t('team.mobileInvalid'));
       return;
     }
     setFormError(null);
@@ -50,38 +48,33 @@ export function TeamScreen(): React.JSX.Element {
           setMobile('');
           setRole('staff');
         },
-        onError: e =>
-          Alert.alert('Could not add', e instanceof Error ? e.message : 'Try again.'),
+        onError: failed('team.addFailed'),
       },
     );
   };
 
-  const onManage = (m: TeamMember) => {
-    const options = ROLE_OPTIONS.filter(o => o.value !== m.role).map(o => ({
-      text: `Make ${o.label}`,
-      onPress: () =>
-        updateRole.mutate(
-          {userId: m.userId, role: o.value},
-          {onError: e => Alert.alert('Could not update', e instanceof Error ? e.message : 'Try again.')},
-        ),
-    }));
-    Alert.alert(
-      m.mobile || 'Member',
-      `Current role: ${ROLE_LABEL[m.role]}`,
-      [
-        ...options,
-        {
-          text: 'Remove from business',
-          style: 'destructive',
-          onPress: () =>
-            remove.mutate(m.userId, {
-              onError: e => Alert.alert('Could not remove', e instanceof Error ? e.message : 'Try again.'),
-            }),
-        },
-        {text: 'Cancel', style: 'cancel'},
-      ],
-    );
-  };
+  const confirmRemove = (m: TeamMember) =>
+    Alert.alert(t('team.removeTitle'), t('team.removeMsg', {mobile: m.mobile}), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {
+        text: t('team.removeYes'),
+        style: 'destructive',
+        onPress: () => remove.mutate(m.userId, {onError: failed('team.removeFailed')}),
+      },
+    ]);
+
+  const onManage = (m: TeamMember) =>
+    Alert.alert(m.mobile || t('team.member'), t('team.currentRole', {role: t(roleKey(m.role))}), [
+      ...ROLES.filter(r => r !== m.role).map(r => ({
+        text: t('team.makeRole', {role: t(roleKey(r))}),
+        onPress: () => updateRole.mutate({userId: m.userId, role: r}, {onError: failed('team.updateFailed')}),
+      })),
+      ...(m.role === 'accountant'
+        ? [{text: t('team.viewActivity'), onPress: () => navigation.navigate('AccountantActivity', {userId: m.userId, mobile: m.mobile})}]
+        : []),
+      {text: t('team.removeAccess'), style: 'destructive' as const, onPress: () => confirmRemove(m)},
+      {text: t('common.cancel'), style: 'cancel' as const},
+    ]);
 
   const members: TeamMember[] = data ?? [];
 
@@ -91,24 +84,15 @@ export function TeamScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingVertical: 16, paddingBottom: 40}}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
         }>
-        <Text variant="title">Team</Text>
-        <Text variant="subtitle" className="mt-0.5">
-          Invite people by mobile number and set what they can do. They get
-          access the next time they log in with that number.
-        </Text>
+        <Text variant="title">{t('team.title')}</Text>
+        <Text variant="subtitle" className="mt-0.5">{t('team.subtitle')}</Text>
 
-        {/* Add member */}
         <View className="mt-5 rounded-2xl border border-border bg-white p-4">
-          <FormField label="Mobile number" required error={formError}>
+          <FormField label={t('team.mobile')} required error={formError}>
             <TextField
-              placeholder="10-digit mobile number"
+              placeholder={t('team.mobilePlaceholder')}
               value={mobile}
               onChangeText={v => {
                 setMobile(onlyDigits(v).slice(0, 10));
@@ -118,21 +102,16 @@ export function TeamScreen(): React.JSX.Element {
               maxLength={10}
             />
           </FormField>
-          <FormField label="Role" hint={ROLE_HINT[role]}>
-            <SegmentedControl value={role} options={ROLE_OPTIONS} onChange={setRole} />
+          <FormField label={t('team.roleLabel')} hint={t(hintKey(role))}>
+            <SegmentedControl value={role} options={ROLES.map(r => ({label: t(roleKey(r)), value: r}))} onChange={setRole} />
           </FormField>
-          <Button
-            title="Add to business"
-            className="mt-3"
-            loading={add.isPending}
-            onPress={onAdd}
-          />
+          <Button testID="team-add" title={t('team.add')} className="mt-3" loading={add.isPending} onPress={onAdd} />
         </View>
 
-        {/* Members */}
-        <Text variant="label" className="mt-6 mb-2">
-          Members
-        </Text>
+        <Button testID="team-activity" title={t('team.activityAll')} variant="secondary" className="mt-4"
+          onPress={() => navigation.navigate('AccountantActivity', {})} />
+
+        <Text variant="label" className="mb-2 mt-6">{t('team.members')}</Text>
         {isLoading && members.length === 0 ? (
           <View style={{gap: 10}}>
             {Array.from({length: 3}).map((_, i) => (
@@ -140,38 +119,28 @@ export function TeamScreen(): React.JSX.Element {
             ))}
           </View>
         ) : isError && members.length === 0 ? (
-          <ErrorState
-            message={error?.message ?? 'Could not load the team.'}
-            onRetry={refetch}
-            retrying={isRefetching}
-          />
+          <ErrorState message={error?.message ?? t('team.loadError')} onRetry={refetch} retrying={isRefetching} />
         ) : (
           <View style={{gap: 10}}>
             {members.map(m => (
-              <View
-                key={m.userId}
-                className="flex-row items-center justify-between rounded-2xl border border-border bg-white px-4 py-3">
+              <View key={m.userId} className="flex-row items-center justify-between rounded-2xl border border-border bg-white px-4 py-3">
                 <View className="flex-1 pr-3">
                   <Text className="font-semibold text-slate-900">
-                    {m.mobile ? `+91 ${m.mobile}` : 'Pending member'}
-                    {m.isSelf ? ' · You' : ''}
+                    {m.mobile ? `+91 ${m.mobile}` : t('team.pending')}
+                    {m.isSelf ? ` · ${t('team.you')}` : ''}
                   </Text>
                   <Text variant="caption" className="mt-0.5">
-                    {ROLE_LABEL[m.role]} · {ROLE_HINT[m.role]}
+                    {t(roleKey(m.role))} · {t(hintKey(m.role))}
                   </Text>
                 </View>
                 {m.isSelf ? (
                   <View className="rounded-full bg-slate-100 px-3 py-1">
-                    <Text className="text-xs font-semibold text-slate-600">
-                      {ROLE_LABEL[m.role]}
-                    </Text>
+                    <Text className="text-xs font-semibold text-slate-600">{t(roleKey(m.role))}</Text>
                   </View>
                 ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => onManage(m)}
+                  <Pressable testID={`manage-${m.userId}`} accessibilityRole="button" onPress={() => onManage(m)}
                     className="rounded-full border border-border px-3 py-1.5">
-                    <Text className="text-sm font-semibold text-primary">Manage</Text>
+                    <Text className="text-sm font-semibold text-primary">{t('team.manage')}</Text>
                   </Pressable>
                 )}
               </View>

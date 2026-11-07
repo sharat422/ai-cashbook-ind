@@ -16,7 +16,6 @@ import {
 } from '@config/constants';
 import {useCreateBusiness} from '@features/auth/hooks';
 import {
-  DEFAULT_APP_LANGUAGE,
   APP_LANGUAGE_LABEL,
   appLanguageByLabel,
   SUPPORTED_APP_LANGUAGES,
@@ -59,7 +58,7 @@ export function CreateBusinessScreen(): React.JSX.Element {
     businessType: null,
     state: null,
     gstRegistered: null,
-    preferredLanguage: DEFAULT_APP_LANGUAGE,
+    preferredLanguage: useAuthStore.getState().preferredLanguage,
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const createBusiness = useCreateBusiness();
@@ -75,9 +74,9 @@ export function CreateBusinessScreen(): React.JSX.Element {
 
   const validate = (): boolean => {
     const next: FormErrors = {
-      businessName: validateRequired(form.businessName, 'Business name'),
-      ownerName: validateRequired(form.ownerName, 'Owner name'),
-      businessType: form.businessType ? null : 'Select a business type',
+      businessName: validateRequired(form.businessName, t('auth.business.nameLabel')),
+      ownerName: validateRequired(form.ownerName, t('auth.business.ownerLabel')),
+      businessType: form.businessType ? null : t('errors.businessType'),
       state: form.state ? null : 'Select a state',
       gstRegistered:
         form.gstRegistered === null ? 'Select an option' : null,

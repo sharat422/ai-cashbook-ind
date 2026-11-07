@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .database import Base, engine
+from .database import Base, SessionLocal, engine
 from .errors import install_error_handlers
 from .migrations import run_startup_migrations
 from .monitoring import (
@@ -36,16 +36,20 @@ from .routers import (
     incomes,
     items,
     feedback,
+    imports,
     khata,
     notifications,
     reconciliation,
     recurring,
+    schemes,
+    statements,
     stock,
     reports,
     restore,
     team,
     transactions,
 )
+from .deps import write_audit
 from .storage import UPLOAD_DIR
 
 logging.basicConfig(level=logging.INFO)
@@ -118,6 +122,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
+@app.middleware("http")
+async def accountant_audit(request, call_next):
+    """Owner's audit log: every accountant view / export / refused write."""
+    response = await call_next(request)
+    if getattr(request.state, "audit", None):
+        with SessionLocal() as db:
+            write_audit(db, request, response.status_code)
+    return response
+
+
 API_PREFIX = "/api/v1"
 for module in (
     auth,
@@ -145,9 +161,14 @@ for module in (
     consent,
     beats,
     reconciliation,
+    schemes,
+    statements,
     stock,
+    imports,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
+# Retailer statement links (/s/<token>): opened in a browser without the app.
+app.include_router(statements.public_router)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

@@ -1,11 +1,22 @@
+import {useQueryClient} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
-import {ActivityIndicator, Pressable, View} from 'react-native';
+import {ActivityIndicator, Alert, Pressable, View} from 'react-native';
 
 import {DateRangeField, FilterChip} from '@components/filters';
 import {ErrorState, Screen, Text} from '@components/ui';
 import {buildStatement} from '@features/customers/domain/customerStatement';
+import {statementsRemote} from '@features/customers/data/statements.remote';
 import {StatementDocument} from '@features/customers/presentation/components';
-import {exportStatement, type ExportFormat} from '@features/customers/presentation/exportStatement';
+import {
+  StatementConsentCard,
+  consentKey,
+} from '@features/customers/presentation/components/StatementConsentCard';
+import {
+  exportStatement,
+  shareStatementLinkBySms,
+  shareStatementOnWhatsApp,
+  type ExportFormat,
+} from '@features/customers/presentation/exportStatement';
 import {useCustomerLedger} from '@features/customers/presentation/hooks';
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
@@ -42,10 +53,14 @@ const PRESETS: Array<{labelKey: TKey; value: Preset}> = [
   {labelKey: 'customers.presetAll', value: 'all'},
 ];
 
-const EXPORTS: Array<{label: string; value: ExportFormat}> = [
-  {label: '📄 PDF', value: 'pdf'},
-  {label: '📊 Excel', value: 'excel'},
-  {label: '🟢 WhatsApp', value: 'whatsapp'},
+type ShareAction = ExportFormat | 'whatsapp' | 'sms' | 'print';
+
+const EXPORTS: Array<{labelKey: TKey; value: ShareAction}> = [
+  {labelKey: 'statement.pdf', value: 'pdf'},
+  {labelKey: 'statement.excel', value: 'excel'},
+  {labelKey: 'statement.print', value: 'print'},
+  {labelKey: 'statement.whatsapp', value: 'whatsapp'},
+  {labelKey: 'statement.sms', value: 'sms'},
 ];
 
 /** Customer statement: pick a range, preview the document, export it. */
@@ -69,6 +84,33 @@ export function CustomerStatementScreen({
     const range = presetRange(p);
     setFrom(range.from);
     setTo(range.to);
+  };
+
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  // "All" starts at 2000-01-01 on screen; the server reads no start as "all".
+  const start = preset === 'all' ? undefined : from;
+  const onAction = async (action: ShareAction) => {
+    if (!statement) return;
+    if (action === 'pdf' || action === 'excel') {
+      exportStatement(action, customer, statement, businessName);
+      return;
+    }
+    setBusy(true);
+    try {
+      if (action === 'print') {
+        await statementsRemote.printLedger(customer.id, from, to);
+      } else if (action === 'sms') {
+        await shareStatementLinkBySms(customer, start);
+      } else if (!(await shareStatementOnWhatsApp(customer, start))) {
+        Alert.alert(t('statement.noConsentTitle'), t('statement.noConsentMsg', {name: customer.fullName}));
+      }
+    } catch (e) {
+      Alert.alert(t('statement.printFailed'), e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+      qc.invalidateQueries({queryKey: consentKey(customer.id)});
+    }
   };
 
   const statement = useMemo(
@@ -114,25 +156,24 @@ export function CustomerStatementScreen({
         <Text variant="label" className="mt-5 mb-2">
           {t('customers.export')}
         </Text>
-        <View className="flex-row" style={{gap: 8}}>
+        <View className="flex-row flex-wrap" style={{gap: 8}}>
           {EXPORTS.map(ex => (
             <Pressable
               key={ex.value}
               accessibilityRole="button"
-              disabled={!statement}
-              onPress={() =>
-                statement &&
-                exportStatement(ex.value, customer, statement, businessName)
-              }
-              className={`h-11 flex-1 items-center justify-center rounded-xl border border-border bg-white ${
-                statement ? '' : 'opacity-50'
+              disabled={!statement || busy}
+              onPress={() => onAction(ex.value)}
+              className={`h-11 items-center justify-center rounded-xl border border-border bg-white px-3 ${
+                statement && !busy ? '' : 'opacity-50'
               }`}>
               <Text className="text-sm font-semibold text-slate-800">
-                {ex.label}
+                {t(ex.labelKey)}
               </Text>
             </Pressable>
           ))}
         </View>
+
+        <StatementConsentCard customer={customer} />
 
         {/* Preview */}
         <Text variant="label" className="mt-6 mb-2">

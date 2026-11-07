@@ -1,4 +1,6 @@
 export type AppLanguage =
+  | 'te'
+  | 'hinglish'
   | 'en'
   | 'hi'
   | 'te'
@@ -10,12 +12,17 @@ export type AppLanguage =
   | 'ml'
   | 'pa';
 
-export const DEFAULT_APP_LANGUAGE: AppLanguage = 'en';
+/** Telugu first: a new install opens in Telugu (switchable on the login screen). */
+export const DEFAULT_APP_LANGUAGE: AppLanguage = 'te';
+
+/** Picker order: the three main choices first, then the other languages. */
+export const PRIMARY_APP_LANGUAGES: ReadonlyArray<AppLanguage> = ['te', 'hinglish', 'en'];
 
 export const SUPPORTED_APP_LANGUAGES: ReadonlyArray<AppLanguage> = [
+  'te',
+  'hinglish',
   'en',
   'hi',
-  'te',
   'ta',
   'kn',
   'mr',
@@ -27,9 +34,10 @@ export const SUPPORTED_APP_LANGUAGES: ReadonlyArray<AppLanguage> = [
 
 /** Shown in the language picker — each language in its own script. */
 export const APP_LANGUAGE_LABEL: Record<AppLanguage, string> = {
+  te: 'తెలుగు',
+  hinglish: 'Hinglish',
   en: 'English',
   hi: 'हिन्दी',
-  te: 'తెలుగు',
   ta: 'தமிழ்',
   kn: 'ಕನ್ನಡ',
   mr: 'मराठी',

@@ -3,6 +3,7 @@ import re
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import gst
@@ -11,7 +12,7 @@ from ..database import get_db
 from ..beats import assert_beat_access
 from ..deps import get_current_membership, require
 from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
-from ..models import BankLine, BeatRetailer, Business, Customer, LedgerEntry, User, Visit, now_iso
+from ..models import BankLine, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, Customer, LedgerEntry, User, Visit, now_iso
 from ..security import get_current_user
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
@@ -209,6 +210,13 @@ def delete_customer(
     customer = _owned_customer(db, business, customer_id)
     # Explicit: SQLite doesn't enforce ON DELETE CASCADE.
     db.query(Visit).filter(Visit.customer_id == customer_id).delete(synchronize_session=False)
+    for model in (StatementLink, StatementEvent):  # explicit for SQLite
+        db.query(model).filter(model.customer_id == customer_id).delete(synchronize_session=False)
+    bill_ids = [b.id for b in db.scalars(select(Bill).where(Bill.customer_id == customer_id)).all()]
+    if bill_ids:  # explicit for SQLite, which doesn't enforce the cascade
+        for model in (SchemeApplication, BillLine):
+            db.query(model).filter(model.bill_id.in_(bill_ids)).delete(synchronize_session=False)
+        db.query(Bill).filter(Bill.id.in_(bill_ids)).delete(synchronize_session=False)
     db.query(BeatRetailer).filter(BeatRetailer.customer_id == customer_id).delete(synchronize_session=False)
     # A bank line matched to one of these entries goes back to unmatched.
     entry_ids = select(LedgerEntry.id).where(LedgerEntry.customer_id == customer_id)
@@ -328,12 +336,9 @@ def add_ledger_entry(
                           place_of_supply=place_of_supply)
         amount = float(tax["total"])
 
-    existing = db.scalars(
-        select(LedgerEntry).where(
-            LedgerEntry.customer_id == customer_id,
-            LedgerEntry.client_id == client_id,
-        )
-    ).first()
+    find = select(LedgerEntry).where(
+        LedgerEntry.customer_id == customer_id, LedgerEntry.client_id == client_id)
+    existing = db.scalars(find).first()
     if existing is not None:
         return ledger_dto(existing)
 
@@ -361,7 +366,11 @@ def add_ledger_entry(
         **{k: tax[k] for k in _GST_COLUMNS if tax},
     )
     db.add(row)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:  # a concurrent retry with this client_id saved first
+        db.rollback()
+        return ledger_dto(db.scalars(find).one())
     recompute_customer(db, customer)
     db.commit()
     db.refresh(row)

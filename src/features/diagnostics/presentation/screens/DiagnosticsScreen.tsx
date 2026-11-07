@@ -8,7 +8,7 @@ import {
   useErrorLogStore,
 } from '@/services/diagnostics/errorLog.store';
 import {useT} from '@/i18n';
-import {formatDisplayDate} from '@utils/date';
+import {formatTimestampDate} from '@utils/date';
 
 function timeAgo(iso: string): string {
   const secs = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 1000));
@@ -17,7 +17,7 @@ function timeAgo(iso: string): string {
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
-  return formatDisplayDate(iso.slice(0, 10));
+  return formatTimestampDate(iso);
 }
 
 export function DiagnosticsScreen(): React.JSX.Element {

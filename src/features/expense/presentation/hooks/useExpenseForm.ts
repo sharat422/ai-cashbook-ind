@@ -9,7 +9,7 @@ import {
   validateExpenseDraft,
   type ExpenseFieldErrors,
 } from '@features/expense/domain/validation';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 interface FormValues {
   amount: number;
@@ -32,7 +32,7 @@ export interface ExpenseFormSeed {
 const initialValues = (seed?: ExpenseFormSeed): FormValues => ({
   amount: seed?.amount ?? NaN,
   category: seed?.category ?? null,
-  date: seed?.date ?? toISODate(new Date()),
+  date: seed?.date ?? todayIST(),
   vendor: seed?.vendor ?? '',
   notes: seed?.notes ?? '',
   attachment: seed?.attachment ?? null,

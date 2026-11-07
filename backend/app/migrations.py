@@ -30,7 +30,31 @@ def run_startup_migrations(engine) -> None:
     _add_ledger_collection_columns(engine, inspector, tables)
     _add_stock_columns(engine, inspector, tables)
     _widen_encrypted_columns(engine, inspector, tables)
+    _add_client_id_unique_indexes(engine, tables)
     _backfill_owner_memberships(engine, tables)
+
+
+# Same names as the model Index()es, so a fresh create_all makes these a no-op.
+_CLIENT_ID_INDEXES = {
+    "incomes": ("uq_income_client", "business_id"),
+    "expenses": ("uq_expense_client", "business_id"),
+    "ledger_entries": ("uq_ledger_client", "customer_id"),
+}
+
+
+def _add_client_id_unique_indexes(engine, tables: set[str]) -> None:
+    """One row per offline client_id, enforced by the database. If old
+    duplicates block an index it is skipped (logged) and the route's
+    look-up-first check still applies."""
+    for table, (name, scope) in _CLIENT_ID_INDEXES.items():
+        if table not in tables:
+            continue
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS {name} ON {table} ({scope}, client_id)"))
+        except Exception:  # noqa: BLE001 — never let a migration crash boot
+            log.exception("migration: could not add %s (duplicate client_ids?)", name)
 
 
 # Columns that became application-encrypted (EncryptedText → TEXT). Ciphertext is

@@ -1,3 +1,5 @@
+import {NetworkError} from '@api/client';
+import {singleFlight} from '@utils/singleFlight';
 import {connectivity} from '@/services/network/connectivity';
 import type {Expense, ExpenseDraft} from '@features/expense/domain/entities';
 import type {
@@ -45,7 +47,7 @@ export const expenseRepository: ExpenseRepository = {
     return expenseLocal.getQueue();
   },
 
-  async syncPending(): Promise<{synced: number; failed: number}> {
+  syncPending: singleFlight(async (): Promise<{synced: number; failed: number}> => {
     const queue = expenseLocal.getQueue();
     if (queue.length === 0) return {synced: 0, failed: 0};
     if (!(await connectivity.isOnline())) return {synced: 0, failed: 0};
@@ -63,6 +65,8 @@ export const expenseRepository: ExpenseRepository = {
           expenseLocal.removeFromQueue(item.localId);
           synced += 1;
         } catch (err) {
+          // Offline again: stop and keep the rest as pending (not "failed").
+          if (err instanceof NetworkError) break;
           expenseLocal.markFailed(
             item.localId,
             err instanceof Error ? err.message : 'Sync failed',
@@ -77,5 +81,5 @@ export const expenseRepository: ExpenseRepository = {
     }
 
     return {synced, failed};
-  },
+  }),
 };

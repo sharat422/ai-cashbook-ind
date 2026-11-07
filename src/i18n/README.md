@@ -10,9 +10,9 @@ which re-renders when the user changes language.
 src/i18n/
   locales/
     en.json         ← SOURCE OF TRUTH (hand-edited)
-    hi.json         ← generated (Hindi)
-    te.json         ← generated (Telugu)
-    kn.json ta.json ← reserved; empty = fall back to English
+    te.json         ← generated (Telugu — the default language for new installs)
+    hinglish.json   ← generated (Hindi in Latin letters)
+    hi.json …       ← generated (the other Indian languages)
     .hashes.json    ← manifest: which English source each translation was made from
   translations.ts   ← imports the JSON, exports `en`, `translations`, `TKey`
   useT.ts           ← `useT()` / `translate()` — lookup + `{placeholder}` fill
@@ -29,7 +29,11 @@ src/i18n/
    npm run i18n:translate        # translates only new/changed keys
    ```
 
-Never hand-edit `hi.json` / `te.json` — they're regenerated.
+Never hand-edit the generated files — they're regenerated.
+
+Outside React (validation, API errors, share helpers) use `tNow(key)`; for
+values stored in English (payment methods, categories) use `src/i18n/labels.ts`.
+`src/i18n/screens.i18n.test.ts` fails if a Telugu-first screen hard-codes English.
 
 ## How "only changed keys" works
 
@@ -57,8 +61,3 @@ Set `ANTHROPIC_API_KEY` for translation. Override the model with `I18N_MODEL`
 - **translate** — on push to `main` that changes `en.json` (or manual dispatch);
   translates the changed keys and commits the updated locales back. Requires the
   `ANTHROPIC_API_KEY` repo secret; skips gracefully if it's absent.
-
-## Enabling Kannada / Tamil
-
-They currently fall back to English. To ship them, add `'kn'`/`'ta'` to
-`TARGET_LOCALES` in `scripts/i18n-translate.mjs` and run `npm run i18n:translate`.

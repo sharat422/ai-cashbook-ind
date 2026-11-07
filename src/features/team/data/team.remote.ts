@@ -30,6 +30,18 @@ function toMember(d: TeamMemberDto): TeamMember {
   };
 }
 
+/** One accountant API call, as the owner's audit log shows it. */
+export interface AccessEntry {
+  at: string;
+  atIst: string;
+  mobile: string;
+  userId: string | null;
+  action: 'view' | 'export' | 'denied';
+  area: 'ledger' | 'ageing' | 'customers' | 'dailyClose' | 'gst' | 'reports' | 'dashboard' | 'export' | 'assistant' | 'other';
+  customer: string | null;
+  path: string;
+}
+
 /** Team management — owner-only endpoints (server-enforced). */
 export const teamRemote = {
   async list(): Promise<TeamMember[]> {
@@ -46,7 +58,10 @@ export const teamRemote = {
       await apiRequest<TeamMemberDto>(`/team/${userId}`, {method: 'PATCH', body: {role}}),
     );
   },
+  /** Revoke: takes effect on the member's very next request. */
   async remove(userId: string): Promise<void> {
     await apiRequest<null>(`/team/${userId}`, {method: 'DELETE'});
   },
+  activity: (userId?: string) =>
+    apiRequest<AccessEntry[]>(`/team/activity${userId ? `?user_id=${encodeURIComponent(userId)}` : ''}`, {method: 'GET'}),
 };

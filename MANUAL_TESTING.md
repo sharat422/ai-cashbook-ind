@@ -1134,6 +1134,27 @@ Open from Dashboard **🔁 Recurring**.
 - **Steps:** Switch to Telugu / Tamil / Malayalam and ask Ask AI a question.
 - **Expected:** Answer in that language (full cases in §19.12).
 
+### 36.6 Telugu first, with Hinglish and English (first launch)
+- **Steps:** Fresh install (or clear app data) → open the app.
+- **Expected:** The login screen is in **Telugu**, with a **తెలుగు / Hinglish / English** toggle above the mobile number. Tapping Hinglish or English switches the whole login screen at once. The choice carries into business setup, survives log out and app restart, and can be changed in Settings → Content language (Telugu, Hinglish and English are listed first; the other languages follow).
+
+### 36.7 Telugu on entry, statement, reminder and daily-close screens
+- **Set-up:** Language = Telugu. A customer with a few sales and payments.
+- **Steps:** Add an expense with no amount, then with ₹500 and **Add details** open; open a customer → receive a payment (try UPI with no UTR); Statement (on-screen, 📄 PDF, 📊 Excel); 🔔 Reminder → send on WhatsApp; Settings → Daily close.
+- **Expected:** Every label, button, chip (categories, payment methods, channels), validation message and confirmation is in Telugu — only names, amounts, and words like UPI / PDF / Excel / WhatsApp stay as they are. The reminder that opens in WhatsApp is in Telugu. The phone-made PDF and the Excel file have Telugu headings (Excel opens the Telugu correctly). Dates show Telugu month names (07 నవం 2026) and amounts use Indian grouping (₹1,23,456).
+
+### 36.8 Errors in Telugu
+- **Steps:** Language = Telugu. Turn on airplane mode and save a customer payment; then (online) record a UPI payment with a UTR already used.
+- **Expected:** Both errors are Telugu sentences ("couldn't reach the server…", "clashes with something already saved…"), never the server's English. In English, the server's own wording shows instead.
+
+### 36.9 Dates are Indian time
+- **Steps:** Set the phone's time zone to London (or anywhere not IST). At 00:30–05:30 IST, add an entry dated today.
+- **Expected:** "Today" is the Indian date; the entry is accepted (not "date in the future") and lands on the correct day in the daily close and statement.
+
+### 36.10 Your data (free export)
+- **Steps:** Settings → **📦 Your data (free export)**. Tap **All data (Excel)**, then **Customer balances (PDF)**, then **Full backup**.
+- **Expected:** An amber **DRAFT — wording not approved yet** banner (the founder's approved text is pending; this is not a Terms page). The free-export statement is shown in Telugu and in English (plus Hinglish if selected): what's free, the formats, and that export stays available even after a paid plan stops. The Excel has Customers, Ledger, Income and Expenses sheets; the PDF lists every customer's balance with a total; no screen asks for a plan or payment. As staff: Excel/PDF are replaced by "ask the owner"; the backup still works.
+
 ---
 
 # PART K — Roles & permissions
@@ -1321,6 +1342,144 @@ Phase 1 only: no warehouses/bins, batches, expiry or manufacturing.
 - **API check (QA):** staff token → `GET /stock`, `/stock/moves` → **403**; `POST /stock/transfers` → **403**; `GET /stock/van?userId=<another staff>` → **403**.
 
 
+
+## 37E. Item bills & FMCG schemes
+
+Phase 1 applies and logs schemes only: **no scheme claim filing or claim automation**. Bills carry no GST yet (GST invoices stay on Add credit, §37C).
+
+**Set-up:** items **Soap** (₹25), **Oil** (₹150), **Shampoo** (₹60) and **Sachet** (₹2), all with stock tracked and opening stock in the godown; load some into staff A's van (§37D). Settings → **🎁 Schemes**:
+- **Soap 10+1**: 10+1, buy 10 get 1, Soap, this month, priority 1.
+- **Oil 12+1**: 10+1, buy 12 get 1, Oil, priority 2. **Oil 5% off**: % off 5, Oil, priority 3.
+- **Shampoo slab**: slabs 10+ → 2%, 50+ → 4.5%, priority 4. **Shampoo gift**: free goods, every 24 → 1 Sachet, priority 5.
+- **Old offer**: % off 10 on Soap, ended yesterday, priority 6.
+
+### 37E.1 10+1 on 20 units
+- **Steps:** Customer → **🧾 New bill** → Godown → add Soap, quantity 20.
+- **Expected:** Soap 20 × ₹25 = ₹500.00, and a separate green line **🎁 Soap 10+1 — 2 Soap free · scheme value ₹50.00**. Bill total ₹500.00 (free goods aren't charged). 19 → 1 free; 9 → no scheme line. **Save bill** → "Bill B-… saved", the retailer owes ₹500 more, godown Soap down by **22** (20 + 2 free).
+
+### 37E.2 Expired schemes never apply
+- **Expected:** "Old offer" never appears on today's bill, not even as "not applied". Set the bill date to yesterday → it applies (end date counts). A scheme switched **Off**, or starting later, never applies.
+
+### 37E.3 Priority: one scheme per line
+- **Steps:** Bill Oil 12.
+- **Expected:** **🎁 Oil 12+1 — 1 Oil free** applied; below it, greyed: "⏸ Oil 5% off: Not applied: 'Oil 12+1' has priority (2 before 3)." Bill Oil 4 → 12+1 doesn't qualify, so **Oil 5% off** applies (−₹30.00) with nothing greyed. Two schemes can't share a priority number (the second is refused, naming the first).
+
+### 37E.4 Slabs and free goods
+- **Expected:** Shampoo 10–49 → 2% off, 50+ → 4.5% off (the highest slab reached); Shampoo gift is shown "not applied" (lower priority). With only the gift scheme on: 48 Shampoo → 2 Sachets free, and Sachet stock drops by 2 as well.
+
+### 37E.5 Never a negative bill
+- **Steps:** A 100% off scheme on an item, bill it.
+- **Expected:** Bill total ₹0.00, never below; no credit entry is added. % off above 100 or 0 is refused when setting up the scheme.
+
+### 37E.6 Van bills by staff
+- **Steps:** Staff A → beat day-list → a shop → **🧾 Bill** → add van items → save.
+- **Expected:** Only the van's items can be picked and they come out of A's van (godown unchanged). Not enough in the van (including free goods) → the whole bill is refused with "Only N … in this van", nothing saved. The bill's credit counts in that beat's **Daily close** as credit given. Staff can't set up schemes or see the scheme report.
+
+### 37E.7 Scheme log and report
+- **Steps:** Customer → **🎁 Scheme log**; Settings → 🎁 Schemes → **Scheme report** → this month.
+- **Expected:** The log lists every scheme considered per bill — applied (value, free qty, discount) and not applied (reason) — for that retailer. The report groups applied schemes by scheme and SKU: bills, quantity, free units, discount, scheme value, plus totals. **Total scheme value equals the sum of the scheme lines on that month's bills.** Editing or deleting a scheme later doesn't change saved bills or the log.
+
+
+## 37F. Retailer statements, WhatsApp consent & printable ledger
+
+The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, each with a few sales and payments over the last 4 months (one sale over 90 days old). A phone or laptop that has never had Bolcash, for the retailer's side. Staging must have `PUBLIC_BASE_URL` set to its https address.
+
+### 37F.1 Open the statement without the app
+- **Steps:** Customer A → Statement → **📩 SMS link** (or copy the link from the SMS) → open it on the other device, not logged in to anything.
+- **Expected:** A page with the distributor's name, A's name, current balance, opening balance, sales and payments in the period, closing balance, the ageing (Not yet due / 1–30 / 31–60 / 61–90 / Over 90 days) and every entry in date order. **Download PDF** opens a real PDF in the browser with the same figures. Owner notes never appear. Names in Hindi/Tamil/etc. show correctly in both.
+
+### 37F.2 A's link never shows B
+- **Steps:** Open A's link. Change the last character of the token; add `?customer_id=<B's id>`; paste B's customer id instead of the token.
+- **Expected:** A's link shows only A. Any changed token → "This statement link isn't valid." A link older than 30 days → "This statement link has expired." Links from another business's account show nothing of yours.
+
+### 37F.3 WhatsApp needs the retailer's opt-in
+- **Steps:** Customer A → Statement → **🟢 WhatsApp link** before recording anything.
+- **Expected:** "No WhatsApp consent … Ask them first" — WhatsApp doesn't open. The WhatsApp card says "Not asked yet". **Retailer agreed** → confirm → card says "Agreed … recorded by you". **🟢 WhatsApp link** now opens WhatsApp to A's number with the link. The same retailer at another distributor's account is still "Not asked yet" (consent is per distributor).
+
+### 37F.4 Opt-out stops it at once
+- **Steps:** As the retailer, open the link → **Stop WhatsApp statements**. Then, as the owner, tap **🟢 WhatsApp link** again.
+- **Expected:** The retailer sees "Done. You won't get statements on WhatsApp any more." The owner's card shows "Opted out … by the retailer", and the WhatsApp button is refused. The refusal is in the history (`GET /customers/{id}/statement-consent`). The retailer can opt back in from the same page. **Retailer opted out** on the owner's side does the same.
+
+### 37F.5 Printable ledger
+- **Steps:** Statement → pick a range with more than 30 entries → **🖨️ Printable ledger** → print or save.
+- **Expected:** A4 pages each headed with the distributor name, customer and period, "Page n of N", Brought forward, Page total (sale, paid, carried-forward balance) and, on the last page, Period total. **Period total sale / paid / closing equal the on-screen statement's Total credit / Total received / Closing balance for the same range.** The page totals add up to the period total.
+
+
+## 37G. Khata import (Excel / CSV)
+
+**Set-up:** owner account with one customer named "Shop 7". A khata file with columns Date, Retailer, Bill No, Amount, Type (udhar / jama), Opening (yes / blank): 500 rows, including 10 opening-balance rows without a date, 5 rows repeated exactly, one row with "abc" as the amount and one with no retailer. A copy saved as .xlsx with Telugu headings (తేదీ, దుకాణం, బిల్లు, మొత్తం, రకం).
+
+### 37G.1 Preview = dry run
+- **Steps:** Settings → **📥 Import old khata** → choose the CSV. Note the counts. Go back to Customers without importing.
+- **Expected:** "Dry run — nothing has been saved yet". Rows in the file 500; will be imported 493; duplicates 5 (each "repeated in this file"); problems 2 ("amount is not a number", "no retailer name") with their row numbers; new retailers 39 (Shop 7 is matched, whatever its capital letters or spaces); total opening balance equals the opening rows (udhar minus jama). **No new customers or entries appear anywhere.**
+
+### 37G.2 Column mapping
+- **Steps:** Choose the Telugu-heading .xlsx. Then set "Opening balance" to a column that holds notes; then set "Amount" to "Not in this file".
+- **Expected:** Columns are recognised from the Telugu headings. The notes column gives "opening balance should be yes or no" rows. With no amount column the field says "Choose this column" and Import is disabled.
+
+### 37G.3 Import, log and backup
+- **Steps:** Import the CSV → confirm.
+- **Expected:** "493 rows imported", skipped 7, new retailers 39. Each retailer's balance equals udhar − jama of their rows; the opening entry is dated the earliest day in the file and is listed first. **Past imports** shows date, file name, imported/skipped and who (role · mobile). **Download backup** gives an Excel of the khata as it was before the import (1 customer, no entries).
+
+### 37G.4 Re-import adds nothing
+- **Steps:** Import the same CSV again.
+- **Expected:** Will be imported 0; Import is disabled. Duplicates 498, each "already in your khata" (or repeated in the file). Changing one row's amount and importing again adds only that row.
+
+### 37G.5 Who can import
+- **Expected:** Owner and accountant see the button. Staff don't see it, and `POST /api/v1/imports` with a staff token returns 403.
+
+## 37H. Offline, sync status and conflicts
+
+**Set-up:** two phones logged in to the same business (owner on A, accountant on B). The low-end test device for §37H.5 is **[LOW-END TEST DEVICE AND ANDROID VERSION — not yet named]**.
+
+### 37H.1 Two hours offline, 20 entries
+- **Steps:** On A turn on airplane mode. Add 5 incomes, 5 expenses, 3 udhar and 2 payments (two customers), and record 5 beat visits. Kill the app once halfway. Wait 2 hours. Turn the internet back on and open the app.
+- **Expected:** Every save finishes at once with "will sync". Home shows "⏳ 20 waiting to sync · offline" (after the kill too). After reconnecting it turns "✓ All synced". On the server (web or phone B) there are exactly 20 new records, none twice. Daily close and customer balances include them.
+
+### 37H.2 Sync status screen
+- **Steps:** Tap the status line on home (or Settings → 🔄 Sync status).
+- **Expected:** Synced / Waiting / Failed / Conflict counts; each queued item with its kind and amount; **Sync now** is disabled while offline. An entry the server refuses (e.g. a customer deleted on phone B meanwhile) shows as Failed with the reason and stays on the phone — it is never dropped.
+
+### 37H.3 Same customer changed on two phones
+- **Steps:** On A and B open the same customer → Edit. On B change the address and save. On A (still showing the old details) change the name and save. Repeat with A in airplane mode: edit on A (saved on this phone), edit on B, then reconnect A.
+- **Expected:** A does not save over B. It opens **Changed on two phones** with both versions side by side and the differing fields marked. Home shows "⚖️ 1 changed on two phones — owner must choose". Nothing changes until a button is pressed. **Keep the other device's version** → B's details stay. **Keep this phone's version** → A's details are saved. If B edits again before A chooses, A is told it changed again and sees the newest version.
+
+### 37H.4 Logout with unsynced entries
+- **Steps:** Offline, add an entry, then Log out.
+- **Expected:** The warning says how many entries would be deleted from the phone; the button reads "Log out and delete them". Cancel keeps everything.
+
+### 37H.5 Low-end device performance (on the named device)
+- **Steps:** Cold-start the app (time to home). In airplane mode, time the first entry from tapping Save to the success screen. Open a customer with 1,000 entries (import one with §37G) and fling through the whole timeline.
+- **Expected:** First offline entry saves in under 2 seconds. The ledger scrolls without freezing (no ANR dialog, no blank rows that stay blank). Write down the cold-start time; there is no target for it yet.
+
+## 37I. Accountant: read-only access
+
+**Set-up:** owner phone with business **A** (a few customers, sales, payments and a GST sale). A second owner with business **B**. A third phone for the accountant (CA), mobile number **M**.
+
+### 37I.1 Invite
+- **Steps:** Owner of A → Settings → Team → mobile M, role **Accountant** → Add. On the CA phone log in with M.
+- **Expected:** The role hint reads "Read-only: ledgers, ageing, daily close, GST reports and CA/Tally export". The CA lands on A's home with the blue "Read-only access" note and no Add / AI entry / Scan / Categorise / Cash counter buttons.
+
+### 37I.2 Can view and export
+- **Steps:** As the CA open Customers → a customer (timeline), Customer ageing, Daily close, GST reports (GSTR-1 Excel, Tally CSV), Settings → Your data → Excel.
+- **Expected:** All open / download. A customer's screen shows Statement, Scheme log and Call only — no Add credit, Receive payment, Request, Reminder, Collect, New bill, Limit or Edit. The customer list has no "+ Add".
+
+### 37I.3 Cannot change anything — UI or API
+- **Steps:** As the CA try any deep link / back-stack route to Add expense, Edit customer, Items, Team. Then with the CA's token call `PATCH /api/v1/customers/{id}`, `DELETE /api/v1/customers/{id}`, `POST /api/v1/customers/{id}/ledger`, `POST /api/v1/stock/moves` with a valid body, `POST /api/v1/team`.
+- **Expected:** Every such screen shows "Read-only access" with a Back button. Every API call returns 403 ("Your role is read-only." / "Your role doesn't allow this action."); the owner's data is unchanged.
+
+### 37I.4 Scoped to assigned businesses
+- **Steps:** With the CA's token call `GET /api/v1/customers` with header `X-Business-Id: <B's id>`. Then have B's owner also invite M as accountant; on the CA phone open Settings.
+- **Expected:** 403 "You don't have access to this business." Once B invites M, Settings shows **Your businesses** with A and B; tapping B opens B's books (and A's are no longer on screen). Switching is refused while entries are waiting to sync.
+
+### 37I.5 Revoke is instant
+- **Steps:** CA has a customer timeline open. Owner → Team → the CA → Manage → **Remove access** → Remove now. On the CA phone pull to refresh (or open any screen).
+- **Expected:** The CA is signed out at once with "The owner has removed your access to that business." Logging in again with M doesn't open A. `GET /api/v1/customers` with the old token returns 403 with header `X-Bolcash-Access: revoked`. Inviting M again restores access.
+
+### 37I.6 Owner's audit log
+- **Steps:** As the CA open a customer ledger, download the Tally CSV, and try one API write. As the owner: Team → **🧾 Accountant activity** (or the CA → Manage → See what they viewed).
+- **Expected:** Newest first: "Tried to change (blocked) · customer list · <name>", "Exported · reports", "Viewed · customer ledger · <name>", each with the date and time in IST (e.g. 07 Nov 2026, 14:05 IST) and the CA's mobile. Owner's own use is not listed; app housekeeping (login, notifications) is not listed.
+
 ---
 
 # PART L — Backend, connectivity & production readiness
@@ -1401,7 +1560,13 @@ Phase 1 only: no warehouses/bins, batches, expiry or manufacturing.
 29. Receive a UPI payment without a UTR → blocked; with a UTR → saved. Import a bank CSV twice → second time "already imported". Confirm a suggestion → Daily close difference drops by that amount.
 30. GST-registered business: add a GST sale to a Maharashtra GSTIN → IGST only; download the Tally CSV → the sale is in it.
 31. Stock: load 20 into staff A's van, staff A sells 10 → van 10, godown unchanged; Stock count with one item 6% off → exact difference shown and logged.
-32. Log out → back to Login.
+32. Schemes: a bill of 20 Soap with a 10+1 scheme shows 2 free as its own line; the scheme report's total matches the bill.
+33. Statements: send a retailer the SMS link and open it on a phone without Bolcash; WhatsApp link refused until the retailer's consent is recorded, and refused again after they tap Stop.
+34. Telugu: on a fresh install the login screen is Telugu with a తెలుగు / Hinglish / English toggle; add an expense and send a reminder with no English on screen; Your data → Excel downloads.
+35. Import: preview a khata CSV (nothing saved), import it, then preview it again → 0 to import.
+36. Offline: airplane mode → add 3 entries → home says 3 waiting → reconnect → All synced, no duplicates. Edit one customer on two phones → the conflict screen asks which to keep.
+37. Accountant: invite a CA → they can open ledgers and download the Tally CSV but see no add/edit buttons; Remove access → their next screen signs them out; Team → Accountant activity lists what they opened, in IST.
+38. Log out → back to Login (the language stays).
 
 ---
 

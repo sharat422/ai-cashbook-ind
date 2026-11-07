@@ -27,6 +27,8 @@ interface AuthState {
   user: User | null;
   business: Business | null;
   preferredLanguage: AppLanguage;
+  /** Shown on the login screen after the server says the owner removed access. */
+  notice: 'accessRevoked' | null;
 
   // Derived selector kept as a method for ergonomic access in components.
   status: () => AuthStatus;
@@ -36,6 +38,8 @@ interface AuthState {
   setBusiness: (business: Business) => void;
   setPreferredLanguage: (language: AppLanguage) => void;
   logout: () => void;
+  /** The owner revoked this user's access: sign out now and say why. */
+  accessRevoked: () => void;
   _setHydrated: (value: boolean) => void;
 }
 
@@ -47,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       business: null,
       preferredLanguage: DEFAULT_APP_LANGUAGE,
+      notice: null,
 
       status: () => {
         const {token, business} = get();
@@ -55,7 +60,7 @@ export const useAuthStore = create<AuthState>()(
         return 'authenticated';
       },
 
-      setSession: ({token, user}) => set({token, user}),
+      setSession: ({token, user}) => set({token, user, notice: null}),
       setBusiness: business => set({business}),
       setPreferredLanguage: language => set({preferredLanguage: language}),
       logout: () =>
@@ -63,8 +68,9 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           user: null,
           business: null,
-          preferredLanguage: DEFAULT_APP_LANGUAGE,
+          // The language stays: the next person on this phone most likely reads it too.
         }),
+      accessRevoked: () => set({token: null, user: null, business: null, notice: 'accessRevoked'}),
       _setHydrated: value => set({hydrated: value}),
     }),
     {

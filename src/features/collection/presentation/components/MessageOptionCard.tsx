@@ -2,11 +2,8 @@ import React from 'react';
 import {Pressable, View} from 'react-native';
 
 import {Text} from '@components/ui';
-import {
-  TONE_ICON,
-  TONE_LABEL,
-  type CollectionMessage,
-} from '@features/collection/domain/entities';
+import {TONE_ICON, type CollectionMessage} from '@features/collection/domain/entities';
+import {useT, type TKey} from '@/i18n';
 
 export interface MessageOptionCardProps {
   message: CollectionMessage;
@@ -23,16 +20,17 @@ export function MessageOptionCard({
   onWhatsApp,
   onShare,
 }: MessageOptionCardProps): React.JSX.Element {
+  const t = useT();
   return (
     <View className="mb-3 mr-8 rounded-2xl rounded-tl-sm border border-border bg-white p-3.5">
       <View className="flex-row items-center justify-between">
         <Text className="text-sm font-semibold text-slate-900">
-          {TONE_ICON[message.tone]} {TONE_LABEL[message.tone]}
+          {TONE_ICON[message.tone]} {t(`collection.tone.${message.tone}` as TKey)}
         </Text>
         {message.recommended ? (
           <View className="rounded-full bg-primary/10 px-2 py-0.5">
             <Text className="text-[10px] font-bold text-primary">
-              ★ Recommended
+              {t('collection.recommended')}
             </Text>
           </View>
         ) : null}
@@ -48,7 +46,7 @@ export function MessageOptionCard({
           onPress={() => onWhatsApp(message.text)}
           className="h-10 flex-1 flex-row items-center justify-center rounded-xl bg-success">
           <Text className="text-sm font-semibold text-white">
-            🟢 Send on WhatsApp
+            {t('collection.sendWhatsapp')}
           </Text>
         </Pressable>
         <Pressable

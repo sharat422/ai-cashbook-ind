@@ -7,12 +7,12 @@ describe('roleCan — mirrors the backend matrix', () => {
     }
   });
 
-  it('accountant: view + export + add/edit, but NOT delete/settings/team', () => {
+  it('accountant: read-only — view + export, never add/edit/delete/settings/team', () => {
     expect(roleCan('accountant', PERMISSIONS.DATA_VIEW)).toBe(true);
     expect(roleCan('accountant', PERMISSIONS.REPORTS_VIEW)).toBe(true);
     expect(roleCan('accountant', PERMISSIONS.REPORTS_EXPORT)).toBe(true);
-    expect(roleCan('accountant', PERMISSIONS.ENTRY_CREATE)).toBe(true);
-    expect(roleCan('accountant', PERMISSIONS.ENTRY_EDIT)).toBe(true);
+    expect(roleCan('accountant', PERMISSIONS.ENTRY_CREATE)).toBe(false);
+    expect(roleCan('accountant', PERMISSIONS.ENTRY_EDIT)).toBe(false);
     expect(roleCan('accountant', PERMISSIONS.ENTRY_DELETE)).toBe(false);
     expect(roleCan('accountant', PERMISSIONS.SETTINGS_MANAGE)).toBe(false);
     expect(roleCan('accountant', PERMISSIONS.TEAM_MANAGE)).toBe(false);

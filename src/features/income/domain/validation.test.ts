@@ -1,4 +1,5 @@
 import type {IncomeDraft} from './entities';
+import {istDate} from '@utils/date';
 import {validateIncomeDraft} from './validation';
 
 const valid: IncomeDraft = {
@@ -18,7 +19,7 @@ describe('validateIncomeDraft', () => {
 
   it('rejects a non-positive amount', () => {
     expect(validateIncomeDraft({...valid, amount: 0}).amount).toBe(
-      'Amount must be greater than ₹0',
+      'Enter an amount greater than ₹0',
     );
   });
 
@@ -36,7 +37,7 @@ describe('validateIncomeDraft', () => {
   });
 
   it('rejects a future date', () => {
-    const future = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const future = istDate(new Date(Date.now() + 86_400_000)); // tomorrow in India
     expect(validateIncomeDraft({...valid, date: future}).date).toBe(
       'Date cannot be in the future',
     );
@@ -44,7 +45,7 @@ describe('validateIncomeDraft', () => {
 
   it('rejects over-long notes', () => {
     expect(validateIncomeDraft({...valid, notes: 'x'.repeat(281)}).notes).toBe(
-      'Notes must be 280 characters or fewer',
+      'Keep it to 280 characters or fewer',
     );
   });
 });

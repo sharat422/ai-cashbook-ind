@@ -9,7 +9,7 @@ from .. import gst, stock
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW, SETTINGS_MANAGE
-from ..models import Business, GstRateChangeLog, Item, StockMove, User
+from ..models import Business, GstRateChangeLog, Item, SchemeItem, StockMove, User
 from ..security import get_current_user
 from ..serializers import item_dto
 from ..validation import _reject
@@ -147,5 +147,6 @@ def delete_item(
     item = _owned_item(db, business, item_id)
     # Explicit for SQLite, which doesn't enforce the cascade.
     db.query(StockMove).filter(StockMove.item_id == item.id).delete(synchronize_session=False)
+    db.query(SchemeItem).filter(SchemeItem.item_id == item.id).delete(synchronize_session=False)
     db.delete(item)
     db.commit()

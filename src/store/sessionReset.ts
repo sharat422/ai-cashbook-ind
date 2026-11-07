@@ -11,6 +11,7 @@ import {useExpenseStore} from '@features/expense/presentation/store/expense.stor
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
 import {useReminderHistoryStore} from '@features/reminders/presentation/store/reminderHistory.store';
 import {useReminderTemplatesStore} from '@features/reminders/presentation/store/reminderTemplates.store';
+import {useCustomerEdits} from '@features/sync/customerEdits';
 import {useInboxStore} from '@/services/notifications/inbox.store';
 import {useAuthStore} from '@store/auth.store';
 
@@ -35,6 +36,7 @@ export function resetBusinessData(): void {
   useCreditDraftStore.setState({drafts: {}});
   useCreditLimitStore.setState({limits: {}});
   useVisitQueue.setState({pending: []});
+  useCustomerEdits.setState({pending: [], conflicts: []});
   useCategorizationStore.setState({decisions: []});
   useCollectionSettingsStore.setState({upiId: '', payeeName: ''});
   useReminderHistoryStore.setState({reminders: []});

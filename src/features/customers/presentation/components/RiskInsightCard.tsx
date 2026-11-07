@@ -7,6 +7,7 @@ import type {
   RiskPrediction,
 } from '@features/customers/domain/risk';
 import {formatINR} from '@utils/currency';
+import {useT} from '@/i18n';
 import {RiskBadge} from './RiskBadge';
 import {RiskGauge} from './RiskGauge';
 
@@ -34,20 +35,21 @@ export function RiskInsightCard({
   prediction,
   features,
 }: Props): React.JSX.Element {
+  const t = useT();
   const confidencePct = Math.round(prediction.confidence * 100);
 
   return (
     <AiInsightCard
       icon="🤖"
-      title="Payment Risk"
-      subtitle="AI prediction"
+      title={t('risk.title')}
+      subtitle={t('risk.subtitle')}
       badge={<RiskBadge category={prediction.category} />}>
       <RiskGauge score={prediction.score} category={prediction.category} />
 
       {/* Prediction confidence */}
       <View className="mt-2">
         <View className="flex-row items-center justify-between">
-          <Text variant="caption">Prediction confidence</Text>
+          <Text variant="caption">{t('risk.confidence')}</Text>
           <Text className="text-xs font-semibold text-slate-900">
             {confidencePct}%
           </Text>
@@ -62,13 +64,13 @@ export function RiskInsightCard({
 
       {/* Inputs used */}
       <View className="mt-4 flex-row rounded-xl bg-slate-50 p-3" style={{gap: 8}}>
-        <Stat label="Outstanding" value={formatINR(features.outstandingAmount)} />
+        <Stat label={t('risk.outstanding')} value={formatINR(features.outstandingAmount)} />
         <Stat
-          label="Avg delay"
-          value={`${Math.round(features.avgPaymentDelayDays)}d`}
+          label={t('risk.avgDelay')}
+          value={t('risk.days', {n: Math.round(features.avgPaymentDelayDays)})}
         />
         <Stat
-          label="Txns/mo"
+          label={t('risk.txnsPerMonth')}
           value={features.transactionFrequencyPerMonth.toFixed(1)}
         />
       </View>
@@ -77,7 +79,7 @@ export function RiskInsightCard({
       {prediction.factors.length > 0 ? (
         <View className="mt-4">
           <Text variant="label" className="mb-2">
-            Why
+            {t('risk.why')}
           </Text>
           <View className="flex-row flex-wrap" style={{gap: 6}}>
             {prediction.factors.map(f => (
@@ -101,7 +103,7 @@ export function RiskInsightCard({
       {/* Suggested actions */}
       <View className="mt-4">
         <Text variant="label" className="mb-2">
-          Suggested actions
+          {t('risk.actions')}
         </Text>
         <View style={{gap: 6}}>
           {prediction.suggestedActions.map(action => (

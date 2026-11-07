@@ -3,6 +3,7 @@ import {Pressable, ScrollView, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {logError} from '@/services/diagnostics/errorLog.store';
+import {tNow} from '@/i18n';
 import {Text} from './Text';
 
 interface Props {
@@ -50,17 +51,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <View className="rounded-3xl border border-border bg-white p-6">
             <Text className="text-center text-4xl">⚠️</Text>
             <Text className="mt-3 text-center text-xl font-bold text-slate-900">
-              Something went wrong
+              {tNow('errors.screenTitle')}
             </Text>
             <Text className="mt-2 text-center text-sm text-muted">
-              The screen hit an unexpected error. You can try again — if it keeps
-              happening, please share the details below.
+              {tNow('errors.screenMsg')}
             </Text>
 
             {/* The actual error message — shown so it can be reported. */}
             <View className="mt-4 rounded-xl bg-slate-50 p-3">
               <Text className="text-xs font-semibold text-danger">
-                {error.message || 'Unknown error'}
+                {error.message || tNow('errors.unknown')}
               </Text>
               {__DEV__ && error.stack ? (
                 <Text className="mt-2 text-[10px] text-muted" numberOfLines={12}>
@@ -73,7 +73,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               accessibilityRole="button"
               onPress={this.reset}
               className="mt-5 h-12 items-center justify-center rounded-xl bg-primary">
-              <Text className="text-base font-semibold text-white">Try again</Text>
+              <Text className="text-base font-semibold text-white">{tNow('common.retry')}</Text>
             </Pressable>
           </View>
         </ScrollView>

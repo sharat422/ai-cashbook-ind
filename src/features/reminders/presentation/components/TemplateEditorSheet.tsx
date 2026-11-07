@@ -5,6 +5,7 @@ import {BottomSheet, Button, Text} from '@components/ui';
 import type {ReminderTemplate} from '@features/reminders/domain/entities';
 import {TEMPLATE_PLACEHOLDERS} from '@features/reminders/domain/templates';
 import {colors} from '@theme/colors';
+import {useT} from '@/i18n';
 
 export interface TemplateEditorSheetProps {
   visible: boolean;
@@ -24,6 +25,7 @@ export function TemplateEditorSheet({
   onSave,
   onReset,
 }: TemplateEditorSheetProps): React.JSX.Element {
+  const t = useT();
   const [body, setBody] = useState('');
 
   useEffect(() => {
@@ -36,11 +38,11 @@ export function TemplateEditorSheet({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title={template ? `Edit · ${template.name}` : 'Edit template'}
+      title={t('reminders.editTitle', {name: template?.name ?? ''})}
       maxHeightClassName="max-h-[80%]">
       <View className="px-5 pb-4 pt-1" style={{gap: 12}}>
         <Text variant="caption">
-          Use placeholders below — they're filled in per customer when sending.
+          {t('reminders.editHint', {braces: '{ }'})}
         </Text>
 
         <View className="rounded-xl border border-border bg-white px-4 py-3">
@@ -48,7 +50,7 @@ export function TemplateEditorSheet({
             className="min-h-[120px] p-0 text-base text-slate-900"
             value={body}
             onChangeText={setBody}
-            placeholder="Reminder message…"
+            placeholder={t('reminders.editPlaceholder')}
             placeholderTextColor={colors.muted}
             multiline
             textAlignVertical="top"
@@ -67,12 +69,12 @@ export function TemplateEditorSheet({
         </View>
 
         <Button
-          title="Save template"
+          title={t('reminders.saveTemplate')}
           className="mt-1"
           onPress={() => onSave(body.trim())}
         />
         {customized ? (
-          <Button title="Reset to default" variant="ghost" onPress={onReset} />
+          <Button title={t('reminders.reset')} variant="ghost" onPress={onReset} />
         ) : null}
       </View>
     </BottomSheet>

@@ -1,7 +1,7 @@
 import type {DashboardSummary} from '@features/dashboard/domain/entities';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 interface Dated {
   amount: number;
@@ -21,7 +21,7 @@ export const dashboardLocal = {
     const incomes = useIncomeStore.getState().entries;
     const expenses = useExpenseStore.getState().entries;
 
-    const todayKey = toISODate(new Date());
+    const todayKey = todayIST();
     const monthKey = todayKey.slice(0, 7); // YYYY-MM
 
     const isToday = (e: Dated) => e.date === todayKey;

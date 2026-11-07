@@ -25,3 +25,7 @@ cryptography==43.0.3
 openpyxl==3.1.5
 # Error/crash monitoring + real-time alerts (activated only when SENTRY_DSN set).
 sentry-sdk==2.20.0
+# Server-side PDFs (retailer statements, printable ledger). uharfbuzz shapes
+# Indian scripts; fonts are bundled in app/fonts (Noto, SIL OFL).
+fpdf2==2.8.3
+uharfbuzz==0.45.0

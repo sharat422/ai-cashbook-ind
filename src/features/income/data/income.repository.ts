@@ -1,3 +1,5 @@
+import {NetworkError} from '@api/client';
+import {singleFlight} from '@utils/singleFlight';
 import {connectivity} from '@/services/network/connectivity';
 import type {Income, IncomeDraft} from '@features/income/domain/entities';
 import type {
@@ -56,7 +58,7 @@ export const incomeRepository: IncomeRepository = {
     return incomeLocal.getQueue();
   },
 
-  async syncPending(): Promise<{synced: number; failed: number}> {
+  syncPending: singleFlight(async (): Promise<{synced: number; failed: number}> => {
     const queue = incomeLocal.getQueue();
     if (queue.length === 0) return {synced: 0, failed: 0};
     if (!(await connectivity.isOnline())) return {synced: 0, failed: 0};
@@ -74,6 +76,8 @@ export const incomeRepository: IncomeRepository = {
           incomeLocal.removeFromQueue(item.localId);
           synced += 1;
         } catch (err) {
+          // Offline again: stop and keep the rest as pending (not "failed").
+          if (err instanceof NetworkError) break;
           incomeLocal.markFailed(
             item.localId,
             err instanceof Error ? err.message : 'Sync failed',
@@ -87,5 +91,5 @@ export const incomeRepository: IncomeRepository = {
     }
 
     return {synced, failed};
-  },
+  }),
 };

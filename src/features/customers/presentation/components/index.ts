@@ -1,6 +1,5 @@
 export * from './CustomerCard';
 export * from './CustomerForm';
-export * from './LedgerEntrySheet';
 export * from './ReceivePaymentSheet';
 export * from './RiskBadge';
 export * from './RiskGauge';

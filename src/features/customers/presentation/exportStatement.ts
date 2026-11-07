@@ -1,17 +1,19 @@
 import {Alert, Linking} from 'react-native';
 import RNFS from 'react-native-fs';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
-import Share, {Social, type ShareSingleOptions} from 'react-native-share';
+import Share from 'react-native-share';
 
+import {ApiError, NetworkError} from '@api/client';
+import {statementsRemote} from '@features/customers/data/statements.remote';
 import {
   statementToCsv,
-  statementToText,
   type CustomerStatement,
 } from '@features/customers/domain/customerStatement';
 import type {Customer} from '@features/customers/domain/entities';
 import {buildStatementHtml} from '@features/customers/domain/statementHtml';
+import {tNow} from '@/i18n';
 
-export type ExportFormat = 'pdf' | 'excel' | 'whatsapp';
+export type ExportFormat = 'pdf' | 'excel';
 
 const safeName = (s: string): string =>
   s.replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '') || 'customer';
@@ -31,7 +33,7 @@ async function makePdf(
     fileName: `Statement_${safeName(customer.fullName)}`,
     directory: 'Documents',
   });
-  if (!filePath) throw new Error('Could not generate the PDF.');
+  if (!filePath) throw new Error(tNow('statement.pdfFailed'));
   return filePath;
 }
 
@@ -54,10 +56,7 @@ function isCancel(err: unknown): boolean {
   return /cancel|did not share|dismiss/i.test(msg);
 }
 
-/**
- * Export a statement as a real PDF or XLSX file (shared via the OS share sheet),
- * or send the PDF to the customer over WhatsApp (with a text-link fallback).
- */
+/** Export a statement as a PDF or CSV file through the OS share sheet. */
 export async function exportStatement(
   format: ExportFormat,
   customer: Customer,
@@ -71,47 +70,61 @@ export async function exportStatement(
         url: fileUri(path),
         type: 'text/csv',
         filename: `Statement_${safeName(customer.fullName)}`,
-        title: 'Customer statement',
+        title: tNow('statement.shareTitle'),
         failOnCancel: false,
       });
       return;
     }
 
+    // WhatsApp to the retailer goes through shareStatementOnWhatsApp, which the
+    // server refuses without the retailer's opt-in.
     const pdfPath = await makePdf(customer, statement, businessName);
-
-    if (format === 'pdf') {
-      await Share.open({
-        url: fileUri(pdfPath),
-        type: 'application/pdf',
-        title: 'Customer statement',
-        failOnCancel: false,
-      });
-      return;
-    }
-
-    // WhatsApp: share the PDF into WhatsApp (user picks the customer chat);
-    // fall back to a text deep link straight to the customer's number.
-    try {
-      const options: ShareSingleOptions = {
-        social: Social.Whatsapp,
-        url: fileUri(pdfPath),
-        type: 'application/pdf',
-        message: statementToText(customer, statement),
-      };
-      await Share.shareSingle(options);
-    } catch (waErr) {
-      if (isCancel(waErr)) return;
-      const text = statementToText(customer, statement);
-      const wa = `whatsapp://send?phone=91${customer.mobile}&text=${encodeURIComponent(text)}`;
-      const sms = `sms:${customer.mobile}?body=${encodeURIComponent(text)}`;
-      const canWa = await Linking.canOpenURL(wa);
-      await Linking.openURL(canWa ? wa : sms);
-    }
+    await Share.open({
+      url: fileUri(pdfPath),
+      type: 'application/pdf',
+      title: tNow('statement.shareTitle'),
+      failOnCancel: false,
+    });
   } catch (err) {
     if (isCancel(err)) return;
-    Alert.alert(
-      'Export failed',
-      err instanceof Error ? err.message : 'Please try again.',
-    );
+    Alert.alert(tNow('statement.exportFailed'), errorText(err));
   }
+}
+
+/**
+ * Send the retailer a link to their statement on WhatsApp. The server checks
+ * their opt-in first (409 = no consent / opted out) and logs every attempt.
+ * Returns false when it was refused for lack of consent.
+ */
+export async function shareStatementOnWhatsApp(customer: Customer, from?: string): Promise<boolean> {
+  try {
+    const share = await statementsRemote.whatsapp(customer.id, from, 'phone');
+    const wa = `whatsapp://send?phone=91${share.mobile}&text=${encodeURIComponent(share.message)}`;
+    if (!(await Linking.canOpenURL(wa))) {
+      Alert.alert(tNow('statement.noWhatsapp'), tNow('statement.noWhatsappMsg'));
+      return true;
+    }
+    await Linking.openURL(wa);
+    return true;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) return false;
+    Alert.alert(tNow('statement.shareFailed'), errorText(err));
+    return true;
+  }
+}
+
+/** Text the retailer a link to their statement (opens in any browser). */
+export async function shareStatementLinkBySms(customer: Customer, from?: string): Promise<void> {
+  try {
+    const {url} = await statementsRemote.link(customer.id, from);
+    const body = tNow('statement.smsBody', {url});
+    await Linking.openURL(`sms:${customer.mobile}?body=${encodeURIComponent(body)}`);
+  } catch (err) {
+    Alert.alert(tNow('statement.shareFailed'), errorText(err));
+  }
+}
+
+/** API errors are already in the user's language; anything else gets a generic line. */
+function errorText(err: unknown): string {
+  return err instanceof ApiError || err instanceof NetworkError ? err.message : tNow('common.tryAgainMsg');
 }

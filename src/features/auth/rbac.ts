@@ -25,9 +25,8 @@ const ALL: Permission[] = Object.values(PERMISSIONS);
 
 const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
   owner: new Set(ALL),
+  // Read-only: view ledgers, ageing, daily close, GST reports; export for the CA.
   accountant: new Set<Permission>([
-    PERMISSIONS.ENTRY_CREATE,
-    PERMISSIONS.ENTRY_EDIT,
     PERMISSIONS.DATA_VIEW,
     PERMISSIONS.REPORTS_VIEW,
     PERMISSIONS.REPORTS_EXPORT,

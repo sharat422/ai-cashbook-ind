@@ -1,4 +1,5 @@
 import {NetworkError} from '@api/client';
+import {singleFlight} from '@utils/singleFlight';
 import {connectivity} from '@/services/network/connectivity';
 import {ledgerLocal} from './ledger.local';
 import {ledgerRemote} from './ledger.remote';
@@ -7,9 +8,9 @@ import {usePendingLedgerStore} from '../presentation/store/pendingLedger.store';
 /**
  * Flush the offline ledger queue. Returns the customer ids that had entries
  * synced, so the caller can invalidate their ledger queries. Safe to call
- * repeatedly; no-ops when the queue is empty or the device is offline.
+ * repeatedly (overlapping calls share one run); no-ops when the queue is empty or the device is offline.
  */
-export async function syncPendingLedger(): Promise<string[]> {
+export const syncPendingLedger = singleFlight(async (): Promise<string[]> => {
   const queue = ledgerLocal.all();
   if (queue.length === 0) return [];
   if (!(await connectivity.isOnline())) return [];
@@ -32,4 +33,4 @@ export async function syncPendingLedger(): Promise<string[]> {
     }
   }
   return [...touched];
-}
+});

@@ -17,6 +17,7 @@ import {
   type RelationshipLevel,
 } from '@features/collection/domain/entities';
 import {MessageOptionCard} from '@features/collection/presentation/components';
+import {useAuthStore} from '@store/auth.store';
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
@@ -41,7 +42,11 @@ export function CollectionAssistantScreen({
   const [relationshipScore, setRelationshipScore] = useState<number>(
     params.relationshipScore,
   );
-  const [language, setLanguage] = useState<Language>('en');
+  // Start in the app language when there are messages for it (Telugu first).
+  const appLanguage = useAuthStore(st => st.preferredLanguage);
+  const [language, setLanguage] = useState<Language>(
+    (LANGUAGE_ORDER as string[]).includes(appLanguage) ? (appLanguage as Language) : 'en',
+  );
 
   const input: CollectionInput = useMemo(
     () => ({name, outstandingAmount: amount, daysOverdue, relationshipScore}),

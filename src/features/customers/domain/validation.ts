@@ -1,5 +1,6 @@
 import {validateMobile} from '@utils/validation';
 import type {CustomerDraft} from './entities';
+import {tNow} from '@/i18n';
 
 export type CustomerFieldErrors = Partial<Record<keyof CustomerDraft, string>>;
 
@@ -16,9 +17,9 @@ export function validateCustomerDraft(
   const errors: CustomerFieldErrors = {};
 
   if (!draft.fullName.trim()) {
-    errors.fullName = 'Full name is required';
+    errors.fullName = tNow('errors.nameRequired');
   } else if (draft.fullName.trim().length > 80) {
-    errors.fullName = 'Name must be 80 characters or fewer';
+    errors.fullName = tNow('errors.tooLong', {n: 80});
   }
 
   const mobileError = validateMobile(draft.mobile);
@@ -26,12 +27,12 @@ export function validateCustomerDraft(
 
   if (draft.gstNumber && draft.gstNumber.trim()) {
     if (!GSTIN.test(draft.gstNumber.trim().toUpperCase())) {
-      errors.gstNumber = 'Enter a valid 15-character GSTIN';
+      errors.gstNumber = tNow('errors.gstinInvalid');
     }
   }
 
   if (draft.notes && draft.notes.length > 500) {
-    errors.notes = 'Notes must be 500 characters or fewer';
+    errors.notes = tNow('errors.tooLong', {n: 500});
   }
 
   return errors;

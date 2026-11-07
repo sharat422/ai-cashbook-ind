@@ -6,6 +6,8 @@
  */
 import type {Customer} from './entities';
 import type {CustomerLedger} from './ledger';
+import {todayIST} from '@utils/date';
+import {tNow} from '@/i18n';
 
 export type RiskCategory = 'low' | 'medium' | 'high';
 
@@ -52,7 +54,7 @@ export function deriveRiskFeatures(
 ): RiskFeatures {
   // Oldest-first for time-based features.
   const asc = [...ledger.entries].reverse();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIST();
 
   const credits = asc.filter(e => e.type === 'credit');
   const payments = asc.filter(e => e.type === 'payment');
@@ -62,15 +64,20 @@ export function deriveRiskFeatures(
   const remaining = payments.map(p => ({...p, available: p.amount}));
   let weightedDelay = 0;
   let creditValue = 0;
+  // Payments are used up oldest-first, so the used-up ones are always a
+  // prefix: skip past them instead of rescanning (O(n), not O(credits × payments)
+  // — a 1,000-entry ledger froze low-end phones).
+  let next = 0;
   for (const c of credits) {
     let unpaid = c.amount;
     creditValue += c.amount;
-    for (const p of remaining) {
-      if (unpaid <= 0) { break; }
+    while (unpaid > 0 && next < remaining.length) {
+      const p = remaining[next];
       const applied = Math.min(unpaid, p.available);
       weightedDelay += applied * Math.max(0, daysBetween(c.date, p.date));
       unpaid -= applied;
       p.available -= applied;
+      if (p.available <= 0) { next += 1; }
     }
     weightedDelay += unpaid * Math.max(0, daysBetween(c.date, today));
   }
@@ -117,33 +124,33 @@ export function predictRisk(features: RiskFeatures): RiskPrediction {
   const delayPts = clamp(features.avgPaymentDelayDays / 60, 0, 1) * 40;
   if (features.avgPaymentDelayDays >= 30) {
     factors.push({
-      label: `Slow payments (~${Math.round(features.avgPaymentDelayDays)}d avg)`,
+      label: tNow('risk.f.slow', {n: Math.round(features.avgPaymentDelayDays)}),
       impact: 'increase',
     });
   } else if (features.avgPaymentDelayDays <= 7 && features.historyCount > 0) {
-    factors.push({label: 'Pays quickly', impact: 'decrease'});
+    factors.push({label: tNow('risk.f.quick'), impact: 'decrease'});
   }
 
   const overduePts = features.isOverdue ? 20 : 0;
   if (features.isOverdue) {
-    factors.push({label: 'Balance is overdue', impact: 'increase'});
+    factors.push({label: tNow('risk.f.overdue'), impact: 'increase'});
   }
 
   const paybackPts = (1 - features.paymentRatio) * 20;
   if (features.paymentRatio < 0.5 && features.outstandingAmount > 0) {
-    factors.push({label: 'Low payback ratio', impact: 'increase'});
+    factors.push({label: tNow('risk.f.lowPayback'), impact: 'increase'});
   } else if (features.paymentRatio >= 0.9) {
-    factors.push({label: 'Strong repayment history', impact: 'decrease'});
+    factors.push({label: tNow('risk.f.strong'), impact: 'decrease'});
   }
 
   const exposurePts = clamp(features.outstandingAmount / 100_000, 0, 1) * 10;
   if (features.outstandingAmount >= 50_000) {
-    factors.push({label: 'High outstanding exposure', impact: 'increase'});
+    factors.push({label: tNow('risk.f.exposure'), impact: 'increase'});
   }
 
   const frequencyPts = -clamp(features.transactionFrequencyPerMonth / 4, 0, 1) * 10;
   if (features.transactionFrequencyPerMonth >= 4) {
-    factors.push({label: 'Frequent, active customer', impact: 'decrease'});
+    factors.push({label: tNow('risk.f.frequent'), impact: 'decrease'});
   }
 
   const score = Math.round(
@@ -170,24 +177,24 @@ function suggestActions(
   features: RiskFeatures,
 ): string[] {
   const actions: string[] = [];
-  if (features.isOverdue) actions.push('Send an Overdue reminder now');
+  if (features.isOverdue) actions.push(tNow('risk.a.overdueNow'));
 
   if (category === 'high') {
     actions.push(
-      'Request a partial settlement or a firm payment date',
-      'Hold new credit until the balance clears',
-      'Call the customer directly to follow up',
+      tNow('risk.a.partial'),
+      tNow('risk.a.hold'),
+      tNow('risk.a.call'),
     );
   } else if (category === 'medium') {
     actions.push(
-      'Send a Payment Due reminder',
-      'Confirm a clear due date',
-      'Keep new credit limited until the trend improves',
+      tNow('risk.a.dueReminder'),
+      tNow('risk.a.dueDate'),
+      tNow('risk.a.limit'),
     );
   } else {
     actions.push(
-      'Healthy payer — continue normal terms',
-      'Optionally send a Friendly reminder near the due date',
+      tNow('risk.a.healthy'),
+      tNow('risk.a.friendly'),
     );
   }
   return actions;

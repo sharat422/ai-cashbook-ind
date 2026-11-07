@@ -1,8 +1,10 @@
 import React from 'react';
-import {Alert, ScrollView, View} from 'react-native';
+import {ScrollView, View} from 'react-native';
 
 import {Button, Screen, Text} from '@components/ui';
 import {useT} from '@/i18n';
+import {confirmLogout} from '@features/sync/syncStatus';
+import {SyncStatusBar} from '@features/sync/presentation/SyncStatusBar';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 
@@ -19,10 +21,7 @@ export function StaffHome({
   const logout = useAuthStore(s => s.logout);
 
   const onLogout = () => {
-    Alert.alert(t('common.logoutConfirmTitle'), t('common.logoutConfirmMsg'), [
-      {text: t('common.cancel'), style: 'cancel'},
-      {text: t('common.logout'), style: 'destructive', onPress: logout},
-    ]);
+    confirmLogout(t, logout);
   };
 
   return (
@@ -37,6 +36,7 @@ export function StaffHome({
         <Text variant="subtitle" className="mt-1">
           {t('staff.subtitle')}
         </Text>
+        <SyncStatusBar />
 
         <View className="mt-8" style={{gap: 12}}>
           <Button

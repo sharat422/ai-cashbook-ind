@@ -191,6 +191,17 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
                         {t('beats.giveCredit')}
                       </Text>
                     </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() =>
+                        navigation.navigate('Bill', {
+                          customer: {id: r.customerId, fullName: r.fullName},
+                          beatId: beat.id,
+                        })
+                      }
+                      className="flex-1 items-center rounded-xl bg-amber-50 py-2">
+                      <Text className="text-sm font-semibold text-amber-800">{t('bill.short')}</Text>
+                    </Pressable>
                   </View>
                 </Pressable>
               );

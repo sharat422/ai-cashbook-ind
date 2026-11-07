@@ -60,3 +60,19 @@ export function createBusiness(
 export function getMyBusiness(): Promise<Business> {
   return apiRequest<Business>('/businesses/me', {method: 'GET'});
 }
+
+export interface BusinessChoice {
+  id: string;
+  businessName: string;
+  role: 'owner' | 'accountant' | 'staff';
+}
+
+/** Every business this user is assigned to (a CA may serve several owners). */
+export function listMyBusinesses(): Promise<BusinessChoice[]> {
+  return apiRequest<BusinessChoice[]>('/me/businesses', {method: 'GET'});
+}
+
+/** Open one of them: the server re-checks the membership for that business. */
+export function openBusiness(id: string): Promise<Business> {
+  return apiRequest<Business>('/businesses/me', {method: 'GET', headers: {'X-Business-Id': id}});
+}

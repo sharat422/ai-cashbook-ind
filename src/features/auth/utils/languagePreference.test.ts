@@ -7,15 +7,19 @@ import {
   normalizePreferredLanguage,
 } from './languagePreference';
 
+// jest.setup.js keeps tests in English; check the real default here.
+jest.unmock('./languagePreference');
+
 describe('preferred language helpers', () => {
-  it('defaults to English', () => {
-    expect(DEFAULT_APP_LANGUAGE).toBe('en');
+  it('defaults to Telugu', () => {
+    expect(DEFAULT_APP_LANGUAGE).toBe('te');
   });
 
   it('normalizes supported language codes', () => {
     expect(normalizePreferredLanguage('HI')).toBe('hi');
     expect(normalizePreferredLanguage('mr')).toBe('mr');
-    expect(normalizePreferredLanguage('fr')).toBe('en');
+    expect(normalizePreferredLanguage('fr')).toBe('te');
+    expect(normalizePreferredLanguage('Hinglish')).toBe('hinglish');
   });
 
   it('labels languages in their own script', () => {
@@ -26,6 +30,7 @@ describe('preferred language helpers', () => {
 
   it('resolves a picked label back to its code (round-trip)', () => {
     expect(appLanguageByLabel(getLanguageLabel('bn'))).toBe('bn');
-    expect(appLanguageByLabel('unknown')).toBe('en');
+    expect(appLanguageByLabel('unknown')).toBe('te');
+    expect(appLanguageByLabel('Hinglish')).toBe('hinglish');
   });
 });

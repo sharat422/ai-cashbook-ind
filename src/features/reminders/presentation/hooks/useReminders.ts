@@ -6,10 +6,8 @@ import type {
   ReminderTemplate,
   ReminderTemplateKey,
 } from '@features/reminders/domain/entities';
-import {
-  DEFAULT_TEMPLATES,
-  TEMPLATE_ORDER,
-} from '@features/reminders/domain/templates';
+import {TEMPLATE_ORDER} from '@features/reminders/domain/templates';
+import {useT, type TKey} from '@/i18n';
 import {dispatchReminder} from '@features/reminders/presentation/dispatch';
 import {useReminderHistoryStore} from '@features/reminders/presentation/store/reminderHistory.store';
 import {useReminderTemplatesStore} from '@features/reminders/presentation/store/reminderTemplates.store';
@@ -19,14 +17,17 @@ export function useReminderTemplates() {
   const overrides = useReminderTemplatesStore(s => s.overrides);
   const setBody = useReminderTemplatesStore(s => s.setBody);
   const resetBody = useReminderTemplatesStore(s => s.resetBody);
+  const t = useT();
 
+  // Built-in wording follows the app language; a customised body is kept as typed.
   const templates = useMemo<ReminderTemplate[]>(
     () =>
       TEMPLATE_ORDER.map(key => ({
-        ...DEFAULT_TEMPLATES[key],
-        body: overrides[key] ?? DEFAULT_TEMPLATES[key].body,
+        key,
+        name: t(`reminders.tpl.${key}.name` as TKey),
+        body: overrides[key] ?? t(`reminders.tpl.${key}.body` as TKey),
       })),
-    [overrides],
+    [overrides, t],
   );
 
   const isCustomized = useCallback(

@@ -2,6 +2,7 @@ import type {AppLanguage} from '@features/auth/utils/languagePreference';
 
 import en from './locales/en.json';
 import hi from './locales/hi.json';
+import hinglish from './locales/hinglish.json';
 import te from './locales/te.json';
 import ta from './locales/ta.json';
 import kn from './locales/kn.json';
@@ -27,6 +28,7 @@ export type TKey = keyof typeof en;
 
 export const translations: Record<AppLanguage, Partial<Record<TKey, string>>> = {
   en,
+  hinglish,
   hi,
   te,
   ta,

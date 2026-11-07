@@ -3,9 +3,7 @@
  * ledger. Pure logic — the running balances continue across the range so the
  * opening/closing figures are correct.
  */
-import {formatINR} from '@utils/currency';
-import {formatDisplayDate} from '@utils/date';
-import type {Customer} from './entities';
+import {tNow, type TKey} from '@/i18n';
 import type {CustomerLedger, LedgerEntryView} from './ledger';
 
 export interface CustomerStatement {
@@ -66,44 +64,23 @@ export function buildStatement(
   };
 }
 
-/** WhatsApp / share-friendly text version of the statement. */
-export function statementToText(
-  customer: Customer,
-  statement: CustomerStatement,
-): string {
-  const lines = [
-    `STATEMENT — ${customer.fullName}`,
-    `${formatDisplayDate(statement.from)} to ${formatDisplayDate(statement.to)}`,
-    ``,
-    `Opening balance: ${formatINR(statement.openingBalance)}`,
-  ];
-  statement.rows.forEach(e => {
-    const sign = e.type === 'credit' ? '+' : '-';
-    lines.push(
-      `${formatDisplayDate(e.date)}  ${sign}${formatINR(e.amount)}  (bal ${formatINR(e.balance)})`,
-    );
-  });
-  lines.push(
-    ``,
-    `Total credit: ${formatINR(statement.totalCredit)}`,
-    `Total received: ${formatINR(statement.totalPayment)}`,
-    `Closing balance: ${formatINR(statement.closingBalance)}`,
-    `Outstanding: ${formatINR(statement.outstanding)}`,
-  );
-  return lines.join('\n');
-}
-
-/** CSV version (Excel-importable). Plain numbers, no currency symbol. */
+/**
+ * CSV version (Excel-importable). Plain numbers, no currency symbol; labels in
+ * the user's language, with a BOM so Excel reads Telugu/Hindi as UTF-8.
+ */
 export function statementToCsv(statement: CustomerStatement): string {
-  const rows: string[] = ['Date,Type,Amount,Balance'];
-  rows.push(`Opening Balance,,,${statement.openingBalance}`);
+  const L = (k: string) => csvCell(tNow(`statement.doc.${k}` as TKey));
+  const rows: string[] = [[L('date'), L('type'), L('amount'), L('balance')].join(',')];
+  rows.push(`${L('opening')},,,${statement.openingBalance}`);
   statement.rows.forEach(e => {
-    const type = e.type === 'credit' ? 'Credit' : 'Payment';
+    const type = e.type === 'credit' ? L('credit') : L('payment');
     rows.push(`${e.date},${type},${e.amount},${e.balance}`);
   });
-  rows.push(`Closing Balance,,,${statement.closingBalance}`);
-  rows.push(`Total Credit,,${statement.totalCredit},`);
-  rows.push(`Total Received,,${statement.totalPayment},`);
-  rows.push(`Outstanding,,,${statement.outstanding}`);
-  return rows.join('\n');
+  rows.push(`${L('closing')},,,${statement.closingBalance}`);
+  rows.push(`${L('totalCredit')},,${statement.totalCredit},`);
+  rows.push(`${L('totalReceived')},,${statement.totalPayment},`);
+  rows.push(`${L('outstanding')},,,${statement.outstanding}`);
+  return '\uFEFF' + rows.join('\n');
 }
+
+const csvCell = (s: string): string => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);

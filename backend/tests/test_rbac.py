@@ -36,25 +36,20 @@ def test_businesses_me_reports_owner_role(user, client):
     assert me["role"] == "owner"
 
 
-# --- Accountant: view + export + add/edit, NO delete/settings/team ----------
+# --- Accountant: read-only (full suite in test_accountant.py) ---------------
 
-def test_accountant_can_view_and_add_but_not_delete(make_user, client):
+def test_accountant_can_view_but_not_add_edit_or_delete(make_user, client):
     owner, acc = _member(make_user, client, "accountant")
-
-    # View + reports allowed.
     assert client.get("/api/v1/dashboard/summary", headers=acc).status_code == 200
     assert client.get("/api/v1/reports/summary?from=2026-01-01&to=2026-12-31", headers=acc).status_code == 200
-    # Add allowed.
-    add_income(client, acc, amount=100, date=today_iso(), client_id="acc-1")
-    # Edit allowed.
-    c = add_customer(client, acc, full_name="Edit Me", mobile="8000000001")
-    upd = client.patch(f"/api/v1/customers/{c['id']}", headers=acc, json={"full_name": "Edited", "mobile": "8000000001"})
-    assert upd.status_code == 200
-    # Delete NOT allowed.
+    c = add_customer(client, owner.headers, full_name="Edit Me", mobile="8000000001")
+    r = client.post("/api/v1/incomes", headers=acc, data={"amount": "100", "category": "Sales",
+                                                          "date": today_iso(), "client_id": "acc-1"})
+    assert r.status_code == 403
+    assert client.patch(f"/api/v1/customers/{c['id']}", headers=acc,
+                        json={"full_name": "Edited", "mobile": "8000000001"}).status_code == 403
     assert client.delete(f"/api/v1/customers/{c['id']}", headers=acc).status_code == 403
-    # Settings (item catalog) NOT allowed.
     assert client.post("/api/v1/items", headers=acc, json={"name": "X"}).status_code == 403
-    # Team management NOT allowed.
     assert client.get("/api/v1/team", headers=acc).status_code == 403
 
 

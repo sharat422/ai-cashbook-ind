@@ -94,3 +94,10 @@ jest.mock('@react-native-community/netinfo', () => ({
   ),
   addEventListener: jest.fn(() => () => {}),
 }));
+
+// The app opens in Telugu, but most tests assert English copy. Tests start in
+// English; Telugu tests switch with useAuthStore.setState({preferredLanguage: 'te'}).
+jest.mock('@features/auth/utils/languagePreference', () => ({
+  ...jest.requireActual('@features/auth/utils/languagePreference'),
+  DEFAULT_APP_LANGUAGE: 'en',
+}));

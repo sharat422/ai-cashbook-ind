@@ -3,7 +3,9 @@ import {Alert} from 'react-native';
 
 import {Button, Input, Text} from '@components/ui';
 import {AuthShell} from '@features/auth/components/AuthShell';
+import {LanguageToggle} from '@features/auth/components/LanguageToggle';
 import {useRequestOtp} from '@features/auth/hooks';
+import {useAuthStore} from '@store/auth.store';
 import {useT} from '@/i18n';
 import type {AuthScreenProps} from '@navigation/types';
 import {onlyDigits, validateMobile} from '@utils/validation';
@@ -13,6 +15,7 @@ export function LoginScreen({
   navigation,
 }: AuthScreenProps<'Login'>): React.JSX.Element {
   const t = useT();
+  const notice = useAuthStore(st => st.notice);
   const [mobile, setMobile] = useState('');
   const [error, setError] = useState<string | null>(null);
   const requestOtp = useRequestOtp();
@@ -56,6 +59,12 @@ export function LoginScreen({
           .
         </Text>
       }>
+      <LanguageToggle />
+      {notice === 'accessRevoked' ? (
+        <Text testID="access-revoked" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {t('access.revokedNotice')}
+        </Text>
+      ) : null}
       <Input
         label={t('auth.login.mobileLabel')}
         prefix="+91"

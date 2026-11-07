@@ -6,6 +6,7 @@ import type {CustomerStatement} from '@features/customers/domain/customerStateme
 import type {Customer} from '@features/customers/domain/entities';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
+import {useT} from '@/i18n';
 
 interface Props {
   customer: Customer;
@@ -66,6 +67,7 @@ export function StatementDocument({
   statement,
   businessName,
 }: Props): React.JSX.Element {
+  const t = useT();
   return (
     <View
       className="rounded-2xl border border-border bg-white p-5"
@@ -80,15 +82,15 @@ export function StatementDocument({
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-2">
           <Text className="text-lg font-bold text-slate-900">
-            {businessName || 'Statement of Account'}
+            {businessName || t('statement.doc.title')}
           </Text>
-          <Text className="text-xs text-muted">Statement of Account</Text>
+          <Text className="text-xs text-muted">{t('statement.doc.title')}</Text>
         </View>
         <View className="rounded-lg bg-slate-900 px-3 py-1.5">
           <Text className="text-[11px] font-semibold text-white">
             {formatINR(statement.outstanding)}
           </Text>
-          <Text className="text-[9px] uppercase text-slate-400">due</Text>
+          <Text className="text-[9px] uppercase text-slate-400">{t('statement.doc.due')}</Text>
         </View>
       </View>
 
@@ -97,7 +99,7 @@ export function StatementDocument({
       {/* Parties + period */}
       <View className="flex-row justify-between">
         <View className="flex-1 pr-3">
-          <Text className="text-[10px] uppercase text-muted">Billed to</Text>
+          <Text className="text-[10px] uppercase text-muted">{t('statement.doc.billedTo')}</Text>
           <Text className="mt-0.5 text-sm font-semibold text-slate-900">
             {customer.fullName}
           </Text>
@@ -110,11 +112,11 @@ export function StatementDocument({
           ) : null}
         </View>
         <View className="items-end">
-          <Text className="text-[10px] uppercase text-muted">Period</Text>
+          <Text className="text-[10px] uppercase text-muted">{t('statement.doc.period')}</Text>
           <Text className="mt-0.5 text-xs font-medium text-slate-900">
             {formatDisplayDate(statement.from)}
           </Text>
-          <Text className="text-xs text-muted">to</Text>
+          <Text className="text-xs text-muted">{t('statement.doc.to')}</Text>
           <Text className="text-xs font-medium text-slate-900">
             {formatDisplayDate(statement.to)}
           </Text>
@@ -124,17 +126,17 @@ export function StatementDocument({
       {/* Summary cards */}
       <View className="mt-4 flex-row" style={{gap: 8}}>
         <SummaryTile
-          label="Total Credit"
+          label={t('statement.doc.totalCredit')}
           value={formatINR(statement.totalCredit)}
           accent="text-amber-700"
         />
         <SummaryTile
-          label="Total Received"
+          label={t('statement.doc.totalReceived')}
           value={formatINR(statement.totalPayment)}
           accent="text-success"
         />
         <SummaryTile
-          label="Outstanding"
+          label={t('statement.doc.outstanding')}
           value={formatINR(statement.outstanding)}
           accent="text-slate-900"
         />
@@ -143,12 +145,12 @@ export function StatementDocument({
       {/* Balances */}
       <View className="mt-4 rounded-xl border border-border px-3 py-1">
         <BalanceRow
-          label="Opening balance"
+          label={t('statement.doc.opening')}
           value={formatINR(statement.openingBalance)}
         />
         <View className="h-px bg-border" />
         <BalanceRow
-          label="Closing balance"
+          label={t('statement.doc.closing')}
           value={formatINR(statement.closingBalance)}
           bold
         />
@@ -156,22 +158,22 @@ export function StatementDocument({
 
       {/* Transactions table */}
       <Text className="mb-2 mt-5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-        Transactions
+        {t('statement.doc.transactions')}
       </Text>
       <View className="flex-row border-b border-slate-200 pb-1.5">
-        <Text className="flex-[2] text-[11px] font-semibold text-muted">Date</Text>
-        <Text className="flex-[1.4] text-[11px] font-semibold text-muted">Type</Text>
+        <Text className="flex-[2] text-[11px] font-semibold text-muted">{t('statement.doc.date')}</Text>
+        <Text className="flex-[1.4] text-[11px] font-semibold text-muted">{t('statement.doc.type')}</Text>
         <Text className="flex-[1.6] text-right text-[11px] font-semibold text-muted">
-          Amount
+          {t('statement.doc.amount')}
         </Text>
         <Text className="flex-[1.6] text-right text-[11px] font-semibold text-muted">
-          Balance
+          {t('statement.doc.balance')}
         </Text>
       </View>
 
       {statement.rows.length === 0 ? (
         <Text variant="caption" className="py-4 text-center">
-          No transactions in this period.
+          {t('statement.doc.empty')}
         </Text>
       ) : (
         statement.rows.map(e => {
@@ -184,7 +186,7 @@ export function StatementDocument({
                 {formatDisplayDate(e.date)}
               </Text>
               <Text className="flex-[1.4] text-xs text-slate-700">
-                {isCredit ? 'Credit' : 'Payment'}
+                {isCredit ? t('statement.doc.credit') : t('statement.doc.payment')}
               </Text>
               <Text
                 className={`flex-[1.6] text-right text-xs font-semibold ${
@@ -204,7 +206,7 @@ export function StatementDocument({
       {/* Footer */}
       <View className="mt-4 flex-row items-center justify-between">
         <Text className="text-[10px] text-muted">
-          Generated by Bolcash
+          {t('statement.doc.footer')}
         </Text>
         <Text className="text-[10px] text-muted">
           {formatDisplayDate(statement.to)}

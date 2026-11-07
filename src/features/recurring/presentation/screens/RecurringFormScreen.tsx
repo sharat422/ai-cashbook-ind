@@ -17,7 +17,7 @@ import {
 } from '@features/recurring/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 const FREQUENCY_OPTIONS = RECURRING_FREQUENCIES.map(f => ({
   label: f[0].toUpperCase() + f.slice(1),
@@ -54,7 +54,7 @@ export function RecurringFormScreen({
   );
   const [interval, setInterval] = useState<number>(editing?.interval ?? 1);
   const [nextDueDate, setNextDueDate] = useState(
-    editing?.nextDueDate ?? toISODate(new Date()),
+    editing?.nextDueDate ?? todayIST(),
   );
   const [notes, setNotes] = useState(editing?.notes ?? '');
   const [active, setActive] = useState(editing?.active ?? true);

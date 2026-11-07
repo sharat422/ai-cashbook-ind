@@ -8,7 +8,7 @@ import type {Van} from '@features/stock/data/stock.remote';
 import {formatQty, isQty} from '@features/stock/domain/qty';
 import {makeStockClientId, useStockMutations} from '@features/stock/presentation/hooks';
 import {useT} from '@/i18n';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 export type StockAction = 'purchase' | 'sale' | 'transfer';
 
@@ -35,7 +35,7 @@ export function StockMoveSheet({
   const t = useT();
   const {record, transfer} = useStockMutations();
   const [qty, setQty] = useState('');
-  const [date, setDate] = useState(toISODate(new Date()));
+  const [date, setDate] = useState(todayIST());
   const [note, setNote] = useState('');
   const [source, setSource] = useState<Source>({location: 'godown'});
   const [vanUserId, setVanUserId] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export function StockMoveSheet({
     setQty('');
     setNote('');
     setError(null);
-    setDate(toISODate(new Date()));
+    setDate(todayIST());
     setSource(ownVanOnly ? {location: 'van'} : {location: 'godown'});
     setVanUserId(null);
     setClientId(makeStockClientId());

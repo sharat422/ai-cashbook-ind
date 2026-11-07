@@ -39,3 +39,14 @@ function TimelineItemBase({
 }
 
 export const TimelineItem = React.memo(TimelineItemBase);
+
+/**
+ * Keep a long ledger light on low-end phones: mount a screenful, add rows in
+ * small batches, and drop off-screen rows from the native view tree.
+ */
+export const LEDGER_LIST_WINDOW = {
+  initialNumToRender: 12,
+  maxToRenderPerBatch: 10,
+  windowSize: 7,
+  removeClippedSubviews: true,
+} as const;

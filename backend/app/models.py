@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     Float,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -96,6 +97,10 @@ class Income(Base):
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
+    # An offline retry reuses its client_id; two retries racing each other
+    # must still produce one row. (NULLs don't collide.)
+    __table_args__ = (Index("uq_income_client", "business_id", "client_id", unique=True),)
+
 
 class Expense(Base):
     __tablename__ = "expenses"
@@ -112,6 +117,8 @@ class Expense(Base):
     attachment_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (Index("uq_expense_client", "business_id", "client_id", unique=True),)
 
 
 class RecurringExpense(Base):
@@ -212,6 +219,51 @@ class LedgerEntry(Base):
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     customer: Mapped[Customer] = relationship(back_populates="ledger")
+
+    __table_args__ = (Index("uq_ledger_client", "customer_id", "client_id", unique=True),)
+
+
+class AccessLog(Base):
+    """What an accountant opened or exported (and any write they were refused).
+    Written on every accountant API call; the owner reads it under Team."""
+
+    __tablename__ = "access_logs"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    mobile: Mapped[str] = mapped_column(String(20))
+    action: Mapped[str] = mapped_column(String(10))  # view | export | denied
+    method: Mapped[str] = mapped_column(String(8))
+    path: Mapped[str] = mapped_column(String(300))
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso, index=True)
+
+
+class ImportLog(Base):
+    """One khata import from Excel/CSV: who, when, which file, what happened,
+    and a backup of the books (the "Your data" workbook) taken just before."""
+
+    __tablename__ = "import_logs"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    imported_by: Mapped[str] = mapped_column(String(60))  # "owner · 98xxxxxx10" at the time
+    file_name: Mapped[str] = mapped_column(String(200))
+    rows_imported: Mapped[int] = mapped_column(Integer)
+    rows_skipped: Mapped[int] = mapped_column(Integer)
+    new_retailers: Mapped[int] = mapped_column(Integer, default=0)
+    # base64 .xlsx, encrypted at rest like the rest of the customer data.
+    backup: Mapped[str] = mapped_column(EncryptedText)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
 
 class BankImport(Base):
@@ -385,6 +437,177 @@ class StockMove(Base):
         # Retry-safe: the app's client_id goes on the first move of a request only.
         UniqueConstraint("business_id", "client_id", name="uq_stock_move_client"),
     )
+
+
+SCHEME_TYPES = ("buy_get", "slab", "percent", "free_goods")
+
+
+class Scheme(Base):
+    """An FMCG trade scheme the owner sets up; applied automatically at billing.
+
+    buy_get    : buy `buy_qty`, get `free_qty` of the same SKU free (10+1).
+    slab       : quantity slabs, each a % off (`slabs` = JSON [[min_qty, pct], …]).
+    percent    : `percent` off the line when quantity ≥ `min_qty`.
+    free_goods : every `min_qty` bought gives `free_qty` of `free_item_id`.
+    `priority`: 1 wins over 2 when two schemes could apply to the same line.
+    """
+
+    __tablename__ = "schemes"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(120))
+    type: Mapped[str] = mapped_column(String(20))  # SCHEME_TYPES
+    valid_from: Mapped[str] = mapped_column(String(10))
+    valid_to: Mapped[str] = mapped_column(String(10))  # inclusive
+    priority: Mapped[int] = mapped_column(Integer)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    buy_qty: Mapped[Decimal | None] = mapped_column(Numeric(12, 3), nullable=True)
+    free_qty: Mapped[Decimal | None] = mapped_column(Numeric(12, 3), nullable=True)
+    free_item_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    min_qty: Mapped[Decimal | None] = mapped_column(Numeric(12, 3), nullable=True)
+    percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    slabs: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "priority", name="uq_scheme_priority"),
+    )
+
+
+class SchemeItem(Base):
+    """A SKU a scheme applies to."""
+
+    __tablename__ = "scheme_items"
+
+    scheme_id: Mapped[str] = mapped_column(
+        ForeignKey("schemes.id", ondelete="CASCADE"), primary_key=True
+    )
+    item_id: Mapped[str] = mapped_column(
+        ForeignKey("items.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+
+class Bill(Base):
+    """An item bill to a retailer. Its total goes to the retailer's credit
+    ledger (ledger_entry_id) and its goods, paid and free, leave stock."""
+
+    __tablename__ = "bills"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    customer_id: Mapped[str] = mapped_column(
+        ForeignKey("customers.id", ondelete="CASCADE"), index=True
+    )
+    bill_number: Mapped[str] = mapped_column(String(20))
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    location: Mapped[str] = mapped_column(String(10))  # godown | van
+    van_user_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    discount: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # scheme discounts
+    total: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # never negative
+    ledger_entry_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    client_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "bill_number", name="uq_bill_number"),
+        UniqueConstraint("business_id", "client_id", name="uq_bill_client"),
+    )
+
+
+class BillLine(Base):
+    __tablename__ = "bill_lines"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    bill_id: Mapped[str] = mapped_column(ForeignKey("bills.id", ondelete="CASCADE"), index=True)
+    item_id: Mapped[str] = mapped_column(String(40))  # no FK: history outlives the item
+    item_name: Mapped[str] = mapped_column(String(200))
+    unit: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3))
+    rate: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+
+
+class SchemeApplication(Base):
+    """The scheme log: one row per scheme considered for a bill line —
+    'applied' (a scheme line on the bill) or 'not_applied' with the reason.
+    Names and values are copied, so editing a scheme never rewrites history."""
+
+    __tablename__ = "scheme_applications"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    bill_id: Mapped[str] = mapped_column(ForeignKey("bills.id", ondelete="CASCADE"), index=True)
+    customer_id: Mapped[str] = mapped_column(String(40), index=True)
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    scheme_id: Mapped[str] = mapped_column(String(40), index=True)
+    scheme_name: Mapped[str] = mapped_column(String(120))
+    scheme_type: Mapped[str] = mapped_column(String(20))
+    item_id: Mapped[str] = mapped_column(String(40), index=True)  # the billed SKU
+    item_name: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20))  # applied | not_applied
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3))  # billed qty of the SKU
+    free_item_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    free_item_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    free_qty: Mapped[Decimal] = mapped_column(Numeric(12, 3))
+    discount: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # off the bill
+    value: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # discount + free goods at rate
+
+
+class StatementLink(Base):
+    """A browser link to ONE retailer's statement, for someone without the app.
+
+    Only a SHA-256 of the token is stored; the link resolves to exactly this
+    customer_id/business_id and nothing else (there is no customer parameter).
+    """
+
+    __tablename__ = "statement_links"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    customer_id: Mapped[str] = mapped_column(
+        ForeignKey("customers.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    period_from: Mapped[str | None] = mapped_column(String(10), nullable=True)  # None = all
+    created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    expires_at: Mapped[str] = mapped_column(String(40))
+
+
+STATEMENT_EVENTS = ("opt_in", "opt_out", "sent", "blocked", "link_created", "viewed")
+
+
+class StatementEvent(Base):
+    """WhatsApp-statement consent and delivery log for one retailer of one
+    distributor. Current consent = the latest opt_in/opt_out row; none = no."""
+
+    __tablename__ = "statement_events"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    customer_id: Mapped[str] = mapped_column(
+        ForeignKey("customers.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(20))  # STATEMENT_EVENTS
+    source: Mapped[str] = mapped_column(String(20))  # owner | retailer | system
+    channel: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso, index=True)
 
 
 class GstRateChangeLog(Base):

@@ -16,6 +16,7 @@ import {
   useIncomeForm,
 } from '@features/income/presentation/hooks';
 import {useT} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 
 /**
@@ -78,6 +79,7 @@ export function AddIncomeScreen({
             <Select
               placeholder={t('form.selectCategory')}
               options={INCOME_CATEGORIES}
+              labelOf={c => categoryLabel(t, c)}
               value={form.values.category}
               onSelect={value => form.setField('category', value)}
               error={form.errors.category}

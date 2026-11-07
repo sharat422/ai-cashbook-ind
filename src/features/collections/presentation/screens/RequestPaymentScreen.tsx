@@ -15,7 +15,7 @@ import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 import {formatINR} from '@utils/currency';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 export function RequestPaymentScreen({
   navigation,
@@ -92,7 +92,7 @@ export function RequestPaymentScreen({
     receivePayment.mutate(
       {
         amount,
-        date: toISODate(new Date()),
+        date: todayIST(),
         paymentMethod: 'upi',
         referenceNumber: ref,
         notes: 'UPI collection request',

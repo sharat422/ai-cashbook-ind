@@ -25,7 +25,7 @@ import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 import {formatINR} from '@utils/currency';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 const QUICK_AMOUNTS = [500, 1000, 5000, 10000];
 
@@ -47,7 +47,7 @@ export function AddCreditScreen({
   const clearDraft = useCreditDraftStore(s => s.clearDraft);
 
   const [amount, setAmount] = useState<number>(NaN);
-  const [date, setDate] = useState<string>(toISODate(new Date()));
+  const [date, setDate] = useState<string>(todayIST());
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [attachment, setAttachment] = useState<Attachment | null>(null);
@@ -97,7 +97,7 @@ export function AddCreditScreen({
   const onDiscardDraft = () => {
     clearDraft(customer.id);
     setAmount(NaN);
-    setDate(toISODate(new Date()));
+    setDate(todayIST());
     setInvoiceNumber('');
     setNotes('');
     setAttachment(null);

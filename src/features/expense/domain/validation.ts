@@ -1,4 +1,6 @@
+import {todayIST} from '@utils/date';
 import {EXPENSE_CATEGORIES, type ExpenseDraft} from './entities';
+import {tNow} from '@/i18n';
 
 export type ExpenseFieldErrors = Partial<Record<keyof ExpenseDraft, string>>;
 
@@ -14,33 +16,33 @@ export function validateExpenseDraft(draft: ExpenseDraft): ExpenseFieldErrors {
   const errors: ExpenseFieldErrors = {};
 
   if (draft.amount === undefined || Number.isNaN(draft.amount)) {
-    errors.amount = 'Enter an amount';
+    errors.amount = tNow('errors.amountRequired');
   } else if (draft.amount <= 0) {
-    errors.amount = 'Amount must be greater than ₹0';
+    errors.amount = tNow('errors.amountPositive');
   } else if (draft.amount > MAX_AMOUNT) {
-    errors.amount = 'Amount looks too large';
+    errors.amount = tNow('errors.amountTooLarge');
   }
 
   if (!draft.category || !EXPENSE_CATEGORIES.includes(draft.category)) {
-    errors.category = 'Select a category';
+    errors.category = tNow('errors.categoryRequired');
   }
 
   if (!draft.date) {
-    errors.date = 'Select a date';
+    errors.date = tNow('errors.dateRequired');
   } else if (Number.isNaN(Date.parse(draft.date))) {
-    errors.date = 'Invalid date';
-  } else if (new Date(draft.date) > new Date()) {
-    errors.date = 'Date cannot be in the future';
+    errors.date = tNow('errors.dateInvalid');
+  } else if (draft.date.slice(0, 10) > todayIST()) {
+    errors.date = tNow('errors.dateFuture');
   }
 
   // Vendor is optional (quick-add lets you save with just an amount); only the
   // length cap is enforced when one is provided.
   if (draft.vendor && draft.vendor.trim().length > 80) {
-    errors.vendor = 'Vendor must be 80 characters or fewer';
+    errors.vendor = tNow('errors.tooLong', {n: 80});
   }
 
   if (draft.notes && draft.notes.length > 5000) {
-    errors.notes = 'Notes must be 5000 characters or fewer';
+    errors.notes = tNow('errors.tooLong', {n: 5000});
   }
 
   return errors;

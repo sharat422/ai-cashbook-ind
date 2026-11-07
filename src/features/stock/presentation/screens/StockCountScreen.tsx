@@ -9,7 +9,7 @@ import {difference, formatQty, isQty, toMilli} from '@features/stock/domain/qty'
 import {makeStockClientId, useStockLevels, useStockMutations} from '@features/stock/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 /**
  * Monthly stock count for one place (godown or a van): system stock next to
@@ -21,7 +21,7 @@ export function StockCountScreen(_: AppScreenProps<'StockCount'>): React.JSX.Ele
   const levels = useStockLevels();
   const {count} = useStockMutations();
   const [where, setWhere] = useState<string>('godown'); // 'godown' or a van user id
-  const [date, setDate] = useState(toISODate(new Date()));
+  const [date, setDate] = useState(todayIST());
   const [counted, setCounted] = useState<Record<string, string>>({});
   const [result, setResult] = useState<CountResult | null>(null);
   const [clientId, setClientId] = useState(makeStockClientId);

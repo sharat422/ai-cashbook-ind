@@ -2,10 +2,9 @@ import React from 'react';
 import {View} from 'react-native';
 
 import {Text} from '@components/ui';
-import {
-  PAYMENT_METHOD_LABEL,
-  type LedgerEntryView,
-} from '@features/customers/domain/ledger';
+import type {LedgerEntryView} from '@features/customers/domain/ledger';
+import {useT} from '@/i18n';
+import {paymentMethodLabel} from '@/i18n/labels';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
 
@@ -19,6 +18,7 @@ function TransactionCardBase({
 }: {
   entry: LedgerEntryView;
 }): React.JSX.Element {
+  const t = useT();
   const isCredit = entry.type === 'credit';
   return (
     <View className="rounded-2xl border border-border bg-white p-4">
@@ -33,16 +33,16 @@ function TransactionCardBase({
                 className={`text-[11px] font-semibold ${
                   isCredit ? 'text-amber-700' : 'text-success'
                 }`}>
-                {isCredit ? 'Credit given' : 'Payment received'}
+                {isCredit ? t('ledger.creditGiven') : t('ledger.paymentReceived')}
               </Text>
             </View>
           </View>
           <Text variant="caption" className="mt-1">
             {formatDisplayDate(entry.date)}
             {!isCredit && entry.paymentMethod
-              ? ` · via ${PAYMENT_METHOD_LABEL[entry.paymentMethod]}`
+              ? t('ledger.via', {method: paymentMethodLabel(t, entry.paymentMethod)})
               : ''}
-            {entry.syncStatus === 'pending' ? ' · pending sync' : ''}
+            {entry.syncStatus === 'pending' ? t('ledger.pendingSync') : ''}
           </Text>
           {entry.notes ? (
             <Text className="mt-1 text-sm text-slate-700" numberOfLines={2}>
@@ -60,7 +60,7 @@ function TransactionCardBase({
             {formatINR(entry.amount)}
           </Text>
           <Text className="mt-1 text-[11px] text-muted">
-            Bal: {formatINR(entry.balance)}
+            {t('ledger.bal', {amount: formatINR(entry.balance)})}
           </Text>
         </View>
       </View>

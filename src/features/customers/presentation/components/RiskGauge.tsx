@@ -3,6 +3,7 @@ import {View} from 'react-native';
 import Svg, {Circle, Path} from 'react-native-svg';
 
 import {Text} from '@components/ui';
+import {tNow} from '@/i18n';
 import type {RiskCategory} from '@features/customers/domain/risk';
 import {RISK_STYLE} from './riskStyle';
 
@@ -80,7 +81,7 @@ export function RiskGauge({
           {score}
         </Text>
         <Text variant="caption" className="-mt-1">
-          out of 100
+          {tNow('risk.outOf100')}
         </Text>
       </View>
     </View>

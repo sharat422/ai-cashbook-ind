@@ -31,8 +31,9 @@ import {
 } from '@features/transactions/domain/anomalyDetection';
 import type {Attachment} from '@/shared/types/attachment';
 import {useT, type TKey} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 /** i18n key for each anomaly flag's explanation. */
 const ANOMALY_KEY: Record<Anomaly['type'], TKey> = {
@@ -56,10 +57,6 @@ const EXPENSE_ICONS: Record<string, string> = {
   Utilities: '💡',
   Miscellaneous: '📦',
 };
-const EXPENSE_OPTIONS: ChipOption<string>[] = EXPENSE_CATEGORIES.map(value => ({
-  value,
-  icon: EXPENSE_ICONS[value],
-}));
 const INCOME_OPTIONS: readonly string[] = INCOME_CATEGORIES;
 
 /**
@@ -73,6 +70,11 @@ export function QuickAddScreen({
   route,
 }: AppScreenProps<'QuickAdd'>): React.JSX.Element {
   const t = useT();
+  const expenseOptions: ChipOption<string>[] = EXPENSE_CATEGORIES.map(value => ({
+    value,
+    icon: EXPENSE_ICONS[value],
+    label: categoryLabel(t, value),
+  }));
   const online = useConnectivity();
   const createIncome = useCreateIncome();
   const createExpense = useCreateExpense();
@@ -87,7 +89,7 @@ export function QuickAddScreen({
   // null = untouched → the silent default is used at save time.
   const [category, setCategory] = useState<string | null>(null);
   const [vendor, setVendor] = useState('');
-  const [date, setDate] = useState<string>(toISODate(new Date()));
+  const [date, setDate] = useState<string>(todayIST());
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
 
@@ -263,17 +265,18 @@ export function QuickAddScreen({
             <View className="mt-1" style={{gap: 18}}>
               <FormField
                 label={t('form.category')}
-                hint={t('txn.categoryDefaultHint', {category: defaultCategory})}>
+                hint={t('txn.categoryDefaultHint', {category: categoryLabel(t, defaultCategory)})}>
                 {type === 'income' ? (
                   <Select<string>
                     placeholder={t('form.selectCategory')}
                     options={INCOME_OPTIONS}
+                    labelOf={c => categoryLabel(t, c)}
                     value={category}
                     onSelect={setCategory}
                   />
                 ) : (
                   <ChipSelect<string>
-                    options={EXPENSE_OPTIONS}
+                    options={expenseOptions}
                     value={category}
                     onSelect={setCategory}
                   />

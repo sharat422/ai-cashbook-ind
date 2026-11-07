@@ -7,6 +7,8 @@ export interface ChipOption<T extends string> {
   value: T;
   /** Optional leading emoji/icon for a friendlier look. */
   icon?: string;
+  /** What the chip shows; defaults to the value (values stay English IDs). */
+  label?: string;
 }
 
 export interface ChipSelectProps<T extends string> {
@@ -57,7 +59,7 @@ export function ChipSelect<T extends string>({
                 className={`text-sm font-medium ${
                   selected ? 'text-white' : 'text-slate-700'
                 }`}>
-                {option.value}
+                {option.label ?? option.value}
               </Text>
             </Pressable>
           );

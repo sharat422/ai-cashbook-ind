@@ -10,13 +10,14 @@ from __future__ import annotations
 import csv
 import io
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 from openpyxl import Workbook
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .calc import IST
 from .gst import money, place_label
 from .models import Business, Customer, GstRateChangeLog, LedgerEntry
 
@@ -45,14 +46,26 @@ def invoices(db: Session, business: Business, start: str, end: str) -> list[tupl
     ).all()
 
 
+def _ist_day_start_utc(day: str) -> str:
+    """00:00 IST of `day` as the UTC ISO string changed_at is stored in."""
+    return datetime.combine(date.fromisoformat(day), time(), IST).astimezone(timezone.utc).isoformat()
+
+
 def rate_changes(db: Session, business: Business, start: str, end: str) -> list:
+    # The period is IST days; changed_at is UTC. Compare on IST day boundaries,
+    # or a change made between midnight and 5:30 am IST lands on the wrong day.
+    next_day = (date.fromisoformat(end) + timedelta(days=1)).isoformat()
     return db.scalars(
         select(GstRateChangeLog)
         .where(GstRateChangeLog.business_id == business.id,
-               GstRateChangeLog.changed_at >= start,
-               GstRateChangeLog.changed_at < f"{end}T99")  # ISO strings; end day inclusive
+               GstRateChangeLog.changed_at >= _ist_day_start_utc(start),
+               GstRateChangeLog.changed_at < _ist_day_start_utc(next_day))
         .order_by(GstRateChangeLog.changed_at)
     ).all()
+
+
+def _ist_minute(iso: str) -> str:
+    return datetime.fromisoformat(iso).astimezone(IST).strftime("%Y-%m-%d %H:%M")
 
 
 def _d(x) -> Decimal:
@@ -190,8 +203,8 @@ def gstr1_xlsx(rows: list[tuple], changes: list) -> bytes:
            [["OE", pos, "", rate, v, ZERO, ""] for (pos, rate), v in sorted(b2cs.items())])
     _sheet(wb, "hsn(b2b)", hsn_header, hsn_rows("b2b"))
     _sheet(wb, "hsn(b2c)", hsn_header, hsn_rows("b2c"))
-    _sheet(wb, "rate changes", ["Changed at", "Item", "Old rate", "New rate"],
-           [[x.changed_at[:16].replace("T", " "), x.item_name,
+    _sheet(wb, "rate changes", ["Changed at (IST)", "Item", "Old rate", "New rate"],
+           [[_ist_minute(x.changed_at), x.item_name,
              Decimal(x.old_rate).normalize() + 0, Decimal(x.new_rate).normalize() + 0]
             for x in changes])
     return _save(wb)

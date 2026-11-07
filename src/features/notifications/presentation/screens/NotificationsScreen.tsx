@@ -4,7 +4,7 @@ import {FlatList, Pressable, View} from 'react-native';
 import {EmptyState, Screen, Text} from '@components/ui';
 import {useInboxStore, type AppNotification} from '@/services/notifications';
 import {useT} from '@/i18n';
-import {formatDisplayDate} from '@utils/date';
+import {formatTimestampDate} from '@utils/date';
 
 function NotificationRow({item}: {item: AppNotification}): React.JSX.Element {
   return (
@@ -19,7 +19,7 @@ function NotificationRow({item}: {item: AppNotification}): React.JSX.Element {
       </View>
       <Text className="mt-1 text-sm text-slate-700">{item.body}</Text>
       <Text variant="caption" className="mt-1">
-        {formatDisplayDate(item.createdAt.slice(0, 10))}
+        {formatTimestampDate(item.createdAt)}
       </Text>
     </View>
   );

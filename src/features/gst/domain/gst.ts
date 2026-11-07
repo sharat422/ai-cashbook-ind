@@ -1,3 +1,4 @@
+import {tNow} from '@/i18n';
 /**
  * Input checks mirrored from the server (backend/app/gst.py) so a GST invoice
  * saved offline doesn't fail later at sync. Tax itself is computed only by the
@@ -33,13 +34,13 @@ export function gstInputError(
   gst: {hsn: string; customerGstin?: string},
 ): {field: GstField; message: string} | null {
   if (!INVOICE_RE.test((invoiceNumber ?? '').trim())) {
-    return {field: 'invoice', message: 'A GST invoice needs an invoice number: up to 16 letters, digits, / or -.'};
+    return {field: 'invoice', message: tNow('errors.gstInvoiceNo')};
   }
   if (gst.customerGstin && !isValidGstin(gst.customerGstin)) {
-    return {field: 'gstin', message: 'Check the GSTIN: 15 characters, like 29ABCDE1234F1Z5.'};
+    return {field: 'gstin', message: tNow('errors.gstinCheck')};
   }
   if (!HSN_RE.test(gst.hsn.replace(/\s/g, ''))) {
-    return {field: 'hsn', message: 'Enter the HSN/SAC code: 4, 6 or 8 digits.'};
+    return {field: 'hsn', message: tNow('errors.hsn')};
   }
   return null;
 }

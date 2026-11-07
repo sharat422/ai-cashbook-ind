@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 
 import {customerUseCases} from '@features/customers/di';
+import {saveCustomerEdit, type SaveResult} from '@features/sync/customerEdits';
 import type {
   Customer,
   CustomerDraft,
@@ -90,14 +91,16 @@ export function useCustomerMutations() {
     onSettled: settle,
   });
 
+  // Online: saved. Offline: queued. Edited elsewhere first: a conflict the
+  // owner resolves — never a silent overwrite.
   const update = useMutation<
-    Customer,
+    SaveResult,
     Error,
     {id: string; draft: CustomerDraft; expectedVersion?: number},
     Ctx
   >({
     mutationFn: ({id, draft, expectedVersion}) =>
-      customerUseCases.update(id, draft, expectedVersion),
+      saveCustomerEdit(id, draft, expectedVersion),
     onMutate: async ({id, draft}) => {
       const ctx = await begin();
       const fields = draftFields(draft);

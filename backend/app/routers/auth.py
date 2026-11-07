@@ -148,6 +148,22 @@ def my_business(
     return {**business_dto(business), "role": role}
 
 
+@router.get("/me/businesses")
+def my_businesses(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Every business this user may open (a CA can be assigned to several by
+    their owners). The app sends the chosen one as X-Business-Id."""
+    rows = db.execute(
+        select(Business, BusinessMember.role)
+        .join(BusinessMember, BusinessMember.business_id == Business.id)
+        .where(BusinessMember.user_id == user.id, BusinessMember.status == "active")
+        .order_by(BusinessMember.created_at.asc())
+    ).all()
+    return [{"id": b.id, "businessName": b.business_name, "role": role} for b, role in rows]
+
+
 class UpdateBusinessInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     businessName: str | None = Field(default=None, min_length=1, max_length=200)

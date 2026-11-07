@@ -5,14 +5,14 @@ import {
 } from '@features/daily-summary/domain/format';
 import {useSummarySettingsStore} from '@features/daily-summary/presentation/store/summarySettings.store';
 import {notificationService} from '@/services/notifications';
-import {toISODate} from '@utils/date';
+import {todayIST, toISODate} from '@utils/date';
 
 /**
  * Generate today's summary and deliver it through every available channel
  * (in-app today; WhatsApp once enabled), then record that today is done.
  */
 export async function sendDailySummaryNow(): Promise<string[]> {
-  const date = toISODate(new Date());
+  const date = todayIST();
   const summary = await dailySummaryUseCases.getForDate(date);
   const delivered = await notificationService.notify({
     title: formatSummaryTitle(summary),

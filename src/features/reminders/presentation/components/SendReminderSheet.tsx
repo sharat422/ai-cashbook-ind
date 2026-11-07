@@ -6,7 +6,6 @@ import {BottomSheet, Button, Text} from '@components/ui';
 import type {Customer} from '@features/customers/domain/entities';
 import {
   CHANNEL_ICON,
-  CHANNEL_LABEL,
   type ReminderChannel,
   type ReminderStatus,
   type ReminderTemplateKey,
@@ -18,6 +17,7 @@ import {
   useSendReminder,
 } from '@features/reminders/presentation/hooks';
 import {formatINR} from '@utils/currency';
+import {useT, type TKey} from '@/i18n';
 import {ReminderHistoryList} from './ReminderHistoryList';
 import {TemplateEditorSheet} from './TemplateEditorSheet';
 
@@ -39,6 +39,8 @@ export function SendReminderSheet({
   businessName,
   onClose,
 }: SendReminderSheetProps): React.JSX.Element {
+  const t = useT();
+  const channelName = (c: ReminderChannel) => t(`reminders.channel.${c}` as TKey);
   const {templates, setBody, resetBody, isCustomized} = useReminderTemplates();
   const history = useReminderHistory(customer.id);
   const send = useSendReminder();
@@ -54,7 +56,7 @@ export function SendReminderSheet({
   } | null>(null);
 
   const selected = useMemo(
-    () => templates.find(t => t.key === templateKey) ?? templates[0],
+    () => templates.find(tp => tp.key === templateKey) ?? templates[0],
     [templates, templateKey],
   );
 
@@ -63,9 +65,9 @@ export function SendReminderSheet({
       renderTemplate(selected.body, {
         name: customer.fullName.split(' ')[0],
         amount: formatINR(Math.max(outstanding, 0)),
-        business: businessName || 'us',
+        business: businessName || t('reminders.us'),
       }),
-    [selected, customer.fullName, outstanding, businessName],
+    [selected, customer.fullName, outstanding, businessName, t],
   );
 
   const onSend = async () => {
@@ -87,7 +89,7 @@ export function SendReminderSheet({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title="Send reminder"
+      title={t('reminders.title')}
       maxHeightClassName="max-h-[92%]">
       <ScrollView
         className="px-5"
@@ -95,38 +97,38 @@ export function SendReminderSheet({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 20}}>
         <Text variant="caption" className="mt-1">
-          To {customer.fullName} · {formatINR(Math.max(outstanding, 0))} due
+          {t('reminders.to', {name: customer.fullName, amount: formatINR(Math.max(outstanding, 0))})}
         </Text>
 
         {/* Template */}
         <View className="mt-4 flex-row items-center justify-between">
-          <Text variant="label">Template</Text>
+          <Text variant="label">{t('reminders.template')}</Text>
           <Pressable onPress={() => setEditorOpen(true)}>
             <Text className="text-sm font-semibold text-primary">
-              ✏️ Customize
+              {t('reminders.customize')}
             </Text>
           </Pressable>
         </View>
         <View className="mt-2 flex-row flex-wrap" style={{gap: 8}}>
-          {templates.map(t => (
+          {templates.map(tp => (
             <FilterChip
-              key={t.key}
-              label={t.name}
-              selected={templateKey === t.key}
-              onPress={() => setTemplateKey(t.key)}
+              key={tp.key}
+              label={tp.name}
+              selected={templateKey === tp.key}
+              onPress={() => setTemplateKey(tp.key)}
             />
           ))}
         </View>
 
         {/* Channel */}
         <Text variant="label" className="mt-5 mb-2">
-          Channel
+          {t('reminders.channel')}
         </Text>
         <View className="flex-row" style={{gap: 8}}>
           {CHANNELS.map(c => (
             <FilterChip
               key={c}
-              label={`${CHANNEL_ICON[c]} ${CHANNEL_LABEL[c]}`}
+              label={`${CHANNEL_ICON[c]} ${channelName(c)}`}
               selected={channel === c}
               onPress={() => setChannel(c)}
             />
@@ -135,7 +137,7 @@ export function SendReminderSheet({
 
         {/* Preview */}
         <Text variant="label" className="mt-5 mb-2">
-          Preview
+          {t('reminders.preview')}
         </Text>
         <View className="rounded-2xl border border-border bg-slate-50 p-4">
           <Text className="text-sm text-slate-800">{message}</Text>
@@ -147,21 +149,21 @@ export function SendReminderSheet({
               result.status === 'sent' ? 'text-success' : 'text-danger'
             }`}>
             {result.status === 'sent'
-              ? `✓ Sent via ${CHANNEL_LABEL[result.channel]}`
-              : `✗ Could not send via ${CHANNEL_LABEL[result.channel]}`}
+              ? t('reminders.sentVia', {channel: channelName(result.channel)})
+              : t('reminders.failedVia', {channel: channelName(result.channel)})}
           </Text>
         ) : null}
 
         {/* History */}
         <Text variant="label" className="mt-6 mb-2">
-          Reminder history
+          {t('reminders.history')}
         </Text>
         <ReminderHistoryList reminders={history} />
       </ScrollView>
 
       <View className="border-t border-border px-5 py-3">
         <Button
-          title={`Send ${CHANNEL_LABEL[channel]} reminder`}
+          title={t('reminders.send', {channel: channelName(channel)})}
           loading={sending}
           onPress={onSend}
         />

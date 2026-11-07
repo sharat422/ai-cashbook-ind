@@ -12,8 +12,9 @@ import type {DailyClose} from '@features/reconciliation/data/reconciliation.remo
 import {formatMoney, isZero} from '@features/reconciliation/domain/money';
 import {useDailyClose} from '@features/reconciliation/presentation/hooks';
 import {useT} from '@/i18n';
+import {paymentMethodLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 /**
  * Per beat and day: what was collected, how (cash / UPI / bank), credit given,
@@ -28,7 +29,7 @@ export function DailyCloseScreen({route}: AppScreenProps<'DailyClose'>): React.J
   const beatsQuery = useBeats();
   const beats: Beat[] = beatsQuery.data ?? [];
   const [picked, setPicked] = useState<string | undefined>(route.params?.beatId);
-  const [date, setDate] = useState(toISODate(new Date()));
+  const [date, setDate] = useState(todayIST());
   // Staff have no whole-business view, so they always look at one of their beats.
   const beatId = picked ?? (seesAll ? undefined : beats[0]?.id);
   const close = useDailyClose(date, beatId, seesAll || beatId !== undefined);
@@ -89,7 +90,7 @@ export function DailyCloseScreen({route}: AppScreenProps<'DailyClose'>): React.J
                 <View className="flex-1">
                   <Text className="text-sm font-semibold text-slate-900">{c.customerName}</Text>
                   <Text variant="caption">
-                    {(c.mode ?? '—').toUpperCase()}
+                    {c.mode ? paymentMethodLabel(t, c.mode) : '—'}
                     {c.reference ? ` · ${c.reference}` : ''}
                   </Text>
                 </View>

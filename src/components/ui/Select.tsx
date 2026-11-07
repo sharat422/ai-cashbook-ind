@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {FlatList, Modal, Pressable, View} from 'react-native';
 
 import {Text} from './Text';
+import {useT} from '@/i18n';
 
 export interface SelectProps<T extends string> {
   label?: string;
@@ -10,6 +11,8 @@ export interface SelectProps<T extends string> {
   options: readonly T[];
   onSelect: (value: T) => void;
   error?: string | null;
+  /** What an option shows; defaults to the value itself. */
+  labelOf?: (value: T) => string;
 }
 
 /**
@@ -18,12 +21,14 @@ export interface SelectProps<T extends string> {
  */
 export function Select<T extends string>({
   label,
-  placeholder = 'Select an option',
+  placeholder,
   value,
   options,
   onSelect,
   error,
+  labelOf = v => v,
 }: SelectProps<T>): React.JSX.Element {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,7 +46,7 @@ export function Select<T extends string>({
           error ? 'border-danger' : 'border-border'
         }`}>
         <Text className={value ? 'text-base text-slate-900' : 'text-base text-muted'}>
-          {value ?? placeholder}
+          {value ? labelOf(value) : placeholder ?? t('common.selectOption')}
         </Text>
         <Text className="text-muted">▾</Text>
       </Pressable>
@@ -86,7 +91,7 @@ export function Select<T extends string>({
                           ? 'font-semibold text-primary'
                           : 'text-slate-900'
                       }`}>
-                      {item}
+                      {labelOf(item)}
                     </Text>
                     {selected ? <Text className="text-primary">✓</Text> : null}
                   </Pressable>

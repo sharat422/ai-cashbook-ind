@@ -20,7 +20,7 @@ import {
 import {useScanReceipt} from '@features/receipt-scanner/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 interface CorrectedFields {
   receiptText: string;
@@ -74,7 +74,7 @@ export function ReceiptReviewScreen({
       gstNumber: extraction.gstNumber.value,
       amount: extraction.amount.value,
       taxAmount: extraction.taxAmount.value,
-      date: extraction.date.value || toISODate(new Date()),
+      date: extraction.date.value || todayIST(),
       category: extraction.category.value,
     });
   }, [extraction]);

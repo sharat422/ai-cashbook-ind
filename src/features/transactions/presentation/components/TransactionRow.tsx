@@ -5,6 +5,8 @@ import {Text} from '@components/ui';
 import type {Transaction} from '@features/transactions/domain/entities';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
+import {useT} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 
 /**
  * Fixed item height (card + gap). Exported so the FlatList can supply
@@ -15,8 +17,10 @@ export const ROW_HEIGHT = 76;
 const GAP = 8;
 
 function TransactionRowBase({tx}: {tx: Transaction}): React.JSX.Element {
+  const t = useT();
   const isIncome = tx.type === 'income';
-  const title = tx.vendor ? `${tx.category} · ${tx.vendor}` : tx.category;
+  const category = categoryLabel(t, tx.category);
+  const title = tx.vendor ? `${category} · ${tx.vendor}` : category;
 
   return (
     <View style={{height: ROW_HEIGHT, paddingBottom: GAP}}>

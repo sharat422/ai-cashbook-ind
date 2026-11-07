@@ -41,6 +41,7 @@ export function makeVisitClientId(): string {
  *  server errors (validation, 403) are thrown so the sheet can show them. */
 export async function saveVisit(visit: VisitInput): Promise<boolean> {
   try {
+    if (!(await connectivity.isOnline())) throw new NetworkError(); // queue now, don't wait for a timeout
     await beatsRemote.recordVisit(visit);
     return true;
   } catch (err) {

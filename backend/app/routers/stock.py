@@ -190,7 +190,7 @@ def add_count(
 ) -> dict:
     business, role = membership
     if not role_can(role, ENTRY_EDIT):
-        raise HTTPException(403, "Only the owner or accountant can enter a stock count.")
+        raise HTTPException(403, "Only the owner can enter a stock count.")
     lines = svc.count(db, business, user, role, location=body.location,
                       van_user_id=body.van_user_id, day=validate_date(body.date),
                       lines=[(line.item_id, line.counted) for line in body.lines],

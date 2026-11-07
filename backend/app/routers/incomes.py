@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -43,11 +44,8 @@ def create_income(
     client_id = validate_text(client_id, "Client ID", 80)
     notes = validate_notes(notes, 280)
     # Idempotency: a retried offline submission must not create a duplicate.
-    existing = db.scalars(
-        select(Income).where(
-            Income.business_id == business.id, Income.client_id == client_id
-        )
-    ).first()
+    find = select(Income).where(Income.business_id == business.id, Income.client_id == client_id)
+    existing = db.scalars(find).first()
     if existing is not None:
         return income_dto(existing)
 
@@ -61,6 +59,10 @@ def create_income(
         attachment_url=save_upload(attachment),
     )
     db.add(row)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # a concurrent retry with this client_id saved first
+        db.rollback()
+        return income_dto(db.scalars(find).one())
     db.refresh(row)
     return income_dto(row)

@@ -24,6 +24,7 @@ import {
   appLanguageByLabel,
   SUPPORTED_APP_LANGUAGES,
 } from '@features/auth/utils/languagePreference';
+import {BusinessSwitcher} from '@features/auth/components/BusinessSwitcher';
 import {usePermissions} from '@features/auth/hooks';
 import {PERMISSIONS} from '@features/auth/rbac';
 import {
@@ -32,15 +33,10 @@ import {
   useAppLockStore,
 } from '@features/security/store/appLock.store';
 import {useRestoreStore} from '@features/restore/store/restore.store';
-import {downloadMyData} from '@features/account/presentation/downloadMyData';
 import {useT} from '@/i18n';
+import {confirmLogout} from '@features/sync/syncStatus';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
-
-const ENABLED_OPTIONS = [
-  {label: 'On', value: true},
-  {label: 'Off', value: false},
-] as const;
 
 type PinMode = 'idle' | 'set' | 'confirm';
 
@@ -51,6 +47,10 @@ export function SettingsScreen({
   const t = useT();
   const {can} = usePermissions();
   const canManageSettings = can(PERMISSIONS.SETTINGS_MANAGE);
+  const enabledOptions = [
+    {label: t('common.on'), value: true},
+    {label: t('common.off'), value: false},
+  ] as const;
   const voiceLanguage = useVoiceSettingsStore(s => s.language);
   const setVoiceLanguage = useVoiceSettingsStore(s => s.setLanguage);
   const lockEnabled = useAppLockStore(s => s.enabled);
@@ -70,8 +70,8 @@ export function SettingsScreen({
       enableBiometric().then(ok => {
         if (!ok) {
           Alert.alert(
-            'Biometrics unavailable',
-            'No fingerprint or face unlock is set up on this device.',
+            t('settings.bioUnavailable'),
+            t('settings.bioUnavailableMsg'),
           );
         }
       });
@@ -93,10 +93,10 @@ export function SettingsScreen({
 
   const onSaveUpi = () => {
     if (upiId.trim() && !isValidUpiId(upiId)) {
-      return Alert.alert('Invalid UPI ID', 'Use the form name@bank, e.g. shop@okhdfcbank.');
+      return Alert.alert(t('settings.upiInvalid'), t('settings.upiInvalidMsg'));
     }
     setUpi(upiId, payee.trim() || businessName || '');
-    Alert.alert('Saved', 'Your UPI collection details are updated.');
+    Alert.alert(t('settings.upiSaved'), t('settings.upiSavedMsg'));
   };
 
   const [mode, setMode] = useState<PinMode>('idle');
@@ -175,34 +175,14 @@ export function SettingsScreen({
     );
   };
 
-  const [exporting, setExporting] = useState(false);
-  const onDownloadData = async () => {
-    setExporting(true);
-    try {
-      const shared = await downloadMyData();
-      if (shared) {
-        Alert.alert(t('account.exportReadyTitle'), t('account.exportReadyMsg'));
-      }
-    } catch (e) {
-      Alert.alert(
-        t('account.exportErrorTitle'),
-        e instanceof Error ? e.message : t('ai.tryAgain'),
-      );
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const onLogout = () => {
-    Alert.alert(t('common.logoutConfirmTitle'), t('common.logoutConfirmMsg'), [
-      {text: t('common.cancel'), style: 'cancel'},
-      {text: t('common.logout'), style: 'destructive', onPress: logout},
-    ]);
+    confirmLogout(t, logout);
   };
 
   return (
     <Screen>
       <View className="py-8">
+        <BusinessSwitcher />
         <Text variant="title">{t('settings.title')}</Text>
 
         {/* Security */}
@@ -222,7 +202,7 @@ export function SettingsScreen({
             <View className="w-28">
               <SegmentedControl
                 value={lockEnabled}
-                options={ENABLED_OPTIONS}
+                options={enabledOptions}
                 onChange={onToggleLock}
               />
             </View>
@@ -271,7 +251,7 @@ export function SettingsScreen({
               <View className="w-28">
                 <SegmentedControl
                   value={biometricEnabled}
-                  options={ENABLED_OPTIONS}
+                  options={enabledOptions}
                   onChange={onToggleBiometric}
                 />
               </View>
@@ -337,31 +317,31 @@ export function SettingsScreen({
         {canManageSettings ? (
           <>
             <Text variant="label" className="mt-8 mb-3">
-              Payments
+              {t('settings.payments')}
             </Text>
             <View className="rounded-2xl border border-border bg-white p-4" style={{gap: 14}}>
               <View>
                 <Text className="mb-1.5 text-sm font-semibold text-slate-700">
-                  Your UPI ID (for collecting payments)
+                  {t('settings.upiLabel')}
                 </Text>
                 <TextField
                   value={upiId}
                   onChangeText={setUpiId}
-                  placeholder="e.g. shop@okhdfcbank"
+                  placeholder={t('settings.upiPlaceholder')}
                   autoCapitalize="none"
                 />
               </View>
               <View>
                 <Text className="mb-1.5 text-sm font-semibold text-slate-700">
-                  Payee name
+                  {t('settings.payeeLabel')}
                 </Text>
                 <TextField
                   value={payee}
                   onChangeText={setPayee}
-                  placeholder={businessName ?? 'Your business name'}
+                  placeholder={businessName ?? t('settings.payeePlaceholder')}
                 />
               </View>
-              <Button title="Save UPI details" variant="secondary" onPress={onSaveUpi} />
+              <Button title={t('settings.upiSave')} variant="secondary" onPress={onSaveUpi} />
             </View>
           </>
         ) : null}
@@ -410,6 +390,14 @@ export function SettingsScreen({
             onPress={() => navigation.navigate('Stock')}
           />
         ) : null}
+        {can(PERMISSIONS.DATA_VIEW) ? (
+          <Button
+            title={t('schemes.title')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('Schemes')}
+          />
+        ) : null}
         {can(PERMISSIONS.REPORTS_VIEW) ? (
           <Button
             title={t('gst.reportsTitle')}
@@ -427,7 +415,7 @@ export function SettingsScreen({
           />
         ) : null}
         <Button
-          title="🪙 Cash counter"
+          title={t('settings.cashCounter')}
           variant="secondary"
           onPress={() => navigation.navigate('CashCounter')}
         />
@@ -469,11 +457,27 @@ export function SettingsScreen({
           {t('account.section')}
         </Text>
         <Button
-          title={t('account.downloadData')}
+          testID="settings-your-data"
+          title={t('yourData.open')}
           variant="secondary"
           className="mb-3"
-          loading={exporting}
-          onPress={onDownloadData}
+          onPress={() => navigation.navigate('YourData')}
+        />
+        {can(PERMISSIONS.ENTRY_EDIT) ? (
+          <Button
+            testID="settings-import"
+            title={t('import.open')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('KhataImport')}
+          />
+        ) : null}
+        <Button
+          testID="settings-sync"
+          title={t('sync.open')}
+          variant="secondary"
+          className="mb-3"
+          onPress={() => navigation.navigate('SyncStatus')}
         />
         {canManageSettings ? (
           <Button

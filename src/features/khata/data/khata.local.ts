@@ -5,7 +5,7 @@ import type {
 } from '@features/khata/domain/entities';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
-import {toISODate} from '@utils/date';
+import {todayIST, toISODate} from '@utils/date';
 
 const DAY = 86_400_000;
 const MAX_POINTS = 30;
@@ -37,7 +37,7 @@ export const khataLocal = {
   computeSummary(filters: KhataFilters): KhataSummary {
     const collected = sumByDate(useIncomeStore.getState().entries);
     const billed = sumByDate(useExpenseStore.getState().entries);
-    const today = toISODate(new Date());
+    const today = todayIST();
 
     const trend: TrendPoint[] = dateRange(filters.from, filters.to).map(date => ({
       date,

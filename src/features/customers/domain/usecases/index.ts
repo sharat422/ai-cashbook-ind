@@ -1,12 +1,13 @@
 import type {Customer, CustomerDraft, CustomerPage, CustomerQuery} from '../entities';
 import type {CustomerRepository} from '../repository';
 import {validateCustomerDraft} from '../validation';
+import {tNow} from '@/i18n';
 
 /** Throw a field-aware error when a draft is invalid. */
 function assertValid(draft: CustomerDraft): void {
   const errors = validateCustomerDraft(draft);
   if (Object.keys(errors).length > 0) {
-    const err = new Error('Please fix the highlighted fields.');
+    const err = new Error(tNow('errors.fixFields'));
     (err as Error & {fields?: unknown}).fields = errors;
     throw err;
   }

@@ -1,5 +1,5 @@
 import React, {useCallback, useMemo} from 'react';
-import {Alert, Pressable, RefreshControl, ScrollView, View} from 'react-native';
+import {Pressable, RefreshControl, ScrollView, View} from 'react-native';
 
 import {Button, EmptyState, ErrorState, Screen, Text} from '@components/ui';
 import {isSummaryEmpty} from '@features/dashboard/domain/entities';
@@ -12,10 +12,13 @@ import {usePermissions} from '@features/auth/hooks';
 import {useDashboardSummary} from '@features/dashboard/presentation/hooks/useDashboardSummary';
 import {DeviceIntegrityBanner} from '@features/security/presentation/DeviceIntegrityBanner';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
-import {useConnectivity} from '@features/income/presentation/hooks';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
 import {useUnreadCount} from '@/services/notifications';
-import {useT} from '@/i18n';
+import {tNow, useT} from '@/i18n';
+import {PERMISSIONS} from '@features/auth/rbac';
+import {confirmLogout} from '@features/sync/syncStatus';
+import {SyncStatusBar} from '@features/sync/presentation/SyncStatusBar';
+import {categoryLabel} from '@/i18n/labels';
 import type {SyncStatus} from '@/shared/types/attachment';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
@@ -44,15 +47,13 @@ export function DashboardScreen({
   navigation,
 }: AppScreenProps<'Dashboard'>): React.JSX.Element {
   const t = useT();
-  const {role} = usePermissions();
+  const {role, can} = usePermissions();
+  // Accountants are read-only: no add / scan / categorise / cash-count actions.
+  const canAdd = can(PERMISSIONS.ENTRY_CREATE);
   const business = useAuthStore(state => state.business);
   const logout = useAuthStore(state => state.logout);
   const incomes = useIncomeStore(state => state.entries);
   const expenses = useExpenseStore(state => state.entries);
-  const pendingCount =
-    useIncomeStore(state => state.queue.length) +
-    useExpenseStore(state => state.queue.length);
-  const online = useConnectivity();
   const unreadCount = useUnreadCount();
 
   const {data, isLoading, isError, error, refetch, isRefetching} =
@@ -63,7 +64,7 @@ export function DashboardScreen({
       ...incomes.map(e => ({
         id: e.id,
         kind: 'income' as const,
-        title: e.category,
+        title: categoryLabel(t, e.category),
         date: e.date,
         amount: e.amount,
         createdAt: e.createdAt,
@@ -72,7 +73,7 @@ export function DashboardScreen({
       ...expenses.map(e => ({
         id: e.id,
         kind: 'expense' as const,
-        title: `${e.category} · ${e.vendor}`,
+        title: `${categoryLabel(t, e.category)} · ${e.vendor}`,
         date: e.date,
         amount: e.amount,
         createdAt: e.createdAt,
@@ -82,17 +83,14 @@ export function DashboardScreen({
     return merged
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, RECENT_LIMIT);
-  }, [incomes, expenses]);
+  }, [incomes, expenses, t]);
 
   const onRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
 
   const onLogout = () => {
-    Alert.alert(t('common.logoutConfirmTitle'), t('common.logoutConfirmMsg'), [
-      {text: t('common.cancel'), style: 'cancel'},
-      {text: t('common.logout'), style: 'destructive', onPress: logout},
-    ]);
+    confirmLogout(t, logout);
   };
 
   const showSkeleton = isLoading && !data;
@@ -131,7 +129,7 @@ export function DashboardScreen({
           <View className="flex-row items-center" style={{gap: 8}}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Notifications"
+              accessibilityLabel={t('dashboard.notifications')}
               onPress={() => navigation.navigate('Notifications')}
               className="h-10 w-10 items-center justify-center rounded-full border border-border bg-white">
               <Text className="text-lg">🔔</Text>
@@ -145,25 +143,14 @@ export function DashboardScreen({
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Settings"
+              accessibilityLabel={t('dashboard.settings')}
               onPress={() => navigation.navigate('Settings')}
               className="h-10 w-10 items-center justify-center rounded-full border border-border bg-white">
               <Text className="text-lg">⚙️</Text>
             </Pressable>
           </View>
         </View>
-        {!online ? (
-          <Text className="mt-2 text-sm font-medium text-amber-700">
-            {t('dashboard.offline')}
-            {pendingCount > 0
-              ? t('dashboard.pendingSyncSuffix', {count: pendingCount})
-              : ''}
-          </Text>
-        ) : pendingCount > 0 ? (
-          <Text className="mt-2 text-sm font-medium text-muted">
-            {t('dashboard.syncing', {count: pendingCount})}
-          </Text>
-        ) : null}
+        <SyncStatusBar />
 
         {/* Non-blocking warning if the device looks rooted/jailbroken */}
         <DeviceIntegrityBanner />
@@ -174,26 +161,23 @@ export function DashboardScreen({
             <SummarySkeleton />
           ) : showError ? (
             <ErrorState
-              message={
-                error?.message ?? 'Check your connection and try again.'
-              }
+              message={error?.message}
               onRetry={onRefresh}
               retrying={isRefetching}
             />
           ) : showEmpty ? (
             <EmptyState
               icon="📊"
-              title="No activity yet"
-              message="Record your first income or expense to see your numbers here."
-              actionLabel="+ Add transaction"
-              onAction={() => navigation.navigate('QuickAdd', {type: 'income'})}
+              title={t('dashboard.emptyTitle')}
+              message={t('dashboard.emptyMsg')}
+              actionLabel={canAdd ? t('dashboard.emptyAction') : undefined}
+              onAction={canAdd ? () => navigation.navigate('QuickAdd', {type: 'income'}) : undefined}
             />
           ) : data ? (
             <>
               {data.source === 'local' ? (
                 <Text className="mb-2 text-xs font-medium text-amber-700">
-                  Showing offline figures from this device — pull to refresh when
-                  back online.
+                  {t('dashboard.localFigures')}
                 </Text>
               ) : null}
               <SummaryWidgets summary={data} />
@@ -218,6 +202,8 @@ export function DashboardScreen({
             onPress={() => navigation.navigate('Assistant')}
           />
         </View>
+        {canAdd ? (
+          <>
         <Button
           title={t('dashboard.aiEntry')}
           className="mt-3"
@@ -244,6 +230,12 @@ export function DashboardScreen({
             onPress={() => navigation.navigate('Categorize')}
           />
         </View>
+          </>
+        ) : (
+          <Text testID="read-only-banner" className="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+            {t('access.readOnlyBanner')}
+          </Text>
+        )}
         <View className="mt-3 flex-row" style={{gap: 12}}>
           <Button
             title={t('dashboard.dailySummary')}
@@ -284,13 +276,15 @@ export function DashboardScreen({
             fullWidth={false}
             onPress={() => navigation.navigate('Recurring')}
           />
+          {canAdd ? (
           <Button
-            title={t('dashboard.cashCounter')}
-            variant="secondary"
-            className="flex-1"
-            fullWidth={false}
-            onPress={() => navigation.navigate('CashCounter')}
-          />
+              title={t('dashboard.cashCounter')}
+              variant="secondary"
+              className="flex-1"
+              fullWidth={false}
+              onPress={() => navigation.navigate('CashCounter')}
+            />
+          ) : null}
         </View>
 
         {/* Recent activity */}
@@ -346,7 +340,7 @@ function ActivityRow({item}: {item: ActivityItem}): React.JSX.Element {
         </Text>
         {item.syncStatus !== 'synced' ? (
           <Text className="text-[10px] font-medium text-amber-600">
-            {item.syncStatus === 'pending' ? 'Pending' : 'Failed'}
+            {item.syncStatus === 'pending' ? tNow('sync.pending') : tNow('sync.failed')}
           </Text>
         ) : null}
       </View>

@@ -56,7 +56,7 @@ def place(db: Session, business: Business, user: User, role: str,
     """Validate a stock place. Staff may only use their own van."""
     if location == "godown":
         if not role_can(role, ENTRY_EDIT):
-            raise _reject("Only the owner or accountant can change godown stock.", 403)
+            raise _reject("Only the owner can change godown stock.", 403)
         return GODOWN
     if location != "van":
         raise _reject("Location must be 'godown' or 'van'.")
@@ -177,7 +177,7 @@ def transfer(db: Session, business: Business, user: User, role: str, *, item_id:
     if (first := _existing(db, business, client_id)) is not None:
         return group(db, first)
     if not role_can(role, ENTRY_EDIT):
-        raise _reject("Only the owner or accountant can load a van.", 403)
+        raise _reject("Only the owner can load a van.", 403)
     item = owned_item(db, business, item_id)
     q = quantity(qty)
     van = place(db, business, user, role, "van", van_user_id)
@@ -196,7 +196,7 @@ def count(db: Session, business: Business, user: User, role: str, *, location: s
     """Physical count of one place: one 'count' move per item, quantity =
     counted − system (0 when it matched), so the log shows every count."""
     if not role_can(role, ENTRY_EDIT):
-        raise _reject("Only the owner or accountant can enter a stock count.", 403)
+        raise _reject("Only the owner can enter a stock count.", 403)
     if (first := _existing(db, business, client_id)) is None:
         if not lines:
             raise _reject("Count at least one item.")

@@ -29,8 +29,9 @@ import {
 import {useVoiceSettingsStore} from '@features/settings/store/voiceSettings.store';
 import {useConnectivity} from '@features/income/presentation/hooks';
 import {useT, type TKey} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 /** Emoji per category for friendlier chips. */
 const CATEGORY_ICONS: Record<string, string> = {
@@ -43,10 +44,6 @@ const CATEGORY_ICONS: Record<string, string> = {
   Miscellaneous: '📦',
 };
 
-const CATEGORY_OPTIONS = EXPENSE_CATEGORIES.map(value => ({
-  value,
-  icon: CATEGORY_ICONS[value],
-}));
 
 /** Friendly i18n label for each server-flagged ambiguous field. */
 const AMBIGUOUS_LABEL: Record<string, TKey> = {
@@ -116,7 +113,7 @@ export function AddExpenseScreen({
       voice.mutate(
         {
           audio,
-          today: toISODate(new Date()),
+          today: todayIST(),
           language: voiceLanguage ?? undefined,
         },
         {onSuccess: applyParsed, onError: onVoiceError},
@@ -236,7 +233,7 @@ export function AddExpenseScreen({
         <View className="mt-6" style={{gap: 18}}>
           <FormField label={t('form.category')} required error={form.errors.category}>
             <ChipSelect
-              options={CATEGORY_OPTIONS}
+              options={EXPENSE_CATEGORIES.map(value => ({value, icon: CATEGORY_ICONS[value], label: categoryLabel(t, value)}))}
               value={form.values.category}
               onSelect={value => form.setField('category', value)}
               error={form.errors.category}

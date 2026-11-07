@@ -6,13 +6,13 @@ import {AmountInput, DateField, FormField, NotesInput, TextField} from '@compone
 import {BottomSheet, Button, Text} from '@components/ui';
 import {
   isUtrMissing,
-  PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
   type PaymentMethod,
 } from '@features/customers/domain/ledger';
-import {useT} from '@/i18n';
+import {useT, type TKey} from '@/i18n';
+import {paymentMethodLabel} from '@/i18n/labels';
 import {formatINR} from '@utils/currency';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 export interface ReceivePaymentInput {
   amount: number;
@@ -35,14 +35,14 @@ export interface ReceivePaymentSheetProps {
 const METHODS = PAYMENT_METHODS;
 
 /** Reference label/placeholder per method. */
-const REFERENCE_HINT: Record<PaymentMethod, string> = {
-  cash: 'Reference (optional)',
-  upi: 'UPI transaction ID',
-  bank: 'Bank reference / UTR',
-  card: 'Card / auth reference',
-  cheque: 'Cheque number',
-  credit: 'Reference (optional)',
-  other: 'Reference (optional)',
+const REFERENCE_HINT: Record<PaymentMethod, TKey> = {
+  cash: 'payments.refOptional',
+  upi: 'payments.refUpi',
+  bank: 'payments.refBank',
+  card: 'payments.refCard',
+  cheque: 'payments.refCheque',
+  credit: 'payments.refOptional',
+  other: 'payments.refOptional',
 };
 
 /**
@@ -59,7 +59,7 @@ export function ReceivePaymentSheet({
 }: ReceivePaymentSheetProps): React.JSX.Element {
   const [amount, setAmount] = useState<number>(NaN);
   const [method, setMethod] = useState<PaymentMethod>('upi');
-  const [date, setDate] = useState<string>(toISODate(new Date()));
+  const [date, setDate] = useState<string>(todayIST());
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function ReceivePaymentSheet({
     if (visible) {
       setAmount(NaN);
       setMethod('upi');
-      setDate(toISODate(new Date()));
+      setDate(todayIST());
       setReference('');
       setNotes('');
       setError(null);
@@ -87,7 +87,7 @@ export function ReceivePaymentSheet({
 
   const submit = () => {
     if (Number.isNaN(amount) || amount <= 0) {
-      setError('Enter an amount greater than ₹0');
+      setError(t('errors.amountPositive'));
       return;
     }
     if (isUtrMissing(method, reference)) {
@@ -107,7 +107,7 @@ export function ReceivePaymentSheet({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title="Receive payment"
+      title={t('payments.title')}
       maxHeightClassName="max-h-[90%]">
       <ScrollView
         className="px-5"
@@ -118,7 +118,7 @@ export function ReceivePaymentSheet({
         <View className="mt-1 flex-row rounded-2xl bg-slate-900 p-4" style={{gap: 12}}>
           <View className="flex-1">
             <Text className="text-[11px] uppercase text-slate-400">
-              Outstanding
+              {t('payments.outstanding')}
             </Text>
             <Text className="mt-1 text-lg font-bold text-white">
               {formatINR(outstanding)}
@@ -126,7 +126,7 @@ export function ReceivePaymentSheet({
           </View>
           <View className="flex-1">
             <Text className="text-[11px] uppercase text-slate-400">
-              {overpay > 0 ? 'Overpayment' : 'Remaining after'}
+              {overpay > 0 ? t('payments.overpayment') : t('payments.remainingAfter')}
             </Text>
             <Text
               className={`mt-1 text-lg font-bold ${
@@ -150,7 +150,7 @@ export function ReceivePaymentSheet({
               if (error) setError(null);
             }}>
             <Text className="text-sm font-semibold text-primary">
-              Pay full · {formatINR(outstanding)}
+              {t('payments.payFull', {amount: formatINR(outstanding)})}
             </Text>
           </Pressable>
         ) : null}
@@ -158,13 +158,13 @@ export function ReceivePaymentSheet({
         {offline ? (
           <View className="mt-3 rounded-xl bg-amber-50 px-4 py-2.5">
             <Text className="text-xs font-medium text-amber-700">
-              Offline — saved on-device and synced later.
+              {t('payments.offline')}
             </Text>
           </View>
         ) : null}
 
         <View className="mt-4" style={{gap: 16}}>
-          <FormField label="Amount received" required error={error}>
+          <FormField label={t('payments.amountReceived')} required error={error}>
             <AmountInput
               value={amount}
               onChange={value => {
@@ -176,12 +176,12 @@ export function ReceivePaymentSheet({
             />
           </FormField>
 
-          <FormField label="Payment method" required>
+          <FormField label={t('payments.method')} required>
             <View className="flex-row flex-wrap" style={{gap: 8}}>
               {METHODS.map(m => (
                 <FilterChip
                   key={m}
-                  label={PAYMENT_METHOD_LABEL[m]}
+                  label={paymentMethodLabel(t, m)}
                   selected={method === m}
                   onPress={() => {
                     setMethod(m);
@@ -192,32 +192,32 @@ export function ReceivePaymentSheet({
             </View>
           </FormField>
 
-          <FormField label="Date" required>
+          <FormField label={t('form.date')} required>
             <DateField value={date} onChange={setDate} />
           </FormField>
 
           <FormField
-            label={method === 'upi' ? t('payments.utrLabel') : 'Reference number'}
+            label={method === 'upi' ? t('payments.utrLabel') : t('payments.reference')}
             required={method === 'upi'}
             error={refError}
-            hint={method === 'cash' ? 'Optional' : undefined}>
+            hint={method === 'cash' ? t('common.optional') : undefined}>
             <TextField
               value={reference}
               onChangeText={v => {
                 setReference(v);
                 if (refError) setRefError(null);
               }}
-              placeholder={REFERENCE_HINT[method]}
+              placeholder={t(REFERENCE_HINT[method])}
               autoCapitalize="characters"
               maxLength={40}
             />
           </FormField>
 
-          <FormField label="Notes" hint="Optional">
+          <FormField label={t('form.notes')} hint={t('common.optional')}>
             <NotesInput
               value={notes}
               onChange={setNotes}
-              placeholder="e.g. part payment"
+              placeholder={t('payments.notesPlaceholder')}
               maxLength={200}
             />
           </FormField>
@@ -226,7 +226,7 @@ export function ReceivePaymentSheet({
 
       <View className="border-t border-border px-5 py-3">
         <Button
-          title={`Receive ${formatINR(entered)}`}
+          title={t('payments.receive', {amount: formatINR(entered)})}
           loading={submitting}
           onPress={submit}
         />

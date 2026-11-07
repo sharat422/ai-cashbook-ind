@@ -6,10 +6,11 @@ import {connectivity} from '@/services/network/connectivity';
 import {syncPendingLedger} from '@features/customers/data/ledgerSync';
 import {uploadLocalCreditLimits} from '@features/customer-intel/store/creditLimit.store';
 import {CUSTOMERS_KEY} from '@features/customers/presentation/hooks/useCustomers';
+import {syncCustomerEdits} from '@features/sync/customerEdits';
 import {LEDGER_KEY} from '@features/customers/presentation/hooks/useCustomerLedger';
 
 /**
- * Headless: flushes offline ledger (Udhaar) entries on mount, on reconnect, and
+ * Headless: flushes offline ledger (Udhaar) entries and customer edits on mount, on reconnect, and
  * on foreground, then invalidates the affected ledger queries so the timeline
  * swaps the optimistic pending entries for the synced ones. Mount inside the
  * QueryProvider tree.
@@ -24,7 +25,8 @@ export function CreditSyncManager(): null {
     try {
       const touched = await syncPendingLedger();
       const limitsMoved = await uploadLocalCreditLimits();
-      if (touched.length > 0 || limitsMoved) {
+      const editsMoved = await syncCustomerEdits();
+      if (touched.length > 0 || limitsMoved || editsMoved > 0) {
         queryClient.invalidateQueries({queryKey: [CUSTOMERS_KEY]});
         touched.forEach(id =>
           queryClient.invalidateQueries({queryKey: [LEDGER_KEY, id]}),

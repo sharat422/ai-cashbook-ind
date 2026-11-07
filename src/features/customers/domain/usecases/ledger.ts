@@ -9,6 +9,8 @@ import type {
   PaymentMethod,
 } from '../ledger';
 import type {LedgerRepository} from '../ledgerRepository';
+import {tNow} from '@/i18n';
+import {todayIST} from '@utils/date';
 
 /** Input shared by add-credit and receive-payment. */
 export interface LedgerEntryInput {
@@ -25,19 +27,19 @@ export interface LedgerEntryInput {
 
 function assertValid(draft: LedgerEntryDraft): void {
   if (Number.isNaN(draft.amount) || draft.amount <= 0) {
-    throw new Error('Enter an amount greater than ₹0');
+    throw new Error(tNow('errors.amountPositive'));
   }
   if (draft.amount > 10_000_000) {
-    throw new Error('Amount looks too large');
+    throw new Error(tNow('errors.amountTooLarge'));
   }
-  if (!draft.date || new Date(draft.date) > new Date()) {
-    throw new Error('Date cannot be in the future');
+  if (!draft.date || draft.date.slice(0, 10) > todayIST()) {
+    throw new Error(tNow('errors.dateFuture'));
   }
   if (draft.type === 'payment' && isUtrMissing(draft.paymentMethod, draft.referenceNumber)) {
-    throw new Error('Enter the UPI transaction ID (UTR) for a UPI payment.');
+    throw new Error(tNow('errors.utrRequired'));
   }
   if (draft.gst) {
-    if (draft.type !== 'credit') throw new Error('GST applies to a sale (credit), not a payment.');
+    if (draft.type !== 'credit') throw new Error(tNow('errors.gstOnPayment'));
     const problem = gstInputError(draft.invoiceNumber, draft.gst);
     if (problem) throw new Error(problem.message);
   }

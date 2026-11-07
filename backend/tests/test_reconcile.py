@@ -2,15 +2,18 @@
 owner/business anomalies without mutating anything.
 
 Duplicates are seeded via direct inserts (the API is idempotent and won't create
-them), simulating rows a concurrent race already left behind.
+them), simulating rows a concurrent race left behind before the unique
+client_id indexes existed — so the test drops those indexes, then restores them.
 """
 
 import uuid
+from contextlib import contextmanager
 
-from sqlalchemy import select
+from sqlalchemy import delete, inspect, select, text
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
+from app.migrations import _CLIENT_ID_INDEXES, _add_client_id_unique_indexes
 from app.models import (
     Business,
     BusinessMember,
@@ -42,7 +45,25 @@ def _mk_business(s: Session, *, with_active_owner: bool = True) -> Business:
     return biz
 
 
+@contextmanager
+def _legacy_schema_without_client_id_indexes():
+    with engine.begin() as conn:
+        for name, _ in _CLIENT_ID_INDEXES.values():
+            conn.execute(text(f"DROP INDEX IF EXISTS {name}"))
+    try:
+        yield
+    finally:
+        _add_client_id_unique_indexes(engine, set(inspect(engine).get_table_names()))
+        names = {i["name"] for t in _CLIENT_ID_INDEXES for i in inspect(engine).get_indexes(t)}
+        assert {n for n, _ in _CLIENT_ID_INDEXES.values()} <= names  # restored
+
+
 def test_detects_duplicate_client_ids_and_owner_anomalies():
+    with _legacy_schema_without_client_id_indexes():
+        _detects_duplicates()
+
+
+def _detects_duplicates():
     dup = f"dup-{uuid.uuid4().hex[:8]}"
     with SessionLocal() as s:
         biz = _mk_business(s)
@@ -82,6 +103,12 @@ def test_detects_duplicate_client_ids_and_owner_anomalies():
     creators = {c["business_id"] for c in report["owners"]["creator_not_active_owner"]}
     assert orphan_id in creators
     assert report["clean"] is False
+
+    with SessionLocal() as s:  # remove the duplicates so the indexes can come back
+        s.execute(delete(LedgerEntry).where(LedgerEntry.customer_id == cust_id))
+        for model in (Income, Expense):
+            s.execute(delete(model).where(model.business_id == biz_id))
+        s.commit()
 
 
 def test_reconcile_makes_no_writes():

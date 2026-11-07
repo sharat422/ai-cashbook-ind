@@ -1,6 +1,9 @@
 """Self-service data rights (DPDP): export everything, and delete the account.
 
 - GET  /account/export  — the user's full data as JSON (right to access/port).
+- GET  /account/export.xlsx, /account/balances.pdf — the current business's
+                          data as Excel / a balances PDF ("Your data" screen).
+                          Free on every plan: no plan or payment check, ever.
 - DELETE /account       — hard-delete the user and everything they own, after an
                           explicit typed confirmation, and log the deletion for
                           our compliance record (right to erasure).
@@ -12,16 +15,24 @@ import json
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import data_export
+from ..calc import today_iso
 from ..database import get_db
+from ..deps import require
+from ..gst_reports import XLSX
+from ..rbac import REPORTS_EXPORT
 from ..models import (
     AccountDeletionLog,
     AiDecision,
     BankImport,
     BankLine,
+    Bill,
+    BillLine,
     GstRateChangeLog,
     Beat,
     BeatRetailer,
@@ -35,6 +46,11 @@ from ..models import (
     Item,
     LedgerEntry,
     RecurringExpense,
+    Scheme,
+    SchemeApplication,
+    SchemeItem,
+    StatementEvent,
+    StatementLink,
     StockMove,
     User,
     now_iso,
@@ -110,6 +126,31 @@ def export_account(
     return out
 
 
+def _download(data: bytes, media_type: str, name: str) -> Response:
+    return Response(data, media_type=media_type,
+                    headers={"Content-Disposition": f'attachment; filename="{name}"',
+                             "Cache-Control": "no-store"})
+
+
+@router.get("/account/export.xlsx")
+def export_workbook(
+    business: Business = Depends(require(REPORTS_EXPORT)),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Customers, ledger, income and expenses in one Excel file."""
+    return _download(data_export.workbook(db, business), XLSX, f"Bolcash_data_{today_iso()}.xlsx")
+
+
+@router.get("/account/balances.pdf")
+def export_balances(
+    business: Business = Depends(require(REPORTS_EXPORT)),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Every customer's balance, printable."""
+    return _download(data_export.balances_pdf(db, business), "application/pdf",
+                     f"Bolcash_balances_{today_iso()}.pdf")
+
+
 class DeleteAccountBody(BaseModel):
     confirmation: str
 
@@ -156,7 +197,15 @@ def delete_account(
             counts["ledger_entries"] += db.query(LedgerEntry).filter(
                 LedgerEntry.customer_id.in_(cust_ids)
             ).delete(synchronize_session=False)
-        for model in (GstRateChangeLog, StockMove, Income, Expense, Item, RecurringExpense, Customer,
+        bill_ids = [b.id for b in db.scalars(select(Bill).where(Bill.business_id.in_(biz_ids))).all()]
+        scheme_ids = [x.id for x in db.scalars(select(Scheme).where(Scheme.business_id.in_(biz_ids))).all()]
+        if bill_ids:
+            counts["bill_lines"] += db.query(BillLine).filter(
+                BillLine.bill_id.in_(bill_ids)).delete(synchronize_session=False)
+        if scheme_ids:
+            counts["scheme_items"] += db.query(SchemeItem).filter(
+                SchemeItem.scheme_id.in_(scheme_ids)).delete(synchronize_session=False)
+        for model in (StatementLink, StatementEvent, SchemeApplication, Bill, Scheme, GstRateChangeLog, StockMove, Income, Expense, Item, RecurringExpense, Customer,
                       AiDecision):
             counts[model.__tablename__] += db.query(model).filter(
                 model.business_id.in_(biz_ids)

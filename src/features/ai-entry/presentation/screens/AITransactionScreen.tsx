@@ -36,7 +36,7 @@ import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 export function AITransactionScreen({
   navigation,
@@ -71,7 +71,7 @@ export function AITransactionScreen({
   const [name, setName] = useState('');
   const [type, setType] = useState<ParsedType>('credit');
   const [amount, setAmount] = useState<number>(NaN);
-  const [date, setDate] = useState<string>(toISODate(new Date()));
+  const [date, setDate] = useState<string>(todayIST());
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [utr, setUtr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -93,7 +93,7 @@ export function AITransactionScreen({
     setName(result.customerName ?? '');
     setType(result.type);
     setAmount(result.amount ?? NaN);
-    setDate(result.date || toISODate(new Date()));
+    setDate(result.date || todayIST());
   };
 
   const voice = useLiveVoice({
@@ -125,7 +125,7 @@ export function AITransactionScreen({
     setError(null);
     setCandidates(null);
     parse.mutate(
-      {text: text.trim(), today: toISODate(new Date())},
+      {text: text.trim(), today: todayIST()},
       {
         onSuccess: applyParsed,
         onError: err =>

@@ -14,7 +14,7 @@ jest.mock('@api/client', () => ({
 }));
 
 import {apiRequest, ApiError, NetworkError} from '@api/client';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
 import {dashboardRepository} from './dashboard.repository';
@@ -45,7 +45,7 @@ it('returns remote figures when the backend responds', async () => {
 });
 
 it('falls back to on-device figures on a NetworkError', async () => {
-  const today = toISODate(new Date());
+  const today = todayIST(); // the app's 'today' is the Indian day
   useIncomeStore.setState({
     entries: [
       {id: 'p1', amount: 700, category: 'Sales', date: today, syncStatus: 'pending'},

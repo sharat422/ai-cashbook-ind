@@ -1,6 +1,9 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import React from 'react';
 
+import {PERMISSIONS} from '@features/auth/rbac';
+import {withPermission} from './withPermission';
+
 import {CategorizationScreen} from '@features/categorization/presentation/screens/CategorizationScreen';
 import {CollectionAssistantScreen} from '@features/collection/presentation/screens/CollectionAssistantScreen';
 import {AddCreditScreen} from '@features/customers/presentation/screens/AddCreditScreen';
@@ -29,6 +32,10 @@ import {RecurringListScreen} from '@features/recurring/presentation/screens/Recu
 import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
 import {BeatDayListScreen} from '@features/beats/presentation/screens/BeatDayListScreen';
 import {BeatPlanScreen} from '@features/beats/presentation/screens/BeatPlanScreen';
+import {BillScreen} from '@features/schemes/presentation/screens/BillScreen';
+import {SchemeFormScreen} from '@features/schemes/presentation/screens/SchemeFormScreen';
+import {SchemeReportScreen} from '@features/schemes/presentation/screens/SchemeReportScreen';
+import {SchemesScreen} from '@features/schemes/presentation/screens/SchemesScreen';
 import {StockCountScreen} from '@features/stock/presentation/screens/StockCountScreen';
 import {StockHistoryScreen} from '@features/stock/presentation/screens/StockHistoryScreen';
 import {StockScreen} from '@features/stock/presentation/screens/StockScreen';
@@ -36,6 +43,7 @@ import {VanStockScreen} from '@features/stock/presentation/screens/VanStockScree
 import {GstReportsScreen} from '@features/gst/presentation/GstReportsScreen';
 import {DailyCloseScreen} from '@features/reconciliation/presentation/screens/DailyCloseScreen';
 import {ReconciliationScreen} from '@features/reconciliation/presentation/screens/ReconciliationScreen';
+import {AccountantActivityScreen} from '@features/team/presentation/screens/AccountantActivityScreen';
 import {TeamScreen} from '@features/team/presentation/screens/TeamScreen';
 import {DiagnosticsScreen} from '@features/diagnostics/presentation/screens/DiagnosticsScreen';
 import {HelpScreen} from '@features/support/presentation/screens/HelpScreen';
@@ -45,10 +53,40 @@ import {SettingsScreen} from '@features/settings/presentation/screens/SettingsSc
 import {ConsentSettingsScreen} from '@features/consent/presentation/screens/ConsentSettingsScreen';
 import {BusinessEditScreen} from '@features/account/presentation/screens/BusinessEditScreen';
 import {DeleteAccountScreen} from '@features/account/presentation/screens/DeleteAccountScreen';
+import {YourDataScreen} from '@features/account/presentation/screens/YourDataScreen';
+import {KhataImportScreen} from '@features/import/presentation/KhataImportScreen';
+import {SyncConflictScreen} from '@features/sync/presentation/SyncConflictScreen';
+import {SyncStatusScreen} from '@features/sync/presentation/SyncStatusScreen';
 import {LegalDocScreen} from '@features/legal/presentation/screens/LegalDocScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
 import {QuickAddScreen} from '@features/transactions/presentation/screens/QuickAddScreen';
 import type {AppStackParamList} from './types';
+
+/** Screens that write: a role without the permission sees a read-only page. */
+const Guarded = {
+  AITransactionScreen: withPermission(AITransactionScreen, PERMISSIONS.ENTRY_CREATE),
+  QuickAddScreen: withPermission(QuickAddScreen, PERMISSIONS.ENTRY_CREATE),
+  AddIncomeScreen: withPermission(AddIncomeScreen, PERMISSIONS.ENTRY_CREATE),
+  AddExpenseScreen: withPermission(AddExpenseScreen, PERMISSIONS.ENTRY_CREATE),
+  ReceiptCaptureScreen: withPermission(ReceiptCaptureScreen, PERMISSIONS.ENTRY_CREATE),
+  ReceiptReviewScreen: withPermission(ReceiptReviewScreen, PERMISSIONS.ENTRY_CREATE),
+  AddCreditScreen: withPermission(AddCreditScreen, PERMISSIONS.ENTRY_CREATE),
+  CustomerFormScreen: withPermission(CustomerFormScreen, PERMISSIONS.ENTRY_CREATE),
+  BillScreen: withPermission(BillScreen, PERMISSIONS.ENTRY_CREATE),
+  RequestPaymentScreen: withPermission(RequestPaymentScreen, PERMISSIONS.ENTRY_CREATE),
+  CollectionAssistantScreen: withPermission(CollectionAssistantScreen, PERMISSIONS.ENTRY_CREATE),
+  CashCounterScreen: withPermission(CashCounterScreen, PERMISSIONS.ENTRY_CREATE),
+  CategorizationScreen: withPermission(CategorizationScreen, PERMISSIONS.ENTRY_EDIT),
+  StockCountScreen: withPermission(StockCountScreen, PERMISSIONS.ENTRY_EDIT),
+  KhataImportScreen: withPermission(KhataImportScreen, PERMISSIONS.ENTRY_EDIT),
+  BusinessEditScreen: withPermission(BusinessEditScreen, PERMISSIONS.SETTINGS_MANAGE),
+  ItemFormScreen: withPermission(ItemFormScreen, PERMISSIONS.SETTINGS_MANAGE),
+  RecurringFormScreen: withPermission(RecurringFormScreen, PERMISSIONS.SETTINGS_MANAGE),
+  SchemeFormScreen: withPermission(SchemeFormScreen, PERMISSIONS.SETTINGS_MANAGE),
+  TeamScreen: withPermission(TeamScreen, PERMISSIONS.TEAM_MANAGE),
+  AccountantActivityScreen: withPermission(AccountantActivityScreen, PERMISSIONS.TEAM_MANAGE),
+  BeatPlanScreen: withPermission(BeatPlanScreen, PERMISSIONS.BEATS_MANAGE),
+};
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -59,41 +97,50 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="ConsentSettings" component={ConsentSettingsScreen} />
-      <Stack.Screen name="BusinessEdit" component={BusinessEditScreen} />
+      <Stack.Screen name="BusinessEdit" component={Guarded.BusinessEditScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="YourData" component={YourDataScreen} />
+      <Stack.Screen name="SyncStatus" component={SyncStatusScreen} />
+      <Stack.Screen name="SyncConflict" component={SyncConflictScreen} />
+      <Stack.Screen name="KhataImport" component={Guarded.KhataImportScreen} />
       <Stack.Screen name="LegalDoc" component={LegalDocScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="CustomerInsights" component={CustomerInsightsScreen} />
-      <Stack.Screen name="CashCounter" component={CashCounterScreen} />
+      <Stack.Screen name="CashCounter" component={Guarded.CashCounterScreen} />
       <Stack.Screen name="Business" component={BusinessScreen} />
       <Stack.Screen name="Assistant" component={AssistantScreen} />
       <Stack.Screen
         name="AITransaction"
-        component={AITransactionScreen}
+        component={Guarded.AITransactionScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen name="Items" component={ItemListScreen} />
       <Stack.Screen
         name="ItemForm"
-        component={ItemFormScreen}
+        component={Guarded.ItemFormScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen name="Recurring" component={RecurringListScreen} />
       <Stack.Screen
         name="RecurringForm"
-        component={RecurringFormScreen}
+        component={Guarded.RecurringFormScreen}
         options={{presentation: 'modal'}}
       />
-      <Stack.Screen name="Team" component={TeamScreen} />
-      <Stack.Screen name="BeatPlan" component={BeatPlanScreen} />
+      <Stack.Screen name="Team" component={Guarded.TeamScreen} />
+      <Stack.Screen name="AccountantActivity" component={Guarded.AccountantActivityScreen} />
+      <Stack.Screen name="BeatPlan" component={Guarded.BeatPlanScreen} />
       <Stack.Screen name="BeatDayList" component={BeatDayListScreen} />
       <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
       <Stack.Screen name="DailyClose" component={DailyCloseScreen} />
       <Stack.Screen name="GstReports" component={GstReportsScreen} />
       <Stack.Screen name="Stock" component={StockScreen} />
-      <Stack.Screen name="StockCount" component={StockCountScreen} />
+      <Stack.Screen name="StockCount" component={Guarded.StockCountScreen} />
       <Stack.Screen name="StockHistory" component={StockHistoryScreen} />
       <Stack.Screen name="VanStock" component={VanStockScreen} />
+      <Stack.Screen name="Bill" component={Guarded.BillScreen} />
+      <Stack.Screen name="Schemes" component={SchemesScreen} />
+      <Stack.Screen name="SchemeForm" component={Guarded.SchemeFormScreen} />
+      <Stack.Screen name="SchemeReport" component={SchemeReportScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen
@@ -103,17 +150,17 @@ export function AppNavigator(): React.JSX.Element {
       />
       <Stack.Screen
         name="QuickAdd"
-        component={QuickAddScreen}
+        component={Guarded.QuickAddScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen
         name="AddIncome"
-        component={AddIncomeScreen}
+        component={Guarded.AddIncomeScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen
         name="AddExpense"
-        component={AddExpenseScreen}
+        component={Guarded.AddExpenseScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen
@@ -122,13 +169,13 @@ export function AppNavigator(): React.JSX.Element {
       />
       <Stack.Screen
         name="ReceiptCapture"
-        component={ReceiptCaptureScreen}
+        component={Guarded.ReceiptCaptureScreen}
         options={{presentation: 'modal'}}
       />
-      <Stack.Screen name="ReceiptReview" component={ReceiptReviewScreen} />
+      <Stack.Screen name="ReceiptReview" component={Guarded.ReceiptReviewScreen} />
       <Stack.Screen
         name="Categorize"
-        component={CategorizationScreen}
+        component={Guarded.CategorizationScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen name="DailySummary" component={DailySummaryScreen} />
@@ -139,22 +186,22 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="CustomerProfile" component={CustomerProfileScreen} />
       <Stack.Screen
         name="CustomerForm"
-        component={CustomerFormScreen}
+        component={Guarded.CustomerFormScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen
         name="AddCredit"
-        component={AddCreditScreen}
+        component={Guarded.AddCreditScreen}
         options={{presentation: 'modal'}}
       />
       <Stack.Screen
         name="CustomerStatement"
         component={CustomerStatementScreen}
       />
-      <Stack.Screen name="RequestPayment" component={RequestPaymentScreen} />
+      <Stack.Screen name="RequestPayment" component={Guarded.RequestPaymentScreen} />
       <Stack.Screen
         name="CollectionAssistant"
-        component={CollectionAssistantScreen}
+        component={Guarded.CollectionAssistantScreen}
       />
     </Stack.Navigator>
   );

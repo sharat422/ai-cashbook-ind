@@ -33,10 +33,12 @@ const HASHES_FILE = join(LOCALES_DIR, '.hashes.json');
 const SOURCE = 'en';
 // Target locales the app ships. Everything except English is generated from
 // en.json by this script (run `npm run i18n:translate` after editing en.json).
-const TARGET_LOCALES = ['hi', 'te', 'ta', 'kn', 'mr', 'gu', 'bn', 'ml', 'pa'];
+const TARGET_LOCALES = ['hi', 'hinglish', 'te', 'ta', 'kn', 'mr', 'gu', 'bn', 'ml', 'pa'];
 // Name the script too: "Punjabi" alone once came back in Devanagari.
 const LOCALE_NAMES = {
   hi: 'Hindi (Devanagari script)',
+  hinglish:
+    'Hinglish: everyday Hindi written in the Latin (Roman) alphabet, mixed with the English words shopkeepers actually use, the way people text on WhatsApp (e.g. "Payment mil gaya", "Udhaar add karein"). Use ONLY Latin letters, never Devanagari',
   te: 'Telugu (Telugu script)',
   ta: 'Tamil (Tamil script)',
   kn: 'Kannada (Kannada script)',

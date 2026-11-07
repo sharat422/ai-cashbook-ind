@@ -1,4 +1,6 @@
+import {todayIST} from '@utils/date';
 import {INCOME_CATEGORIES, type IncomeDraft} from './entities';
+import {tNow} from '@/i18n';
 
 export type IncomeFieldErrors = Partial<
   Record<keyof IncomeDraft, string>
@@ -16,27 +18,27 @@ export function validateIncomeDraft(draft: IncomeDraft): IncomeFieldErrors {
   const errors: IncomeFieldErrors = {};
 
   if (draft.amount === undefined || Number.isNaN(draft.amount)) {
-    errors.amount = 'Enter an amount';
+    errors.amount = tNow('errors.amountRequired');
   } else if (draft.amount <= 0) {
-    errors.amount = 'Amount must be greater than ₹0';
+    errors.amount = tNow('errors.amountPositive');
   } else if (draft.amount > MAX_AMOUNT) {
-    errors.amount = 'Amount looks too large';
+    errors.amount = tNow('errors.amountTooLarge');
   }
 
   if (!draft.category || !INCOME_CATEGORIES.includes(draft.category)) {
-    errors.category = 'Select a category';
+    errors.category = tNow('errors.categoryRequired');
   }
 
   if (!draft.date) {
-    errors.date = 'Select a date';
+    errors.date = tNow('errors.dateRequired');
   } else if (Number.isNaN(Date.parse(draft.date))) {
-    errors.date = 'Invalid date';
-  } else if (new Date(draft.date) > new Date()) {
-    errors.date = 'Date cannot be in the future';
+    errors.date = tNow('errors.dateInvalid');
+  } else if (draft.date.slice(0, 10) > todayIST()) {
+    errors.date = tNow('errors.dateFuture');
   }
 
   if (draft.notes && draft.notes.length > 280) {
-    errors.notes = 'Notes must be 280 characters or fewer';
+    errors.notes = tNow('errors.tooLong', {n: 280});
   }
 
   return errors;

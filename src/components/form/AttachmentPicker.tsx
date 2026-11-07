@@ -8,6 +8,7 @@ import {
 } from 'react-native-image-picker';
 
 import {Text} from '@components/ui';
+import {tNow} from '@/i18n';
 import type {Attachment} from '@/shared/types/attachment';
 
 export interface AttachmentPickerProps {
@@ -35,7 +36,7 @@ export function AttachmentPicker({
   const handleResponse = (res: ImagePickerResponse) => {
     if (res.didCancel) return;
     if (res.errorCode) {
-      Alert.alert('Could not add image', res.errorMessage ?? res.errorCode);
+      Alert.alert(tNow('attach.couldNotAdd'), tNow('common.tryAgainMsg'));
       return;
     }
     const asset = res.assets?.[0];
@@ -56,7 +57,7 @@ export function AttachmentPicker({
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
+          options: [tNow('common.cancel'), tNow('attach.camera'), tNow('attach.gallery')],
           cancelButtonIndex: 0,
         },
         index => {
@@ -65,10 +66,10 @@ export function AttachmentPicker({
         },
       );
     } else {
-      Alert.alert('Add attachment', undefined, [
-        {text: 'Take Photo', onPress: takePhoto},
-        {text: 'Choose from Gallery', onPress: pickFromGallery},
-        {text: 'Cancel', style: 'cancel'},
+      Alert.alert(tNow('attach.title'), undefined, [
+        {text: tNow('attach.camera'), onPress: takePhoto},
+        {text: tNow('attach.gallery'), onPress: pickFromGallery},
+        {text: tNow('common.cancel'), style: 'cancel'},
       ]);
     }
   };
@@ -88,7 +89,7 @@ export function AttachmentPicker({
           accessibilityRole="button"
           onPress={() => onChange(null)}
           className="ml-2 px-2 py-1">
-          <Text className="text-sm font-semibold text-danger">Remove</Text>
+          <Text className="text-sm font-semibold text-danger">{tNow('attach.remove')}</Text>
         </Pressable>
       </View>
     );
@@ -100,7 +101,7 @@ export function AttachmentPicker({
       onPress={openOptions}
       className="h-14 flex-row items-center justify-center rounded-xl border border-dashed border-border bg-white">
       <Text className="text-base font-medium text-primary">
-        + Add receipt / image
+        {tNow('attach.add')}
       </Text>
     </Pressable>
   );

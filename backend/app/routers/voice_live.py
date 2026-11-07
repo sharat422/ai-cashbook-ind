@@ -15,9 +15,9 @@ from ..chatbot.guardrails import voice_seconds_left
 from ..chatbot.loop import LANGUAGE_HINTS, message
 from ..config import settings
 from ..database import SessionLocal
-from ..deps import get_current_membership, require, require_ai_consent
+from ..deps import _resolve_membership, require_ai_consent
 from ..models import AiDecision
-from ..rbac import DATA_VIEW, ENTRY_CREATE
+from ..rbac import DATA_VIEW, ENTRY_CREATE, role_can
 from ..security import get_current_user
 
 router = APIRouter(tags=["ai"])
@@ -41,7 +41,11 @@ def _authorize(token: str, purpose: str, language=None) -> tuple[str, str, float
     with SessionLocal() as db:
         user = get_current_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials=token), db)
         require_ai_consent(user, db)
-        business = require(PURPOSES[purpose]["permission"])(get_current_membership(user, db))
+        # ponytail: a websocket sends no X-Business-Id, so this is the user's first
+        # business; pass the id in the handshake if CAs need voice per business.
+        business, role = _resolve_membership(db, user)
+        if not role_can(role, PURPOSES[purpose]["permission"]):
+            raise HTTPException(403, "Your role doesn't allow this action.")
         max_seconds = PURPOSES[purpose]["max_seconds"]
         if purpose == "chatbot":
             # Daily Ask AI voice budget per merchant (voice entry isn't capped).

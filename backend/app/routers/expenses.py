@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -44,11 +45,8 @@ def create_expense(
     date = validate_date(date, allow_future=False)
     client_id = validate_text(client_id, "Client ID", 80)
     notes = validate_notes(notes, 5000)
-    existing = db.scalars(
-        select(Expense).where(
-            Expense.business_id == business.id, Expense.client_id == client_id
-        )
-    ).first()
+    find = select(Expense).where(Expense.business_id == business.id, Expense.client_id == client_id)
+    existing = db.scalars(find).first()
     if existing is not None:
         return expense_dto(existing)
 
@@ -63,6 +61,10 @@ def create_expense(
         attachment_url=save_upload(attachment),
     )
     db.add(row)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # a concurrent retry with this client_id saved first
+        db.rollback()
+        return expense_dto(db.scalars(find).one())
     db.refresh(row)
     return expense_dto(row)

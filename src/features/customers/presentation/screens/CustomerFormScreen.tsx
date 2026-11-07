@@ -1,7 +1,6 @@
 import React from 'react';
 import {Alert, View} from 'react-native';
 
-import {ApiError} from '@api/client';
 import {Button, Screen, Text} from '@components/ui';
 import {CustomerForm} from '@features/customers/presentation/components';
 import {
@@ -26,17 +25,7 @@ export function CustomerFormScreen({
     form.markSubmitAttempted();
     if (!form.isValid) return;
 
-    const onError = (err: Error) => {
-      // 409 = another device edited this customer since it was loaded. Don't
-      // clobber their change — tell the user to reload the latest version.
-      if (err instanceof ApiError && err.status === 409) {
-        Alert.alert(t('customers.conflictTitle'), t('customers.conflictMsg'), [
-          {text: t('common.ok'), onPress: () => navigation.goBack()},
-        ]);
-        return;
-      }
-      Alert.alert(t('form.couldNotSave'), err.message);
-    };
+    const onError = (err: Error) => Alert.alert(t('form.couldNotSave'), err.message);
 
     if (editing) {
       update.mutate(
@@ -45,7 +34,18 @@ export function CustomerFormScreen({
           draft: form.draft,
           expectedVersion: editing.version,
         },
-        {onSuccess: () => navigation.goBack(), onError},
+        {
+          onSuccess: result => {
+            // Changed on another device first: show both versions, let the owner pick.
+            if (result === 'conflict') {
+              navigation.replace('SyncConflict', {customerId: editing.id});
+              return;
+            }
+            if (result === 'queued') Alert.alert(t('sync.editQueuedTitle'), t('sync.editQueuedMsg'));
+            navigation.goBack();
+          },
+          onError,
+        },
       );
     } else {
       create.mutate(form.draft, {

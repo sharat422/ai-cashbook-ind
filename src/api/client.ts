@@ -1,22 +1,46 @@
 import {API_ROOT, ENV} from '@config/env';
 import {logError} from '@/services/diagnostics/errorLog.store';
 import {useAuthStore} from '@store/auth.store';
+import {tNow, translate, type TKey} from '@/i18n';
 
 /** Normalized error thrown by the API client so the UI can show `.message`. */
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** The server's own (English) wording — for logs and support, not the screen. */
+  detail: string;
+  constructor(status: number, message: string, detail: string = message) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.detail = detail;
   }
+}
+
+const STATUS_KEY: Record<number, TKey> = {
+  401: 'errors.sessionExpired',
+  403: 'errors.notAllowed',
+  404: 'errors.notFound',
+  409: 'errors.conflict',
+  413: 'errors.tooLarge',
+  429: 'errors.tooMany',
+};
+
+/**
+ * What the user reads for a failed request. The server writes its errors in
+ * English, so in any other language the screen shows a translated sentence
+ * for the status instead — never English-only text. English keeps the
+ * server's more specific wording.
+ */
+export function apiErrorMessage(status: number, detail: string): string {
+  const lang = useAuthStore.getState().preferredLanguage;
+  if (lang === 'en') return detail;
+  const key = STATUS_KEY[status] ?? (status >= 500 ? 'errors.server' : 'errors.checkInput');
+  return translate(lang, key);
 }
 
 /** Thrown when a request exceeds ENV.apiTimeoutMs or the device is offline. */
 export class NetworkError extends Error {
-  constructor(
-    message = 'Couldn’t reach the server — it may be waking up. Please try again in a moment.',
-  ) {
+  constructor(message = tNow('errors.network')) {
     super(message);
     this.name = 'NetworkError';
   }
@@ -89,7 +113,7 @@ export async function apiRequest<T>(
   path: string,
   {body, headers, timeoutMs, ...options}: RequestOptions = {},
 ): Promise<T> {
-  const token = useAuthStore.getState().token;
+  const {token, business} = useAuthStore.getState();
   const multipart = isFormData(body);
 
   const controller = new AbortController();
@@ -107,6 +131,8 @@ export async function apiRequest<T>(
         // Let fetch set the multipart boundary itself — never override it.
         ...(multipart ? {} : {'Content-Type': 'application/json'}),
         ...(token ? {Authorization: `Bearer ${token}`} : {}),
+        // Every call is about one business; access is re-checked on the server each time.
+        ...(business?.id ? {'X-Business-Id': business.id} : {}),
         ...headers,
       },
       body:
@@ -131,15 +157,21 @@ export async function apiRequest<T>(
     }
 
     if (!response.ok) {
+      // The owner removed this user's access: sign out of the business at once.
+      if (response.status === 403 && response.headers?.get?.('x-bolcash-access') === 'revoked') {
+        useAuthStore.getState().accessRevoked();
+      }
       // FastAPI returns {"detail": ...} on errors (a string for ours, an array
       // for default validation 422) — normalize either into one human sentence.
+      const detail = humanizeApiError(data, text);
       const apiError = new ApiError(
         response.status,
-        humanizeApiError(data, text),
+        apiErrorMessage(response.status, detail),
+        detail,
       );
       // Log server-side failures (5xx); 4xx are expected and handled by callers.
       if (response.status >= 500) {
-        logError(`api ${options.method ?? 'GET'} ${path}`, apiError);
+        logError(`api ${options.method ?? 'GET'} ${path}`, apiError, detail);
       }
       throw apiError;
     }
@@ -149,9 +181,7 @@ export async function apiRequest<T>(
     if (err instanceof ApiError) throw err;
     const ctx = `api ${options.method ?? 'GET'} ${path}`;
     if (err instanceof Error && err.name === 'AbortError') {
-      const timedOut = new NetworkError(
-        'The server took too long to respond (it may be waking up). Please try again.',
-      );
+      const timedOut = new NetworkError(tNow('errors.timeout'));
       logError(ctx, timedOut);
       throw timedOut;
     }

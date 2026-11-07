@@ -6,6 +6,7 @@ import {
   type LedgerEntryDraft,
 } from '@features/customers/domain/ledger';
 import type {LedgerRepository} from '@features/customers/domain/ledgerRepository';
+import {connectivity} from '@/services/network/connectivity';
 import {ledgerLocal, pendingToEntry} from './ledger.local';
 import {ledgerRemote} from './ledger.remote';
 import {usePendingLedgerStore} from '../presentation/store/pendingLedger.store';
@@ -46,6 +47,9 @@ export const ledgerRepository: LedgerRepository = {
   ): Promise<LedgerEntry> {
     const localId = makeLocalId();
     try {
+      // Known offline (e.g. Wi-Fi with no internet): queue now instead of
+      // waiting out the request timeout — the entry must save in ~instantly.
+      if (!(await connectivity.isOnline())) throw new NetworkError();
       const entry = await ledgerRemote.add(customerId, draft, localId);
       const store = usePendingLedgerStore.getState();
       store.cache(customerId, [...(store.cached[customerId] ?? []).filter(e => e.id !== entry.id), entry]);

@@ -9,7 +9,7 @@ import {
   validateIncomeDraft,
   type IncomeFieldErrors,
 } from '@features/income/domain/validation';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 interface FormValues {
   amount: number;
@@ -22,7 +22,7 @@ interface FormValues {
 const initialValues = (): FormValues => ({
   amount: NaN,
   category: null,
-  date: toISODate(new Date()),
+  date: todayIST(),
   notes: '',
   attachment: null,
 });

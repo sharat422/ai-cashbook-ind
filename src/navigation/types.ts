@@ -1,3 +1,4 @@
+import type {Scheme} from '@features/schemes/data/schemes.remote';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import type {Customer} from '@features/customers/domain/entities';
@@ -35,6 +36,11 @@ export type AppStackParamList = {
   ConsentSettings: undefined;
   BusinessEdit: undefined;
   DeleteAccount: undefined;
+  YourData: undefined;
+  SyncStatus: undefined;
+  SyncConflict: {customerId: string};
+  KhataImport: undefined;
+  AccountantActivity: {userId?: string; mobile?: string} | undefined;
   LegalDoc: {doc: 'privacy' | 'terms'};
   Business: undefined;
   Assistant: undefined;
@@ -56,6 +62,10 @@ export type AppStackParamList = {
   StockCount: undefined;
   StockHistory: {itemId?: string; name?: string};
   VanStock: undefined;
+  Bill: {customer: {id: string; fullName: string}; beatId?: string};
+  Schemes: undefined;
+  SchemeForm: {scheme?: Scheme};
+  SchemeReport: {customerId?: string; customerName?: string};
   Diagnostics: undefined;
   Help: undefined;
   Feedback: {kind?: 'bug' | 'feedback'} | undefined;

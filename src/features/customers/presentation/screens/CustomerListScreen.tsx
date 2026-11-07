@@ -10,6 +10,8 @@ import {
 } from '@features/customers/presentation/components';
 import {useCustomers} from '@features/customers/presentation/hooks';
 import {useDebouncedValue} from '@/shared/hooks/useDebouncedValue';
+import {usePermissions} from '@features/auth/hooks';
+import {PERMISSIONS} from '@features/auth/rbac';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
@@ -20,6 +22,7 @@ export function CustomerListScreen({
   route,
 }: AppScreenProps<'Customers'>): React.JSX.Element {
   const t = useT();
+  const canAdd = usePermissions().can(PERMISSIONS.ENTRY_CREATE); // read-only roles can't add
   const [search, setSearch] = React.useState(route.params?.search ?? '');
   const debounced = useDebouncedValue(search, 350);
 
@@ -68,6 +71,7 @@ export function CustomerListScreen({
       <View className="pb-3 pt-4">
         <View className="flex-row items-center justify-between">
           <Text variant="title">{t('customers.title')}</Text>
+          {canAdd ? (
           <Pressable
             accessibilityRole="button"
             onPress={() => navigation.navigate('CustomerForm')}
@@ -83,6 +87,7 @@ export function CustomerListScreen({
               {t('customers.add')}
             </Text>
           </Pressable>
+          ) : null}
         </View>
 
         <View className="mt-4">
@@ -127,9 +132,9 @@ export function CustomerListScreen({
                   ? t('customers.emptySearchMsg')
                   : t('customers.emptyMsg')
               }
-              actionLabel={hasSearch ? undefined : t('customers.addFirst')}
+              actionLabel={hasSearch || !canAdd ? undefined : t('customers.addFirst')}
               onAction={
-                hasSearch
+                hasSearch || !canAdd
                   ? undefined
                   : () => navigation.navigate('CustomerForm')
               }

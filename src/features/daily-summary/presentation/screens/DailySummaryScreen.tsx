@@ -21,7 +21,7 @@ import {useDailySummary} from '@features/daily-summary/presentation/hooks';
 import {useSummarySettingsStore} from '@features/daily-summary/presentation/store/summarySettings.store';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
-import {toISODate} from '@utils/date';
+import {todayIST} from '@utils/date';
 
 const pad = (n: number) => `${n}`.padStart(2, '0');
 
@@ -33,7 +33,7 @@ export function DailySummaryScreen({
   navigation,
 }: AppScreenProps<'DailySummary'>): React.JSX.Element {
   const t = useT();
-  const today = toISODate(new Date());
+  const today = todayIST();
   const {data, isLoading, isError, error, refetch, isRefetching} =
     useDailySummary(today);
   const ENABLED_OPTIONS = [

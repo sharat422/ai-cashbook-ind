@@ -19,11 +19,14 @@ import {
   SuccessOverlay,
   Text,
 } from '@components/ui';
+import {usePermissions} from '@features/auth/hooks';
+import {PERMISSIONS} from '@features/auth/rbac';
 import type {LedgerEntryView} from '@features/customers/domain/ledger';
 import {
   ReceivePaymentSheet,
   RiskInsightCard,
   StatusBadge,
+  LEDGER_LIST_WINDOW,
   TimelineItem,
   type ReceivePaymentInput,
 } from '@features/customers/presentation/components';
@@ -57,6 +60,9 @@ export function CustomerProfileScreen({
   navigation,
   route,
 }: AppScreenProps<'CustomerProfile'>): React.JSX.Element {
+  const {can} = usePermissions();
+  const canAdd = can(PERMISSIONS.ENTRY_CREATE);
+  const canEdit = can(PERMISSIONS.ENTRY_EDIT);
   const t = useT();
   const {customer} = route.params;
   const ledgerQuery = useCustomerLedger(customer.id);
@@ -188,7 +194,8 @@ export function CustomerProfileScreen({
         </View>
       ) : null}
 
-      {/* Primary actions */}
+      {/* Primary actions — hidden for read-only roles (accountant) */}
+      {canAdd ? (
       <View className="mt-5 flex-row" style={{gap: 12}}>
         <ActionButton
           label={t('customers.addCredit')}
@@ -201,41 +208,64 @@ export function CustomerProfileScreen({
           onPress={() => setPaymentOpen(true)}
         />
       </View>
+      ) : null}
 
       {/* Secondary actions */}
       <View className="mt-3 flex-row flex-wrap" style={{gap: 8}}>
-        <SecondaryAction
-          label={t('customers.request')}
-          onPress={() => navigation.navigate('RequestPayment', {customer})}
-        />
-        <SecondaryAction
-          label={t('customers.reminder')}
-          onPress={() => setReminderOpen(true)}
-        />
+        {canAdd ? (
+          <SecondaryAction
+            label={t('customers.request')}
+            onPress={() => navigation.navigate('RequestPayment', {customer})}
+          />
+        ) : null}
+        {canAdd ? (
+          <SecondaryAction
+            label={t('customers.reminder')}
+            onPress={() => setReminderOpen(true)}
+          />
+        ) : null}
         <SecondaryAction
           label={t('customers.statement')}
           onPress={() => navigation.navigate('CustomerStatement', {customer})}
         />
+        {canAdd ? (
+          <SecondaryAction
+            label={t('customers.collect')}
+            onPress={() =>
+              navigation.navigate('CollectionAssistant', {
+                name: customer.fullName,
+                mobile: customer.mobile,
+                amount: Math.max(outstanding, 0),
+                daysOverdue,
+                relationshipScore,
+              })
+            }
+          />
+        ) : null}
+        {canAdd ? (
+          <SecondaryAction
+            label={t('bill.new')}
+            onPress={() => navigation.navigate('Bill', {customer: {id: customer.id, fullName: customer.fullName}})}
+          />
+        ) : null}
         <SecondaryAction
-          label={t('customers.collect')}
+          label={t('schemes.log')}
           onPress={() =>
-            navigation.navigate('CollectionAssistant', {
-              name: customer.fullName,
-              mobile: customer.mobile,
-              amount: Math.max(outstanding, 0),
-              daysOverdue,
-              relationshipScore,
-            })
+            navigation.navigate('SchemeReport', {customerId: customer.id, customerName: customer.fullName})
           }
         />
-        <SecondaryAction
-          label={t('customers.limit')}
-          onPress={() => setLimitOpen(true)}
-        />
-        <SecondaryAction
-          label={t('customers.edit')}
-          onPress={() => navigation.navigate('CustomerForm', {customer})}
-        />
+        {canEdit ? (
+          <SecondaryAction
+            label={t('customers.limit')}
+            onPress={() => setLimitOpen(true)}
+          />
+        ) : null}
+        {canEdit ? (
+          <SecondaryAction
+            label={t('customers.edit')}
+            onPress={() => navigation.navigate('CustomerForm', {customer})}
+          />
+        ) : null}
         <SecondaryAction
           label={t('customers.call')}
           onPress={() => Linking.openURL(`tel:${customer.mobile}`)}
@@ -339,6 +369,7 @@ export function CustomerProfileScreen({
   return (
     <Screen scroll={false}>
       <FlatList
+        {...LEDGER_LIST_WINDOW}
         data={entries}
         keyExtractor={item => item.id}
         renderItem={({item, index}) => (

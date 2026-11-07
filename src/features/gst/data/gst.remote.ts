@@ -1,9 +1,5 @@
-import RNFS from 'react-native-fs';
-import Share from 'react-native-share';
-
 import {apiRequest} from '@api/client';
-import {API_ROOT} from '@config/env';
-import {useAuthStore} from '@store/auth.store';
+import {downloadAndShare} from '@api/download';
 
 /** Exact decimal string from the server, e.g. "1180.00". */
 export type Money = string;
@@ -106,19 +102,12 @@ export const gstRemote = {
   },
 
   /** Download one CA file to the device and open the share sheet. */
-  async download(report: GstReport, from: string, to: string): Promise<void> {
+  download(report: GstReport, from: string, to: string): Promise<void> {
     const ext = report.endsWith('.csv') ? 'csv' : 'xlsx';
-    const path = `${RNFS.DocumentDirectoryPath}/${FILE_STEM[report]}_${from}_${to}.${ext}`;
-    const token = useAuthStore.getState().token;
-    const {statusCode} = await RNFS.downloadFile({
-      fromUrl: `${API_ROOT}/reports/${report}?from=${from}&to=${to}`,
-      toFile: path,
-      headers: token ? {Authorization: `Bearer ${token}`} : {},
-    }).promise;
-    if (statusCode !== 200) {
-      await RNFS.unlink(path).catch(() => undefined);
-      throw new Error(`Download failed (${statusCode}).`);
-    }
-    await Share.open({url: `file://${path}`, type: MIME[report], failOnCancel: false});
+    return downloadAndShare(
+      `/reports/${report}?from=${from}&to=${to}`,
+      `${FILE_STEM[report]}_${from}_${to}.${ext}`,
+      MIME[report],
+    );
   },
 };

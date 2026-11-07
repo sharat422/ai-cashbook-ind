@@ -8,6 +8,7 @@ import {
 } from '@features/customers/domain/entities';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
+import {useT} from '@/i18n';
 import {StatusBadge} from './StatusBadge';
 import {STATUS_STYLE} from './statusStyle';
 
@@ -31,6 +32,7 @@ function CustomerCardBase({
   customer: Customer;
   onPress: () => void;
 }): React.JSX.Element {
+  const t = useT();
   const status = customerStatus(customer);
   const style = STATUS_STYLE[status];
   const subtitle = customer.businessName || `+91 ${customer.mobile}`;
@@ -53,8 +55,8 @@ function CustomerCardBase({
           </Text>
           <Text className="mt-0.5 text-[11px] text-muted" numberOfLines={1}>
             {customer.lastTransactionDate
-              ? `Last txn ${formatDisplayDate(customer.lastTransactionDate)}`
-              : 'No transactions yet'}
+              ? t('customers.lastTxn', {date: formatDisplayDate(customer.lastTransactionDate)})
+              : t('customers.noTxnTitle')}
           </Text>
         </View>
 

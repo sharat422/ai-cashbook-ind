@@ -25,6 +25,15 @@ export function translate(
 }
 
 /**
+ * Translate with the language selected right now, outside React (validation,
+ * API errors, share helpers). Screens should prefer `useT()`, which also
+ * re-renders on a language change.
+ */
+export function tNow(key: TKey, vars?: Record<string, string | number>): string {
+  return translate(useAuthStore.getState().preferredLanguage, key, vars);
+}
+
+/**
  * Returns a `t(key, vars?)` translator bound to the user's selected content
  * language. Falls back to English for any missing key, and interpolates
  * `{name}` placeholders from `vars`. Re-renders the caller when the language
