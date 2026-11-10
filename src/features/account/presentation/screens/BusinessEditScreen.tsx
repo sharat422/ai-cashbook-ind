@@ -4,6 +4,7 @@ import {Alert, View} from 'react-native';
 import {Button, Input, Screen, SegmentedControl, Select, Text} from '@components/ui';
 import {BUSINESS_TYPES, INDIAN_STATES} from '@config/constants';
 import {accountRemote} from '@features/account/data/account.remote';
+import {cleanGstin, isValidGstin} from '@features/gst/domain/gst';
 import {useAuthStore} from '@store/auth.store';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
@@ -29,12 +30,17 @@ export function BusinessEditScreen({
   const [gstRegistered, setGstRegistered] = useState<boolean>(
     business?.gstRegistered ?? false,
   );
+  const [gstin, setGstin] = useState(business?.gstin ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSave = async () => {
     if (!businessName.trim() || !ownerName.trim()) {
       setError(t('account.editRequired'));
+      return;
+    }
+    if (gstRegistered && gstin && !isValidGstin(gstin)) {
+      setError(t('errors.gstinCheck'));
       return;
     }
     setError(null);
@@ -46,6 +52,8 @@ export function BusinessEditScreen({
         businessType: businessType ?? undefined,
         state: state ?? undefined,
         gstRegistered,
+        // Printed on every GST invoice; the server checks it matches the state.
+        gstin: gstRegistered ? cleanGstin(gstin) : undefined,
       });
       setBusiness(updated);
       navigation.goBack();
@@ -107,6 +115,21 @@ export function BusinessEditScreen({
           value={gstRegistered}
           onChange={setGstRegistered}
         />
+        {gstRegistered ? (
+          <Input
+            testID="business-gstin"
+            label={t('gst.sellerGstin')}
+            placeholder="29ABCDE1234F1Z5"
+            value={gstin}
+            autoCapitalize="characters"
+            maxLength={15}
+            onChangeText={v => {
+              setGstin(v.toUpperCase());
+              if (error) setError(null);
+            }}
+            error={error && gstin && !isValidGstin(gstin) ? error : null}
+          />
+        ) : null}
 
         <Button
           title={t('common.save')}

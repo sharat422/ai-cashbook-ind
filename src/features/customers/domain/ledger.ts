@@ -64,12 +64,25 @@ export interface LedgerEntry {
   /** Payment-only: how it was received and any reference (UPI ref / cheque no). */
   paymentMethod?: PaymentMethod;
   referenceNumber?: string;
+  /** Cheque: the drawer's bank and account (a cheque number alone repeats). */
+  chequeBank?: string;
+  chequeAccount?: string;
+  /** Set by the server when a bank/cheque reference repeats an earlier
+   *  payment: saved anyway, the person is told to check it. */
+  warning?: DuplicateReference;
   /** Local file URI while pending; remote URL once uploaded. */
   attachmentUrl?: string;
   attachment?: Attachment | null;
   createdAt: string;
   /** Defaults to 'synced'; 'pending' for entries queued offline. */
   syncStatus?: LedgerSyncStatus;
+}
+
+export interface DuplicateReference {
+  entryId: string;
+  customerName: string;
+  amount: string;
+  date: string;
 }
 
 /** A ledger entry with the running outstanding balance after it. */
@@ -96,6 +109,8 @@ export interface LedgerEntryDraft {
   notes?: string;
   paymentMethod?: PaymentMethod;
   referenceNumber?: string;
+  chequeBank?: string;
+  chequeAccount?: string;
   attachment?: Attachment | null;
   /** Set when recorded from a beat day-list; feeds that beat's daily close. */
   beatId?: string;
@@ -107,6 +122,9 @@ export interface LedgerEntryDraft {
 export interface GstInvoiceInput {
   rate: string;
   hsn: string;
+  /** Quantity and unit (UQC) of the line — required on a GST invoice. */
+  quantity: string;
+  uqc: string;
   priceIncludesGst: boolean;
   customerGstin?: string;
   /** Customer's state when they have no GSTIN; defaults to the seller's. */

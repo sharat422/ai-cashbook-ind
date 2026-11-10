@@ -23,6 +23,8 @@ psycopg2-binary==2.9.10
 cryptography==43.0.3
 # Reads .xlsx bank statements for manual UPI/bank reconciliation.
 openpyxl==3.1.5
+# Old Excel 97-2003 (.xls) bank statements, read-only.
+xlrd==2.0.1
 # Error/crash monitoring + real-time alerts (activated only when SENTRY_DSN set).
 sentry-sdk==2.20.0
 # Server-side PDFs (retailer statements, printable ledger). uharfbuzz shapes

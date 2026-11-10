@@ -26,6 +26,10 @@ class MoveBody(BaseModel):
     van_user_id: str | None = Field(default=None, alias="vanUserId")
     date: str
     note: str | None = None
+    # Purchases: required.
+    supplier: str | None = Field(default=None, max_length=200)
+    unit_price: str | float | None = Field(default=None, alias="unitPrice")
+    bill_ref: str | None = Field(default=None, alias="billRef", max_length=40)
 
 
 class TransferBody(BaseModel):
@@ -61,6 +65,8 @@ def move_dto(m: StockMove) -> dict:
     return {"id": m.id, "itemId": m.item_id, "location": m.location, "vanUserId": m.van_user_id,
             "kind": m.kind, "quantity": _q(m.quantity), "date": m.date, "groupId": m.group_id,
             "counted": None if m.counted is None else _q(m.counted), "note": m.note,
+            "supplier": m.supplier, "billRef": m.bill_ref,
+            "unitPrice": None if m.unit_price is None else f"{Decimal(m.unit_price):.2f}",
             "createdBy": m.created_by, "createdAt": m.created_at}
 
 
@@ -69,8 +75,8 @@ def _vans(db: Session, business: Business) -> list[dict]:
         select(BusinessMember, User).join(User, User.id == BusinessMember.user_id)
         .where(BusinessMember.business_id == business.id, BusinessMember.status == "active")
     ).all()
-    return [{"userId": u.id, "mobile": u.mobile, "role": m.role}
-            for m, u in sorted(rows, key=lambda r: (r[0].role != "staff", r[1].mobile))]
+    return [{"userId": u.id, "mobile": u.mobile, "role": m.role, "name": m.display_name}
+            for m, u in sorted(rows, key=lambda r: (r[0].role != "staff", r[0].display_name or r[1].mobile))]
 
 
 def _stock_items(db: Session, business: Business) -> list[Item]:
@@ -163,7 +169,9 @@ def add_move(
     moves = svc.record(db, business, user, role, kind=body.kind, item_id=body.item_id,
                        qty=body.quantity, location=body.location, van_user_id=body.van_user_id,
                        day=validate_date(body.date), client_id=body.client_id,
-                       note=validate_notes(body.note, 500))
+                       note=validate_notes(body.note, 500),
+                       purchase={"supplier": body.supplier, "unit_price": body.unit_price,
+                                 "bill_ref": body.bill_ref})
     return [move_dto(m) for m in moves]
 
 

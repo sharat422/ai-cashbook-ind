@@ -1,42 +1,62 @@
+import {personLabel} from '@utils/personLabel';
 import React, {useState} from 'react';
 import {Alert, Pressable, View} from 'react-native';
 
 import {FilterChip} from '@components/filters';
-import {FormField, TextField} from '@components/form';
+import {DateField, FormField, TextField} from '@components/form';
 import {Button, EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
-import {ROLE_LABEL} from '@features/auth/rbac';
-import type {Beat} from '@features/beats/data/beats.remote';
-import {useBeatMutations, useBeats} from '@features/beats/presentation/hooks';
+import type {Beat, BeatAssignment} from '@features/beats/data/beats.remote';
+import {useBeatMutations, useBeats, useDeletedBeats} from '@features/beats/presentation/hooks';
 import {useCustomers} from '@features/customers/presentation/hooks/useCustomers';
 import type {TeamMember} from '@features/team/data/team.remote';
 import {useTeam} from '@features/team/presentation/hooks';
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
+import {formatDisplayDate, todayIST} from '@utils/date';
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
+/** A year ahead: how far cover can be planned in the date picker. */
+const PLAN_AHEAD = () => new Date(Date.now() + 365 * 24 * 3600 * 1000);
 
 type Picked = Array<{id: string; name: string}>;
 
-/** Owner: create beats (name, days, salesperson, retailers) and set visit order. */
+/** Owner: create, edit and delete beats (name, days, salesperson, retailers) and set visit order. */
 export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.JSX.Element {
   const t = useT();
   const beats = useBeats();
   const team = useTeam();
   const members: TeamMember[] = team.data ?? [];
   const list: Beat[] = beats.data ?? [];
-  const {create, setRetailers} = useBeatMutations();
-  const [creating, setCreating] = useState(false);
+  const {create, setRetailers, edit, remove, assign, unassign, restore} = useBeatMutations();
+  const [showDeleted, setShowDeleted] = useState(false);
+  const deleted = useDeletedBeats(showDeleted);
+  /** 'new', the id of the beat whose details are being edited, or null. */
+  const [form, setForm] = useState<string | null>(null);
+  const creating = form !== null;
   const [editing, setEditing] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [days, setDays] = useState<number[]>([]);
   const [assignee, setAssignee] = useState<string | null>(null);
   const [picked, setPicked] = useState<Picked>([]);
+  const [helperFrom, setHelperFrom] = useState(todayIST());
+  const [helperTo, setHelperTo] = useState('');
 
+  /** Helpers still on the beat after today, or starting later (one removed today is off). */
+  const helpers = (beat: Beat) =>
+    beat.assignments.filter(a => a.role === 'secondary' && (a.validTo === null || a.validTo > todayIST()));
+  /** "Ravi — from 16 Nov 2026 until 20 Nov 2026"; plain name for open cover that has started. */
+  const helperLabel = (a: Pick<BeatAssignment, 'validFrom' | 'validTo'>, who: string) => {
+    const dates = [
+      a.validFrom > todayIST() ? t('beats.helperFrom', {date: formatDisplayDate(a.validFrom)}) : null,
+      a.validTo ? t('beats.helperUntil', {date: formatDisplayDate(a.validTo)}) : null,
+    ].filter(Boolean).join(' ');
+    return dates ? `${who} — ${dates}` : who;
+  };
   const dayNames = (ds: number[]) => ds.map(d => t(`beats.day${d}` as TKey)).join(', ');
   const memberLabel = (userId: string | null) => {
     const m = members.find(x => x.userId === userId);
-    return m ? `${m.mobile} · ${ROLE_LABEL[m.role]}` : t('beats.unassigned');
+    return m ? `${personLabel(m.name, m.mobile)} · ${t(`team.role.${m.role}` as TKey)}` : t('beats.unassigned');
   };
 
   const startCreate = () => {
@@ -45,11 +65,30 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
     setAssignee(null);
     setPicked([]);
     setEditing(null);
-    setCreating(true);
+    setForm('new');
   };
+  const startDetails = (beat: Beat) => {
+    setName(beat.name);
+    setDays(beat.weekdays);
+    setAssignee(beat.assignedUserId);
+    setHelperFrom(todayIST());
+    setHelperTo('');
+    setEditing(null);
+    setForm(beat.id);
+  };
+  const confirmDelete = (beat: Beat) =>
+    Alert.alert(t('beats.deleteTitle', {name: beat.name}), t('beats.deleteMsg'), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('beats.delete'), style: 'destructive', onPress: () => remove.mutate(beat.id, {onError})},
+    ]);
+  const confirmRestore = (beat: Beat) =>
+    Alert.alert(t('beats.restoreTitle', {name: beat.name}), t('beats.restoreMsg'), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('beats.restore'), onPress: () => restore.mutate(beat.id, {onError})},
+    ]);
   const startEdit = (beat: Beat) => {
     setPicked(beat.retailers.map(r => ({id: r.customerId, name: r.fullName})));
-    setCreating(false);
+    setForm(null);
     setEditing(beat.id);
   };
   const onError = (err: Error) => Alert.alert(t('form.couldNotSave'), err.message);
@@ -59,9 +98,16 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
       Alert.alert(t('beats.needNameAndDays'));
       return;
     }
+    if (form !== 'new' && form !== null) {
+      edit.mutate(
+        {beatId: form, draft: {name: name.trim(), weekdays: days, assignedUserId: assignee}},
+        {onSuccess: () => setForm(null), onError},
+      );
+      return;
+    }
     create.mutate(
       {name: name.trim(), weekdays: days, assignedUserId: assignee, customerIds: picked.map(p => p.id)},
-      {onSuccess: () => setCreating(false), onError},
+      {onSuccess: () => setForm(null), onError},
     );
   };
   const saveOrder = (beatId: string) =>
@@ -121,9 +167,10 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
               ))}
             </View>
           </FormField>
-          <RetailerPicker picked={picked} onChange={setPicked} />
-          <Button title={t('beats.create')} loading={create.isPending} onPress={saveNew} />
-          <Button title={t('common.cancel')} variant="ghost" onPress={() => setCreating(false)} />
+          {form === 'new' ? <RetailerPicker picked={picked} onChange={setPicked} /> : null}
+          <Button testID="beat-save" title={form === 'new' ? t('beats.create') : t('beats.saveDetails')}
+            loading={create.isPending || edit.isPending} onPress={saveNew} />
+          <Button title={t('common.cancel')} variant="ghost" onPress={() => setForm(null)} />
         </View>
       ) : (
         <Button title={t('beats.newBeat')} className="mt-6" onPress={startCreate} />
@@ -138,8 +185,46 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
           <Text className="text-base font-semibold text-slate-900">{beat.name}</Text>
           <Text variant="caption">{dayNames(beat.weekdays)}</Text>
           <Text variant="caption">
-            {memberLabel(beat.assignedUserId)} · {t('beats.retailerCount', {count: beat.retailers.length})}
+            {beat.assignedUserId ? memberLabel(beat.assignedUserId) : t('beats.pickSalesperson')} ·{' '}
+            {t('beats.retailerCount', {count: beat.retailers.length})}
           </Text>
+          {helpers(beat).length ? (
+            <Text testID={`beat-team-${beat.id}`} variant="caption">
+              {t('beats.alsoOnBeat')}: {helpers(beat).map(a => helperLabel(a, personLabel(a.name, a.mobile))).join(', ')}
+            </Text>
+          ) : null}
+          {form === beat.id ? (
+            <View className="mt-3" style={{gap: 6}}>
+              <Text variant="label">{t('beats.alsoOnBeat')}</Text>
+              <Text variant="caption">{t('beats.alsoOnBeatHint')}</Text>
+              <Text variant="caption">{t('beats.helperDatesHint')}</Text>
+              <FormField label={t('beats.helperStart')}>
+                <DateField value={helperFrom} onChange={setHelperFrom} maximumDate={PLAN_AHEAD()} />
+              </FormField>
+              <FormField label={t('beats.helperEnd')}>
+                <DateField value={helperTo} onChange={setHelperTo} maximumDate={PLAN_AHEAD()} />
+              </FormField>
+              {helperTo ? (
+                <Button testID="helper-no-end" title={t('beats.noEndDate')} variant="ghost" onPress={() => setHelperTo('')} />
+              ) : null}
+              <View className="flex-row flex-wrap" style={{gap: 8}}>
+                {members.filter(m => m.role === 'staff' && m.userId !== beat.assignedUserId).map(m => {
+                  const mine = helpers(beat).find(a => a.userId === m.userId);
+                  return (
+                    <FilterChip
+                      key={m.userId}
+                      label={mine ? helperLabel(mine, personLabel(m.name, m.mobile)) : personLabel(m.name, m.mobile)}
+                      selected={!!mine}
+                      onPress={() => mine
+                        ? unassign.mutate({beatId: beat.id, userId: m.userId}, {onError})
+                        : assign.mutate({beatId: beat.id, userId: m.userId, validFrom: helperFrom, validTo: helperTo || null},
+                          {onError})}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
           {editing === beat.id ? (
             <View className="mt-3" style={{gap: 10}}>
               <RetailerPicker picked={picked} onChange={setPicked} />
@@ -166,8 +251,43 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
               />
             </View>
           )}
+          {editing !== beat.id ? (
+            <View className="mt-2 flex-row" style={{gap: 8}}>
+              <Button testID={`beat-edit-${beat.id}`} title={t('beats.editDetails')} variant="ghost"
+                className="flex-1" onPress={() => startDetails(beat)} />
+              <Button testID={`beat-history-${beat.id}`} title={t('visits.open')} variant="ghost" className="flex-1"
+                onPress={() => navigation.navigate('VisitHistory', {beatId: beat.id, title: beat.name})} />
+              <Button testID={`beat-delete-${beat.id}`} title={t('beats.delete')} variant="ghost" className="flex-1"
+                onPress={() => confirmDelete(beat)} />
+            </View>
+          ) : null}
         </View>
       ))}
+
+      {/* Deleted beats: an owner's undo. They come back as they were. */}
+      <Button testID="beats-show-deleted" title={t('beats.deletedBeats')} variant="ghost" className="mt-6"
+        onPress={() => setShowDeleted(v => !v)} />
+      {showDeleted ? (
+        deleted.isLoading ? (
+          <Skeleton className="mt-2 h-16 w-full" />
+        ) : !deleted.data?.length ? (
+          <Text variant="caption" className="mt-2">{t('beats.noDeleted')}</Text>
+        ) : (
+          deleted.data.map((beat: Beat) => (
+            <View key={beat.id} testID={`deleted-beat-${beat.id}`}
+              className="mt-2 flex-row items-center rounded-2xl border border-border bg-white p-4" style={{gap: 8}}>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-slate-900">{beat.name}</Text>
+                <Text variant="caption">
+                  {dayNames(beat.weekdays)} · {t('beats.retailerCount', {count: beat.retailers.length})}
+                </Text>
+              </View>
+              <Button testID={`beat-restore-${beat.id}`} title={t('beats.restore')} variant="secondary"
+                loading={restore.isPending && restore.variables === beat.id} onPress={() => confirmRestore(beat)} />
+            </View>
+          ))
+        )
+      ) : null}
     </Screen>
   );
 }

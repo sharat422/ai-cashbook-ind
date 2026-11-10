@@ -3,6 +3,8 @@ import type {Role} from '@features/auth/rbac';
 
 export interface TeamMember {
   userId: string;
+  /** The owner's name for this person (null = show the mobile number). */
+  name: string | null;
   mobile: string;
   role: Role;
   status: string;
@@ -12,6 +14,7 @@ export interface TeamMember {
 
 interface TeamMemberDto {
   user_id: string;
+  name?: string | null;
   mobile: string | null;
   role: Role;
   status: string;
@@ -22,6 +25,7 @@ interface TeamMemberDto {
 function toMember(d: TeamMemberDto): TeamMember {
   return {
     userId: d.user_id,
+    name: d.name ?? null,
     mobile: d.mobile ?? '',
     role: d.role,
     status: d.status,
@@ -35,6 +39,7 @@ export interface AccessEntry {
   at: string;
   atIst: string;
   mobile: string;
+  name: string | null;
   userId: string | null;
   action: 'view' | 'export' | 'denied';
   area: 'ledger' | 'ageing' | 'customers' | 'dailyClose' | 'gst' | 'reports' | 'dashboard' | 'export' | 'assistant' | 'other';
@@ -48,10 +53,13 @@ export const teamRemote = {
     const dtos = await apiRequest<TeamMemberDto[]>('/team', {method: 'GET'});
     return dtos.map(toMember);
   },
-  async add(mobile: string, role: Role): Promise<TeamMember> {
+  async add(mobile: string, role: Role, name?: string): Promise<TeamMember> {
     return toMember(
-      await apiRequest<TeamMemberDto>('/team', {method: 'POST', body: {mobile, role}}),
+      await apiRequest<TeamMemberDto>('/team', {method: 'POST', body: {mobile, role, name}}),
     );
+  },
+  async rename(userId: string, name: string): Promise<TeamMember> {
+    return toMember(await apiRequest<TeamMemberDto>(`/team/${userId}`, {method: 'PATCH', body: {name}}));
   },
   async updateRole(userId: string, role: Role): Promise<TeamMember> {
     return toMember(

@@ -123,3 +123,27 @@ def test_invalid_role_rejected(make_user, client):
     owner = make_user()
     r = client.post("/api/v1/team", headers=owner.headers, json={"mobile": "8333333333", "role": "superadmin"})
     assert r.status_code == 422
+
+
+def test_owner_names_people_and_the_name_shows_on_vans_and_visits(make_user, client):
+    owner = make_user()
+    r = client.post("/api/v1/team", headers=owner.headers,
+                    json={"mobile": "7322000001", "role": "staff", "name": "  Ravi   (Van 2) "})
+    assert r.status_code == 200 and r.json()["name"] == "Ravi (Van 2)"
+    uid = r.json()["user_id"]
+    staff = _login(client, "7322000001")
+    vans = client.get("/api/v1/stock", headers=owner.headers).json()["vans"]
+    assert any(v["userId"] == uid and v["name"] == "Ravi (Van 2)" for v in vans)
+
+    shop = add_customer(client, owner.headers)["id"]
+    beat = client.post("/api/v1/beats", headers=owner.headers, json={
+        "name": "B", "weekdays": list(range(7)), "assignedUserId": uid, "customerIds": [shop]}).json()
+    client.post("/api/v1/visits", headers=staff, json={"clientId": "n1", "beatId": beat["id"],
+                                                         "customerId": shop, "outcome": "visited_ordered"})
+    visits = client.get("/api/v1/visits", headers=owner.headers).json()
+    assert visits[0]["user_name"] == "Ravi (Van 2)"
+
+    # Rename, or clear back to the number; the role is untouched.
+    r = client.patch(f"/api/v1/team/{uid}", headers=owner.headers, json={"name": "Ravi K"})
+    assert (r.json()["name"], r.json()["role"]) == ("Ravi K", "staff")
+    assert client.patch(f"/api/v1/team/{uid}", headers=owner.headers, json={"name": ""}).json()["name"] is None

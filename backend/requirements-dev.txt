@@ -4,3 +4,5 @@
 pytest==8.3.4
 # Reads generated PDFs back in tests.
 pypdf==5.1.0
+# Writes real Excel 97-2003 (.xls) files for the statement-import tests.
+xlwt==1.3.0

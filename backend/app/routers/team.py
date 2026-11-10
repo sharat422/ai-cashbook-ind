@@ -2,12 +2,13 @@ import re
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_membership, require
+from ..beats import end_all_for_member
 from ..calc import IST
 from ..models import AccessLog, Business, BusinessMember, Customer, User
 from ..rbac import TEAM_MANAGE, ROLES
@@ -19,15 +20,23 @@ router = APIRouter(tags=["team"])
 class AddMemberBody(BaseModel):
     mobile: str
     role: str  # accountant | staff | owner
+    name: str | None = Field(default=None, max_length=60)
 
 
 class UpdateRoleBody(BaseModel):
-    role: str
+    role: str | None = None
+    name: str | None = Field(default=None, max_length=60)  # "" clears it
+
+
+def _name(value: str | None) -> str | None:
+    v = " ".join((value or "").split())
+    return v[:60] or None
 
 
 def _member_dto(m: BusinessMember, user: User | None, self_user_id: str) -> dict:
     return {
         "user_id": m.user_id,
+        "name": m.display_name,
         "mobile": user.mobile if user else m.invited_by_mobile,
         "role": m.role,
         "status": m.status,
@@ -113,6 +122,8 @@ def add_member(
     if existing is not None:
         existing.role = body.role  # already a member → update their role
         existing.status = "active"  # re-inviting someone whose access was removed
+        if body.name is not None:
+            existing.display_name = _name(body.name)
         member = existing
     else:
         member = BusinessMember(
@@ -121,6 +132,7 @@ def add_member(
             role=body.role,
             status="active",
             invited_by_mobile=mobile,
+            display_name=_name(body.name),
         )
         db.add(member)
     db.commit()
@@ -148,20 +160,23 @@ def update_member_role(
     current: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    if body.role not in ROLES:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Role must be one of {', '.join(ROLES)}",
-        )
     member = _owned_member(db, business.id, user_id)
-    # Guard: don't let the last active owner demote themselves and lock the
-    # business out (inactive owner rows don't count — see _active_owner_count).
-    if body.role != "owner" and _is_last_active_owner(db, business.id, member):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            "This is the only owner — promote someone else to owner first.",
-        )
-    member.role = body.role
+    if body.name is not None:
+        member.display_name = _name(body.name)
+    if body.role is not None:
+        if body.role not in ROLES:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"Role must be one of {', '.join(ROLES)}",
+            )
+        # Guard: don't let the last active owner demote themselves and lock the
+        # business out (inactive owner rows don't count — see _active_owner_count).
+        if body.role != "owner" and _is_last_active_owner(db, business.id, member):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "This is the only owner — promote someone else to owner first.",
+            )
+        member.role = body.role
     db.commit()
     db.refresh(member)
     return _member_dto(member, db.get(User, member.user_id), current.id)
@@ -183,6 +198,7 @@ def remove_member(
     # Kept as "revoked", not deleted: their next call is refused with a clear
     # "access removed" (not "set up a business"), and their audit trail stays.
     member.status = "revoked"
+    end_all_for_member(db, business, user_id)  # their past visits stay in history
     db.commit()
 
 
@@ -208,13 +224,16 @@ def accountant_activity(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     """Owner: what accountants viewed and exported, newest first, times in IST."""
-    q = select(AccessLog).where(AccessLog.business_id == business.id)
+    q = select(AccessLog).where(AccessLog.business_id == business.id,
+                                AccessLog.action.in_(("view", "export", "denied")))
     if user_id:
         q = q.where(AccessLog.user_id == user_id)
     rows = db.scalars(q.order_by(AccessLog.created_at.desc()).limit(limit)).all()
     ids = {m.group(1) for r in rows if (m := _CUSTOMER_ID.search(r.path))}
     names = dict(db.execute(select(Customer.id, Customer.full_name).where(
         Customer.business_id == business.id, Customer.id.in_(ids))).all()) if ids else {}
+    names_by_user = dict(db.execute(select(BusinessMember.user_id, BusinessMember.display_name).where(
+        BusinessMember.business_id == business.id)).all())
     out = []
     for r in rows:
         m = _CUSTOMER_ID.search(r.path)
@@ -222,6 +241,7 @@ def accountant_activity(
             "at": r.created_at,
             "atIst": datetime.fromisoformat(r.created_at).astimezone(IST).strftime("%d %b %Y, %I:%M %p IST"),
             "mobile": r.mobile,
+            "name": names_by_user.get(r.user_id),
             "userId": r.user_id,
             "action": r.action,
             "area": next((a for rx, a in _AREAS if rx.search(r.path)), "other"),

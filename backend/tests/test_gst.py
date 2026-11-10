@@ -14,7 +14,7 @@ from conftest import today_iso
 from helpers import add_customer
 from app import gst
 from app.database import SessionLocal
-from app.models import GstRateChangeLog, LedgerEntry
+from app.models import GstInvoiceNumber, GstRateChangeLog, LedgerEntry
 
 API = "/api/v1"
 D = Decimal
@@ -31,20 +31,22 @@ def _gstin(state: str, pan: str = "AAPFU0939F") -> str:
     raise AssertionError("no check digit")
 
 
-KA, MH = _gstin("29"), _gstin("27")  # seller is in Karnataka
+KA, MH = _gstin("29"), _gstin("27")  # customers
+SELLER = _gstin("29", "AAACS1234B")  # the business, in Karnataka
 
 
 def _gst_owner(make_user, client):
     owner = make_user()
-    r = client.patch(f"{API}/businesses/me", headers=owner.headers, json={"gstRegistered": True})
+    r = client.patch(f"{API}/businesses/me", headers=owner.headers,
+                     json={"gstRegistered": True, "gstin": SELLER})
     assert r.status_code == 200, r.text
     return owner
 
 
 def _sale(client, headers, cid, cid_key, amount=1000, rate="18", **extra):
-    data = {"type": "credit", "amount": str(amount), "date": today_iso(), "client_id": cid_key,
-            "invoice_number": extra.pop("invoice_number", f"INV/{cid_key}"[:16]),
-            "gst_rate": rate, "hsn_code": extra.pop("hsn_code", "1006"), **extra}
+    data = {"type": "credit", "amount": str(amount), "date": extra.pop("date", today_iso()),
+            "client_id": cid_key, "gst_rate": rate, "hsn_code": extra.pop("hsn_code", "1006"),
+            "quantity": extra.pop("quantity", "10"), "uqc": extra.pop("uqc", "BAG"), **extra}
     return client.post(f"{API}/customers/{cid}/ledger", headers=headers, data=data)
 
 
@@ -107,8 +109,9 @@ def test_gst_inputs_are_checked(make_user, client):
     cid = add_customer(client, owner.headers)["id"]
     bad_digit = KA[:-1] + ("0" if KA[-1] != "0" else "1")
     for key, extra in [("gstin", {"customer_gstin": bad_digit}), ("hsn", {"hsn_code": "12"}),
-                       ("rate", {"rate": "7"}), ("inv", {"invoice_number": ""}),
-                       ("inv2", {"invoice_number": "INVOICE-NUMBER-TOO-LONG"}),
+                       ("rate", {"rate": "7"}), ("retired12", {"rate": "12"}), ("retired28", {"rate": "28"}),
+                       ("noqty", {"quantity": ""}), ("zeroqty", {"quantity": "0"}), ("uqc", {"uqc": "BOXES"}),
+                       ("nouqc", {"uqc": ""}),
                        ("state", {"place_of_supply": "Atlantis"}),
                        ("pay", {"type": "payment", "payment_method": "cash"})]:
         r = _sale(client, owner.headers, cid, key, **extra)
@@ -149,8 +152,10 @@ def test_exports_hold_the_saved_figures(make_user, client):
     owner = _gst_owner(make_user, client)
     reg = add_customer(client, owner.headers, full_name="Ravi", business_name="Ravi Stores")["id"]
     walk_in = add_customer(client, owner.headers, full_name="=HYPERLINK(\"x\")")["id"]
-    _sale(client, owner.headers, reg, "a", amount=1000, invoice_number="A-1", customer_gstin=MH)
-    _sale(client, owner.headers, walk_in, "b", amount="525.50", rate="5", invoice_number="A-2",
+    fy = gst.financial_year(today_iso())
+    A1, A2 = f"{fy}/00001", f"{fy}/00002"
+    _sale(client, owner.headers, reg, "a", amount=1000, customer_gstin=MH)
+    _sale(client, owner.headers, walk_in, "b", amount="525.50", rate="5",
           hsn_code="19053100", price_includes_gst="true")
     client.post(f"{API}/customers/{reg}/ledger", headers=owner.headers,  # not a GST invoice
                 data={"type": "credit", "amount": "99", "date": today_iso(), "client_id": "plain"})
@@ -179,9 +184,9 @@ def test_exports_hold_the_saved_figures(make_user, client):
     d = today_iso()
     ddmm = f"{d[8:10]}-{d[5:7]}-{d[:4]}"
     assert rows[1] == [ddmm, "Ravi Stores", MH, "1006", "1000.00", "0.00", "0.00", "180.00",
-                       "A-1", "18", "27-Maharashtra", "1180.00"]
+                       A1, "18", "27-Maharashtra", "1180.00"]
     assert rows[2] == [ddmm, "'=HYPERLINK(\"x\")", "", "19053100", "500.48", "12.51", "12.51",
-                       "0.00", "A-2", "5", "29-Karnataka", "525.50"]
+                       "0.00", A2, "5", "29-Karnataka", "525.50"]
 
     tally = load_workbook(io.BytesIO(_book(client, owner.headers, "tally-export.xlsx").content))["Sales"]
     cell = tally["B3"]
@@ -191,7 +196,7 @@ def test_exports_hold_the_saved_figures(make_user, client):
     book = load_workbook(io.BytesIO(_book(client, owner.headers, "gstr1.xlsx").content))
     assert book.sheetnames == ["b2b", "b2cl", "b2cs", "hsn(b2b)", "hsn(b2c)", "rate changes"]
     b2b = [c.value for c in book["b2b"][2]]
-    assert b2b[:3] == [MH, "Ravi Stores", "A-1"] and b2b[4] == 1180 and b2b[5] == "27-Maharashtra"
+    assert b2b[:3] == [MH, "Ravi Stores", A1] and b2b[4] == 1180 and b2b[5] == "27-Maharashtra"
     assert [c.value for c in book["b2cs"][2]][:5] == ["OE", "29-Karnataka", None, 5, 500.48]
     assert book["b2cl"].max_row == 1
 
@@ -229,3 +234,134 @@ def test_no_text_claims_filing_or_e_invoicing():
         for sentence in re.split(r"(?<=[.!?\n])", text):
             if claim.search(sentence):
                 assert denial.search(sentence), sentence
+
+
+# --- Rates by date, the seller's GSTIN, invoice numbers ---------------------------
+
+def test_rates_follow_the_invoice_date():
+    # GST 2.0 from 22 Sep 2025: 0/5/18/40 (+3 gold, 0.25 rough diamonds); 12% ended
+    # then; 28% stayed for tobacco until 1 Feb 2026.
+    assert gst.rates_on(None) == {D(r) for r in ("0", "0.25", "3", "5", "18", "40")}
+    assert D("12") in gst.rates_on("2025-09-21") and D("12") not in gst.rates_on("2025-09-22")
+    assert D("28") in gst.rates_on("2026-01-31") and D("28") not in gst.rates_on("2026-02-01")
+    for bad in ("7", "1.5", "6"):
+        with pytest.raises(Exception):
+            gst.clean_rate(bad, "2025-01-01")
+
+
+def test_old_invoice_can_still_use_a_retired_rate(make_user, client):
+    owner = _gst_owner(make_user, client)
+    cid = add_customer(client, owner.headers)["id"]
+    r = _sale(client, owner.headers, cid, "old12", rate="12", date="2025-09-21")
+    assert r.status_code == 200, r.text
+    assert r.json()["gst"]["rate"] == "12"
+    assert _sale(client, owner.headers, cid, "new12", rate="12", date="2025-09-22").status_code == 422
+    assert _sale(client, owner.headers, cid, "old28", rate="28", date="2026-01-31").status_code == 200
+    r = _sale(client, owner.headers, cid, "new28", rate="28")
+    assert r.status_code == 422 and "ended on 2026-02-01" in r.json()["detail"]
+
+
+def test_gst_invoice_needs_the_sellers_own_gstin(make_user, client):
+    owner = make_user()
+    me = f"{API}/businesses/me"
+    assert client.patch(me, headers=owner.headers, json={"gstRegistered": True}).status_code == 200
+    cid = add_customer(client, owner.headers)["id"]
+    r = _sale(client, owner.headers, cid, "nogstin")
+    assert r.status_code == 422 and "GSTIN" in r.json()["detail"]
+    # The GSTIN's state must be the business state, now and after a state change.
+    r = client.patch(me, headers=owner.headers, json={"gstin": MH})
+    assert r.status_code == 422 and "Maharashtra" in r.json()["detail"]
+    assert client.patch(me, headers=owner.headers, json={"gstin": SELLER.lower()}).json()["gstin"] == SELLER
+    assert client.patch(me, headers=owner.headers, json={"state": "Kerala"}).status_code == 422
+    assert client.patch(me, headers=owner.headers, json={"gstin": ""}).json()["gstin"] is None
+
+
+@pytest.mark.parametrize("state, code", [("Jammu and Kashmir", "01"), ("Ladakh", "38"),
+                                         ("Chandigarh", "04"), ("Puducherry", "34"),
+                                         ("Lakshadweep", "31"), ("Andaman and Nicobar Islands", "35"),
+                                         ("Dadra and Nagar Haveli and Daman and Diu", "26"),
+                                         ("Delhi", "07")])
+def test_every_union_territory_works_as_the_business_state(make_user, client, state, code):
+    owner = make_user()
+    r = client.patch(f"{API}/businesses/me", headers=owner.headers,
+                     json={"state": state, "gstRegistered": True, "gstin": _gstin(code, "AAACS1234B")})
+    assert r.status_code == 200, r.text
+    cid = add_customer(client, owner.headers)["id"]
+    local = _sale(client, owner.headers, cid, "ut").json()["gst"]
+    assert local["place_of_supply"] == code and local["cgst"] == "90.00"
+
+
+def test_app_state_list_matches_the_server():
+    # Every state the app offers must be one the server knows (36 states and UTs).
+    src = (Path(__file__).parents[2] / "src/config/constants.ts").read_text(encoding="utf-8")
+    start = src.index("INDIAN_STATES = [")
+    block = src[start:src.index("] as const", start)]
+    app_states = set(re.findall(r"'([^']+)'", block))
+    assert app_states == set(gst.STATE_CODES) - {"Other Territory"}
+    assert len(app_states) == 36
+
+
+def test_invoice_numbers_are_consecutive_per_business_per_financial_year(make_user, client):
+    a, b = _gst_owner(make_user, client), _gst_owner(make_user, client)
+    ca, cb = add_customer(client, a.headers)["id"], add_customer(client, b.headers)["id"]
+    fy = gst.financial_year(today_iso())
+
+    nums = [_sale(client, a.headers, ca, f"n{i}", invoice_number="MY-OWN-1").json()["invoice_number"]
+            for i in range(3)]
+    assert nums == [f"{fy}/00001", f"{fy}/00002", f"{fy}/00003"]  # the app's number is ignored
+    assert all(len(n) <= 16 for n in nums)
+    assert _sale(client, b.headers, cb, "b1").json()["invoice_number"] == f"{fy}/00001"  # per business
+    # A retry of the same entry gets the same number, not a new one.
+    assert _sale(client, a.headers, ca, "n0").json()["invoice_number"] == f"{fy}/00001"
+    # Last financial year has its own series.
+    last_fy = _sale(client, a.headers, ca, "old", date="2025-03-31", rate="12").json()
+    assert last_fy["invoice_number"] == "24-25/00001"
+    # Plain credits never take a GST number.
+    plain = client.post(f"{API}/customers/{ca}/ledger", headers=a.headers,
+                        data={"type": "credit", "amount": "5", "date": today_iso(), "client_id": "p",
+                              "invoice_number": "BILL-9"}).json()
+    assert plain["invoice_number"] == "BILL-9"
+
+
+def test_deleted_invoice_numbers_are_never_reused(make_user, client):
+    owner = _gst_owner(make_user, client)
+    fy = gst.financial_year(today_iso())
+    gone = add_customer(client, owner.headers)["id"]
+    _sale(client, owner.headers, gone, "x1")
+    assert client.delete(f"{API}/customers/{gone}", headers=owner.headers).status_code == 204
+    cid = add_customer(client, owner.headers)["id"]
+    assert _sale(client, owner.headers, cid, "x2").json()["invoice_number"] == f"{fy}/00002"
+    with SessionLocal() as db:
+        rows = db.query(GstInvoiceNumber).filter_by(business_id=owner.business["id"]).all()
+        assert sorted((r.serial, r.ledger_entry_id is None) for r in rows) == [(1, True), (2, False)]
+
+
+def test_financial_year_boundaries():
+    assert gst.financial_year("2026-03-31") == "25-26"
+    assert gst.financial_year("2026-04-01") == "26-27"
+    assert gst.financial_year("2099-12-31") == "99-00"
+
+
+def test_phone_formula_vectors_still_match_the_server():
+    # src/features/gst/domain/gstSplitVectors.json was generated from split();
+    # the app's gstSplit.test.ts checks the phone against the same file.
+    root = Path(__file__).parents[2] / "src/features/gst/domain"
+    for v in json.loads((root / "gstSplitVectors.json").read_text(encoding="utf-8")):
+        s = gst.split(v["amount"], D(v["rate"]), v["inclusive"], v["interState"])
+        assert {k: f"{x:.2f}" for k, x in s.items()} == {k: v[k] for k in s}, v
+    ts = (root / "gstSplit.ts").read_text(encoding="utf-8")
+    pairs = dict(re.findall(r"'?([A-Za-z][A-Za-z ]+?)'?: '(\d\d)'", ts))
+    assert pairs == {k: c for k, c in gst.STATE_CODES.items() if k != "Other Territory"}
+
+
+
+def test_gst_line_quantity_and_uqc_reach_the_hsn_sheet(make_user, client):
+    owner = _gst_owner(make_user, client)
+    cid = add_customer(client, owner.headers)["id"]
+    a = _sale(client, owner.headers, cid, "q1", quantity="2.5", uqc="kgs").json()
+    assert (a["gst"]["quantity"], a["gst"]["uqc"]) == ("2.5", "KGS")
+    _sale(client, owner.headers, cid, "q2", quantity="4", uqc="KGS")
+    _sale(client, owner.headers, cid, "q3", quantity="3", uqc="BAG")
+    book = load_workbook(io.BytesIO(_book(client, owner.headers, "gstr1.xlsx").content))
+    rows = sorted([c.value for c in r][:5] for r in book["hsn(b2c)"].iter_rows(min_row=2))
+    assert rows == [["1006", None, "BAG-BAGS", 3, 1180], ["1006", None, "KGS-KILOGRAMS", 6.5, 2360]]

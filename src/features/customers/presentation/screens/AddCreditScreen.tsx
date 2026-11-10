@@ -56,6 +56,7 @@ export function AddCreditScreen({
   const [success, setSuccess] = useState(false);
   // GST invoice: only for a GST-registered business; null = a plain credit.
   const gstRegistered = useAuthStore(s => s.business?.gstRegistered ?? false);
+  const hasSellerGstin = useAuthStore(s => !!s.business?.gstin);
   const [gst, setGst] = useState<GstForm | null>(null);
   const [gstError, setGstError] = useState<{field: GstField; message: string} | null>(null);
 
@@ -115,12 +116,14 @@ export function AddCreditScreen({
       ? {
           rate: gst.rate,
           hsn: gst.hsn,
+          quantity: gst.quantity,
+          uqc: gst.uqc ?? '',
           priceIncludesGst: gst.priceIncludesGst,
           customerGstin: gstin || undefined,
           placeOfSupply: gstin ? undefined : gst.placeOfSupply ?? undefined,
         }
       : undefined;
-    const problem = gstInput ? gstInputError(invoiceNumber, gstInput) : null;
+    const problem = gstInput ? gstInputError(gstInput) : null;
     setGstError(problem);
     if (problem) return;
     addCredit.mutate(
@@ -238,7 +241,9 @@ export function AddCreditScreen({
             <DateField value={date} onChange={setDate} />
           </FormField>
 
-          {gstRegistered ? (
+          {gstRegistered && !hasSellerGstin ? (
+            <Text testID="gst-needs-gstin" variant="caption">{t('gst.needsSellerGstin')}</Text>
+          ) : gstRegistered ? (
             <SegmentedControl
               label={t('gst.invoiceToggle')}
               value={gst !== null}
@@ -253,20 +258,20 @@ export function AddCreditScreen({
             />
           ) : null}
 
-          <FormField
-            label={t('customers.invoiceNumber')}
-            hint={gst ? undefined : t('common.optional')}
-            required={gst !== null}
-            error={gstError?.field === 'invoice' ? gstError.message : null}>
-            <TextField
-              value={invoiceNumber}
-              onChangeText={v => setInvoiceNumber(v.toUpperCase())}
-              placeholder={t('customers.invoicePlaceholder')}
-              autoCapitalize="characters"
-              maxLength={gst ? 16 : 40}
-              error={gstError?.field === 'invoice' ? gstError.message : null}
-            />
-          </FormField>
+          {gst ? (
+            // Rule 46: consecutive and unique per financial year, so the server numbers it.
+            <Text testID="gst-invoice-auto" variant="caption">{t('gst.invoiceAuto')}</Text>
+          ) : (
+            <FormField label={t('customers.invoiceNumber')} hint={t('common.optional')}>
+              <TextField
+                value={invoiceNumber}
+                onChangeText={v => setInvoiceNumber(v.toUpperCase())}
+                placeholder={t('customers.invoicePlaceholder')}
+                autoCapitalize="characters"
+                maxLength={40}
+              />
+            </FormField>
+          )}
 
           {gst ? (
             <GstInvoiceSection

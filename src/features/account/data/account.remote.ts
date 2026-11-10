@@ -8,6 +8,7 @@ export interface BusinessUpdate {
   businessType?: string;
   state?: string;
   gstRegistered?: boolean;
+  gstin?: string;
 }
 
 export interface DeleteResult {

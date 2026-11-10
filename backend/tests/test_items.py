@@ -9,7 +9,7 @@ def _make_item(client, headers, **over):
         "purchase_price": 350,
         "unit": "bag",
         "hsn_sac": "2523",
-        "gst_rate": 28,
+        "gst_rate": 18,  # cement: 28% before GST 2.0, 18% since 22 Sep 2025
         "track_stock": True,
         "stock_qty": 100,
         **over,
@@ -22,7 +22,7 @@ def _make_item(client, headers, **over):
 def test_create_and_get_item(user, client):
     item = _make_item(client, user.headers)
     assert item["name"] == "Cement Bag"
-    assert item["gst_rate"] == 28
+    assert item["gst_rate"] == 18
     assert item["hsn_sac"] == "2523"
     got = client.get(f"/api/v1/items/{item['id']}", headers=user.headers)
     assert got.status_code == 200
@@ -53,7 +53,7 @@ def test_update_and_delete_item(user, client):
     upd = client.patch(
         f"/api/v1/items/{item['id']}",
         headers=user.headers,
-        json={"name": "Cement Bag 50kg", "sale_price": 420, "gst_rate": 28},
+        json={"name": "Cement Bag 50kg", "sale_price": 420, "gst_rate": 40},
     )
     assert upd.status_code == 200
     assert upd.json()["name"] == "Cement Bag 50kg"

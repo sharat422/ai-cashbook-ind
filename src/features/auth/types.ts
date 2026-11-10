@@ -15,6 +15,8 @@ export interface Business {
   businessType: BusinessType;
   state: IndianState;
   gstRegistered: boolean;
+  /** The business's own GSTIN (needed for GST invoices). */
+  gstin?: string | null;
   /** The caller's role in this business (from /businesses/me). Absent for the
    *  local create response; defaults to owner (the creator). */
   role?: Role;

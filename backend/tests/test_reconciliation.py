@@ -38,9 +38,11 @@ def _dd_mm(iso: str) -> str:
 def test_upi_payment_without_utr_is_rejected_by_the_api(make_user, client):
     owner = make_user()
     cid = add_customer(client, owner.headers)["id"]
-    for ref in (None, "", "   ", "12"):
-        r = _pay(client, owner.headers, cid, 500, f"no-utr-{ref!r}", ref=ref)
+    for ref in (None, "", "   ", "12"):  # the app sends utr_rule: it enforces the UTR
+        r = _pay(client, owner.headers, cid, 500, f"no-utr-{ref!r}", ref=ref, utr_rule="true")
         assert r.status_code == 422, (ref, r.text)
+    # A short UTR is refused even from an old app (no utr_rule).
+    assert _pay(client, owner.headers, cid, 500, "short", ref="12").status_code == 422
     assert _pay(client, owner.headers, cid, 500, "bad-mode", method="bitcoin", ref="x").status_code == 422
     # Cash needs none; UPI with a UTR is stored (spaces dropped); credit is untouched.
     assert _pay(client, owner.headers, cid, 500, "cash-ok", method="cash").status_code == 200
@@ -82,7 +84,7 @@ def test_hundred_line_import_suggests_matches_and_confirms_none(make_user, clien
     assert all(s["match"] == "utr" for s in sugg)
     assert all(s["bankLine"]["amount"] == s["collection"]["amount"] for s in sugg)
     # Nothing confirmed on its own.
-    assert all(s["bankLine"]["matchedEntryId"] is None for s in sugg)
+    assert all(not s["bankLine"]["matched"] for s in sugg)
     exc = client.get(f"{API}/reconciliation/exceptions", headers=owner.headers).json()
     assert len(exc["bankLines"]) == 50 and exc["collections"] == []
 
@@ -165,12 +167,15 @@ def test_daily_close_is_zero_when_reconciled_else_exact_difference(make_user, cl
         return r.json()
 
     c = close()
-    assert c | {"collections": None} == {
+    assert c | {"collections": None, "members": None} == {
         "date": day, "beatId": beat["id"], "collections": None,
         "creditCollected": "1200.60", "cashInHand": "0.30", "upiClaimed": "1000.10",
         "bankClaimed": "200.20", "otherClaimed": "0.00", "verified": "0.00",
-        "creditGiven": "750.00", "difference": "1200.30"}
-    assert Decimal(c["difference"]) == Decimal("1200.30")  # exact, no float drift
+        "creditGiven": "750.00", "difference": "1200.60",  # ₹0.30 cash not yet deposited
+        "cashDeposited": "0.00", "cashDepositPending": "0.00", "cashKeptBack": "0.00", "deposits": [],
+        "cashCounted": None, "cashOverShort": None, "cashCountedAt": None, "cashCountByPerson": False,
+        "members": None}
+    assert Decimal(c["difference"]) == Decimal("1200.60")  # exact, no float drift
 
     stmt = f"Date,Narration,Credit,Debit\n{day},UPI/123412341234,1000.10,\n{day},NEFT BANKREF001,200.20,\n"
     _upload(client, owner.headers, stmt.encode())
@@ -178,7 +183,12 @@ def test_daily_close_is_zero_when_reconciled_else_exact_difference(make_user, cl
         client.post(f"{API}/reconciliation/confirm", headers=owner.headers,
                     json={"bankLineId": s["bankLine"]["id"], "entryId": s["collection"]["id"]})
     after = close()
-    assert after["verified"] == "1200.30" and after["difference"] == "0.00"
+    assert after["verified"] == "1200.30" and after["difference"] == "0.30"  # the cash
+    # The owner keeps the ₹0.30 in the shop: recorded as float, the close is 0.00.
+    assert client.post(f"{API}/reconciliation/deposits", headers=owner.headers, json={
+        "date": day, "beatId": beat["id"], "amount": "0.30", "kind": "float"}).status_code == 200
+    after = close()
+    assert after["cashKeptBack"] == "0.30" and after["difference"] == "0.00"
     assert all(x["verified"] for x in after["collections"] if x["mode"] != "cash")
 
     # Isolation: staff can't see another beat's close, or the whole business.

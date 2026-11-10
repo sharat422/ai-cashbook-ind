@@ -171,7 +171,7 @@ production backend you must use a number wired to a real OTP delivery channel.
 
 ### 4.5 Offline banner
 - **Steps:** Airplane mode, reopen Dashboard.
-- **Expected:** Amber "Offline"; if local data exists, an amber "Showing offline figures from this device — pull to refresh when back online" banner above the widgets.
+- **Expected:** The sync status line under the business name ends with "· offline" (and shows "⏳ N waiting to sync" if anything is queued, §37H); if local data exists, an amber "Showing offline figures from this device — pull to refresh when back online" banner above the widgets.
 
 ### 4.6 Error state
 - **Steps:** Point at an unreachable backend while online.
@@ -804,7 +804,7 @@ Collect dues into your own UPI — no gateway.
 
 ### 21.4a Price and GST rules (server)
 - **Steps:** (API/QA) Send an item with a negative price, or a GST rate that isn't a real slab (e.g. 10%).
-- **Expected:** 422; nothing saved. The server accepts only **0, 0.25, 3, 5, 12, 18, 28 %**. The app picker shows 0, 5, 12, 18, 28 % (0.25 % and 3 % are for gold and diamonds and can only be set through the API).
+- **Expected:** 422; nothing saved. Items take today's rates only: **0, 0.25, 3, 5, 18, 40 %** (GST 2.0, from 22 Sep 2025). 12 % and 28 % are refused with "ended on …". The app picker shows 0, 5, 18, 40 % (0.25 % and 3 % are for diamonds and gold and can only be set through the API).
 
 ### 21.5 Search / Edit / Delete
 - **Steps:** Search by name/HSN/SAC; edit price/GST → Save changes; open an item → Delete → confirm.
@@ -914,7 +914,7 @@ Open from Dashboard **🔁 Recurring**.
 ### 25.6 Two-device edit conflict (customers)
 - **Context:** Income/expense/ledger are **create-only + idempotent** (never conflict). The editable record is the **customer profile**, which uses optimistic concurrency (a `version` token).
 - **Steps:** Open the same customer on **two devices**. On A edit the name and **Save**. On B (old copy) edit and **Save**.
-- **Expected:** A saves. B is **rejected with "Edited on another device"** and taken back — A's change is not overwritten. Reopening on B shows A's latest; editing from there saves fine.
+- **Expected:** A saves. B does **not** overwrite A: B opens **Changed on two phones** with both versions side by side and waits for the owner to pick one (full case in §37H.3).
 
 ---
 
@@ -1161,8 +1161,8 @@ Open from Dashboard **🔁 Recurring**.
 
 ## 37. Roles & permissions (multi-user business)
 
-Roles: **owner** (full), **accountant** (view + export + add/edit, no
-delete/settings/team), **staff** (add entries only). The **server enforces**
+Roles: **owner** (full), **accountant** (read-only: view + export, never
+add/edit/delete/settings/team — §37I), **staff** (add entries only). The **server enforces**
 every rule (403); the app also hides what a role can't do.
 
 ### 37.1 Owner adds team members
@@ -1177,9 +1177,9 @@ every rule (403); the app also hides what a role can't do.
 - **Steps:** Log in as **staff**.
 - **Expected:** Minimal home with **only add actions** (AI Entry, + Income, − Expense, Scan receipt) + Log out. **No** figures, transactions, customers, reports, settings or **Ask AI**. Blocked APIs (including `/chatbot/ask` and Ask AI voice) return 403. AI Entry voice still works.
 
-### 37.4 Accountant — view/export, no delete/settings/team
+### 37.4 Accountant — read-only (view + export)
 - **Steps:** Log in as **accountant**.
-- **Expected:** Full dashboard, customers, khata, **reports + PDF/Excel export**, add/edit entries & customers. Settings hides UPI, Item-catalog and **Team**; no delete/team access.
+- **Expected:** Full dashboard, customers, khata, **reports + PDF/Excel export**, a "Read-only access" note, and **no** add/edit/delete actions. Settings hides UPI, Item-catalog and **Team**. Full case in §37I.
 
 ### 37.5 Owner — full access
 - **Expected:** Everything, incl. Settings → Team & roles, UPI, item catalog, recurring, delete, data-rights edit.
@@ -1265,7 +1265,7 @@ Manual only: the app never collects money, logs in to a bank, or moves funds. Yo
 - **Expected:** Collections recorded (count and total), Cash in hand, UPI claimed, Bank transfer claimed, Found in the bank, Credit given, **Difference to explain**. Amounts show paise (₹1,200.30). Before reconciling, the difference = UPI + bank collections not yet found in the bank, to the paisa. After confirming all of them → **₹0.00** in green, "Every UPI and bank collection was found in the bank." Each collection shows Cash / ✓ In bank / Not in bank yet.
 
 ### 37B.7 Who can do what
-- **Expected:** Owner and accountant: import, confirm, see all beats and "All beats" in Daily close. Staff: no reconciliation screen; Daily close only for their own beats (no "All beats"). Staff with no beat see "No beat assigned".
+- **Expected:** Owner: import, confirm, see all beats and "All beats" in Daily close. Accountant: sees suggestions, exceptions and Daily close for all beats, but can't import or confirm (read-only, §37I). Staff: no reconciliation screen; Daily close only for their own beats (no "All beats"). Staff with no beat see "No beat assigned".
 - **API check (QA):** staff token → `POST /reconciliation/import`, `GET /reconciliation/suggestions` → **403**; `GET /daily-close?beat_id=<another staff's beat>` → **403**; `GET /daily-close` without a beat → **403**.
 
 ### 37B.8 Deletions
@@ -1276,10 +1276,10 @@ Manual only: the app never collects money, logs in to a bank, or moves funds. Yo
 
 GST-ready bookkeeping for the CA. **Bolcash does not file GST returns and does not create e-invoices**, and no screen, file or help text may say it does.
 
-**Set-up:** a business in **Karnataka** with **GST registered = Yes** (Settings → business details). Customers: one with a Karnataka GSTIN, one with a Maharashtra GSTIN (e.g. `27AAPFU0939F1ZV`), one with none. **Before release, the CA confirms the GST rate list** (0, 5, 12, 18, 28, 40%, plus 0.25 and 3% for items) and the B2CL limit (₹1 lakh).
+**Set-up:** a business in **Karnataka** with **GST registered = Yes** and **your GSTIN** (a Karnataka one, starting 29) in Settings → Edit business info. Customers: one with a Karnataka GSTIN, one with a Maharashtra GSTIN (e.g. `27AAPFU0939F1ZV`), one with none. **Before release, the CA confirms the dated GST rate list** (0, 5, 18, 40% plus 3% and 0.25%; 12% before 22 Sep 2025; 28% before 1 Feb 2026) and the B2CL limit (₹1 lakh).
 
 ### 37C.1 Intra-state: CGST + SGST
-- **Steps:** Karnataka customer → **Add credit** → ₹1,000 → **GST invoice? Yes** → invoice `A-1`, HSN `1006`, 18%, **Before GST**.
+- **Steps:** Karnataka customer → **Add credit** → ₹1,000 → **GST invoice? Yes** → HSN `1006`, quantity `10`, unit `BAG`, 18%, **Before GST**. (No invoice-number field: the server numbers it, §37L.)
 - **Expected:** The box under the fields shows Taxable ₹1,000.00, CGST ₹90.00, SGST ₹90.00, Invoice total ₹1,180.00, Place of supply 29-Karnataka. No IGST line. After saving, the customer owes ₹1,180.
 - Switch to **Including GST** with ₹1,180 → Taxable ₹1,000.00, total stays exactly ₹1,180.00. CGST and SGST are always equal.
 
@@ -1292,7 +1292,7 @@ GST-ready bookkeeping for the CA. **Bolcash does not file GST returns and does n
 - **Expected:** "You're offline. The tax will be worked out when this syncs." — no tax figures shown. It saves to the queue and after sync the entry shows the invoice total the server computed.
 
 ### 37C.4 Wrong inputs are stopped
-- **Expected:** No invoice number, an invoice number over 16 characters, HSN `12`, or a GSTIN with a typo (change its last character) → message under that field, nothing saved. A business that isn't GST registered sees no **GST invoice?** switch.
+- **Expected:** No quantity, no unit (UQC), HSN `12`, or a GSTIN with a typo (change its last character) → message under that field, nothing saved. A business that isn't GST registered sees no **GST invoice?** switch; one without its own GSTIN sees "first enter your GSTIN…" instead.
 
 ### 37C.5 Rate change keeps old invoices
 - **Steps:** Item catalog → an item at 18% → change to 5% → save. Open GST reports for this month.
@@ -1304,6 +1304,7 @@ GST-ready bookkeeping for the CA. **Bolcash does not file GST returns and does n
 - **Permissions:** staff don't see the button; staff token → `GET /reports/tally-export.csv` → **403**.
 
 ### 37C.7 CA test (pilot month) — required before release
+- **Runbook for the CA:** docs/CA_TALLY_TEST.md (all four files, TallyPrime and GST Offline Tool versions, signed discrepancy note).
 - **Steps:** Enter one real month of GST sales. Download the Tally export and send it to the CA. The CA imports it into Tally and counts the records imported and every field they had to re-type or correct. Enter both numbers in **CA test**.
 - **Expected:** **Passed** only with every record imported and **0** fields re-typed. More than 10% of fields re-typed (fields = records × 9) or any record not imported → **Failed**: tap **Share result** and report it to the team with the CA's notes on which columns were re-typed. In between → **Needs fixes**.
 
@@ -1318,7 +1319,7 @@ Phase 1 only: no warehouses/bins, batches, expiry or manufacturing.
 **Set-up:** owner, staff A and staff B (§37). Item catalog → **Biscuits**, product, unit `box`, **Track stock: On**, **Opening stock 50**, **Low-stock alert below 10**.
 
 ### 37D.1 Purchase and godown stock
-- **Steps:** Settings → **📦 Stock** → Biscuits → **Purchase** → 30.
+- **Steps:** Settings → **📦 Stock** → Biscuits → **Purchase** → 30, supplier `Hindustan Distributors`, price `80`, bill `HD/101` (all three are required).
 - **Expected:** Total 80, Godown 80. Opening the item again in the catalog shows "In stock now: 80 box" with no stock field to type over.
 
 ### 37D.2 Load a van (godown → van)
@@ -1426,7 +1427,7 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 - **Expected:** Will be imported 0; Import is disabled. Duplicates 498, each "already in your khata" (or repeated in the file). Changing one row's amount and importing again adds only that row.
 
 ### 37G.5 Who can import
-- **Expected:** Owner and accountant see the button. Staff don't see it, and `POST /api/v1/imports` with a staff token returns 403.
+- **Expected:** Only the owner sees the button. Accountants (read-only) and staff don't, and `POST /api/v1/imports` with their token returns 403.
 
 ## 37H. Offline, sync status and conflicts
 
@@ -1479,6 +1480,50 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 ### 37I.6 Owner's audit log
 - **Steps:** As the CA open a customer ledger, download the Tally CSV, and try one API write. As the owner: Team → **🧾 Accountant activity** (or the CA → Manage → See what they viewed).
 - **Expected:** Newest first: "Tried to change (blocked) · customer list · <name>", "Exported · reports", "Viewed · customer ledger · <name>", each with the date and time in IST (e.g. 07 Nov 2026, 14:05 IST) and the CA's mobile. Owner's own use is not listed; app housekeeping (login, notifications) is not listed.
+
+## 37J. Beats: edit, delete and visit history
+
+- **37J.1 Edit:** Beat plan → a beat → **Edit** → change the name, a day and the salesperson → Save changes. The new salesperson sees it on Today's beat; the old one gets "not assigned to you". Shops and their order don't change.
+- **37J.2 Delete:** **Delete** → confirm. The beat leaves Beat plan and every staff list; recording a visit on it is refused. Its daily close for past days still opens, and its visits stay in the history.
+- **37J.3 Visit history:** a beat → **History**; a customer → **🚶 Visits**. Newest first with outcome, reason, promise date, beat and who (name, else number). Staff opening history see only their own visits.
+- **37J.4 Shared beat:** staff A is the beat's salesperson; Beat plan → Edit → **Also on this beat** → tap staff B. Both see the beat on Today's beat; staff C gets "not assigned to you". A and B each record a visit and a cash collection → visit history shows who recorded each (name, else number); Daily close for the beat is one close with both collections and a **By salesperson** subtotal. Tap B again to remove them: B still has the beat today, not tomorrow; B's visits stay in history. Removing B from the team does the same.
+- **37J.5 Restore:** delete a beat with 4 shops in a set order → Beat plan → **Deleted beats** → **Restore** → confirm. It's back in Beat plan in its place, same shops in the same order; History shows its old visits; its past daily close opens; its salesperson sees it on Today's beat again. Delete another beat, remove its salesperson from the team, restore it: the card says **No salesperson — pick one** and no staff sees it until you pick one in Edit. Staff and accountants can't restore.
+- **37J.7 Helpers (B4):** owner, Beat plan → Edit on a beat with salesperson A → **Also on this beat** lists the business's staff except A. Tap B: B sees the beat on Today's beat straight away (same day). Tap B again: B keeps the beat today, loses it tomorrow, and B's visits stay in History with B's name. Tap B a third time the same day: B is back with no second entry. A can't be added or removed here (change the salesperson in Edit details). Staff never see these controls; the API refuses them (403).
+- **37J.8 Cover planned ahead (B5):** owner, Beat plan → Edit → set **Helper starts on** to next Monday and **Helper's last day** to Wednesday → tap staff B. The card reads "Also on this beat: B — from <Mon> until <Wed>". B doesn't see the beat on Today's beat before Monday (and can't record a visit there), sees it Monday to Wednesday, and loses it Thursday. A start date in the past or a last day before the start is refused. Tapping B before Monday cancels the planned cover. Today's daily close and visit history don't change when cover is planned.
+- **37J.6 Native read-through (per language, by a native speaker — not the person who wrote the English):** fill sheet 4 "Beats & visits" of `review/<lang>.xlsx` (`backend/.venv/Scripts/python.exe scripts/i18n_review_sheets.py build review`) — a correction, or OK if the line is right — run `… unreviewed <lang>` until nothing is left, apply it (`… apply review/<lang>.xlsx`), then on a phone in that language read out loud: Beat plan (new beat, Edit, Also on this beat, Delete, Deleted beats, Restore, "No salesperson — pick one"), Today's beat (each outcome, every reason, promise date, Save visit, offline note), and Visit history. Every string is in that script; no English on screen; outcomes and reasons say what a salesperson would say at the shop.
+
+## 37K. Reconciliation: by hand, split, undo, delete, mapping, counted cash, UTRs
+
+- **37K.1 Split:** record UPI payments of ₹600 and ₹400 from one retailer; import a statement with one ₹1,000 line → **Match by hand** → tick both → "Picked ₹1,000.00 of ₹1,000.00" → Match. The line moves to Matched; Daily close difference drops by ₹1,000. Ticking more than the line holds keeps **Match these** disabled; the server refuses it too.
+- **37K.2 By hand, any date:** a collection 10+ days from its bank line isn't suggested; **Match by hand** → search the name → it's listed → match.
+- **37K.3 Undo:** Matched → **Undo match** → confirm → the line and its collections are open again; the undo is kept in the database.
+- **37K.4 Delete a statement:** Imported statements → **Delete statement** → confirm. Its lines and matches disappear, Daily close goes back up, and the same file can be imported again.
+- **37K.5 Column mapping and dates:** import a CSV whose headings the app doesn't know (e.g. "Posted On / Ref / Money In") → it asks for the columns → pick them → the sample shows. A US-style export (MM/DD/YYYY): with "Day first" the sample dates are wrong or rejected; pick **MM/DD/YYYY (US)** → dates correct → Import.
+- **37K.6 Counted cash:** Daily close → enter the cash counted → Save count. It shows "Short by ₹…" or "Over by ₹…" on its own; Difference to explain and every sale/payment are unchanged. A recount replaces what's shown. Staff count their own beat; accountants can't count.
+- **37K.15 Several transfers for several bills (R8):** three ₹500 UPI collections; a statement with ₹900 and ₹600 lines. Reconciliation → the ₹900 line → Match by hand → **Paid in several transfers? Add more bank lines** → tick ₹600. Tick two collections: "Picked ₹1,000.00 of ₹1,500.00 (bank)", Match is off. Tick the third: both counters read ₹1,500.00 and Match is on → Match. Both lines and all three collections leave the unmatched lists; Daily close's difference drops by ₹1,500. Undo on either line brings all five back. One line with collections that don't fill it (§37K.1) still matches as before.
+- **37K.16 Deposits per salesperson (R10):** after §37K.14 (Ravi counted ₹7,900, Priya ₹5,000), owner → Daily close → Cash deposits: a row each for Ravi (pre-filled ₹7,900) and Priya (₹5,000) → Save each. The list shows "Cash deposit · ₹7,900.00 · Ravi" and Priya's. Import a statement with ₹7,900 and ₹5,000 cash-deposit lines; Match by hand on each deposit → its own line. Difference to explain drops by ₹12,900; each person's row under Counted cash shows Cash deposited. The whole-beat deposit box still works and matches the same way. Staff see their own and whole-beat deposits only, record none, and get 403 on another beat.
+- **37K.14 Counted cash per salesperson (B6):** a beat where Ravi collects ₹8,000 cash and Priya ₹5,000. Owner → Daily close for the beat: under Counted cash there is a row each for Ravi and Priya, pre-filled with ₹8,000 and ₹5,000. Change Ravi's to 7,900 → Save count: Ravi's row says "Short by ₹100.00"; until Priya is saved the beat says over/short shows once everyone is counted; save Priya's as is → the beat shows Cash counted ₹12,900.00 and "Short by ₹100.00". Sales, payments and Difference to explain don't change. Log in as Priya: only her own row, no beat figure; she can't count Ravi's cash. A whole-beat count (the box under the rows) still works; whichever is saved last is shown. Counts saved before this release still show as the whole-beat figure.
+- **37K.7 Duplicate UTR:** receive a UPI payment with a UTR already used on another payment → refused, naming the earlier payment (customer, amount, date); in Telugu a Telugu sentence. Cash/cheque references can repeat.
+- **37K.8 Old-app payment without UTR:** (QA, API) post a UPI payment without `utr_rule` and without a UTR → saved, flagged; Reconciliation → **UPI payments without a UTR** → enter the 12-digit UTR → Save → it leaves the list and can be matched.
+- **37K.9 One collection, two transfers:** record a ₹1,000 UPI payment; import a statement with ₹600 and ₹400 deposits. Collections not found in the bank → the ₹1,000 → **Match by hand** → tick ₹600: "Picked ₹600.00 of ₹1,000.00", Match is off; tick ₹400 → ₹1,000.00 of ₹1,000.00 → Match. Both lines and the collection leave the exception lists and the daily close difference drops by ₹1,000. Ticking ₹600 + ₹500 shows the total in red and Match stays off. Undo on either line in Matched re-opens both lines and the collection.
+- **37K.10 Old .xls statements:** import a real Excel 97-2003 statement (.xls) and an HTML ".xls" export from a bank that makes one (save a bank page as .xls if needed). Both open on the column-mapping screen with the bank's own column names, and import like the .xlsx. Import the same .xls again: nothing new is added. A PDF statement is refused with "save it as .xlsx or .csv".
+- **37K.11 Cash deposit:** a beat collects ₹5,000 cash today → Daily close for the beat shows Difference to explain ₹5,000.00 (cash not banked yet). As owner, Cash deposits → Cash deposit → 5000 → Save: "Cash deposit not in bank yet ₹5,000.00". Import a statement with a ₹5,000 cash deposit line → back in Daily close → the deposit's **Match by hand** → only the ₹5,000 line can be picked → confirm. The line leaves "Bank payments with no collection", Cash deposited shows ₹5,000.00 and the difference is ₹0.00. Reconciliation → Matched → **Undo** on that line: the deposit shows "Not in bank yet" again and the difference is back to ₹5,000. Short deposit: record ₹4,500 deposit + ₹500 **Kept back** and match the ₹4,500 line → difference ₹0.00. Staff see their own beat's deposits but no Save or Match; another beat's are refused.
+- **37K.12 Repeated cheque or bank reference:** receive a cheque payment, number 004512, bank "SBI Main Road", account 1234. Receive another from a different customer with the same three → it saves, then "Same reference as an earlier payment" names the first customer, amount and date. The same number with another bank or account saves with no warning. A bank transfer with a reference already used → saves with the warning. A UPI payment with a UTR already used is still refused.
+- **37K.13 Restore a deleted statement:** confirm a match on a statement, then Delete statement (the difference goes up). Reconciliation → **Deleted statements** → **Restore** → confirm. Its lines are back in "Bank payments with no collection", all unmatched; Matched is empty; the difference stays up until you confirm the match again, then it's back to what it was. Import the same file after deleting, then try Restore: it's refused ("imported again"). Staff and accountants don't see Restore.
+
+## 37L. GST: rates by date, seller GSTIN, invoice numbers, quantity and UQC
+
+- **37L.1 Rates:** the rate chips are 0, 5, 18, 40%. (QA, API) an invoice dated 21 Sep 2025 at 12% saves; dated 22 Sep 2025 → "12% GST ended on 2025-09-22…"; 28% works only before 1 Feb 2026.
+- **37L.2 Seller GSTIN:** Edit business info → GST registered Yes → GSTIN with another state's code → "This GSTIN is registered in …". The right one saves; changing the state afterwards is refused while the GSTIN doesn't match. Union Territories (J&K, Ladakh, Chandigarh, Puducherry, Lakshadweep, A&N, DNH & DD) are all in the state lists.
+- **37L.3 Invoice numbers:** three GST sales → numbers `26-27/00001`, `/00002`, `/00003` (this FY, consecutive, ≤ 16 characters); another business starts at 00001; a sale dated in the last FY gets that FY's series; deleting a customer with an invoice doesn't free its number.
+- **37L.4 Item picker and UQC:** GST invoice → **Item** → pick one with an HSN and a current rate → HSN, rate and unit fill in (an item still at 12/28% keeps the chosen rate). Download GSTR-1 → **hsn(b2c)** has the UQC (e.g. `BAG-BAGS`) and total quantity.
+- **37L.5 Offline GST:** airplane mode → GST sale → the tax split shows with "Worked out on this phone…"; save; the customer's pending balance is the invoice total (e.g. ₹1,180), and after sync it is the same figure.
+
+## 37M. Stock, names and credit limits
+
+- **37M.1 No overselling:** (QA) two phones sell the last box at the same moment → one succeeds, the other gets "Only 0 box…". Stock never goes below 0.
+- **37M.2 Names:** Team → add a staff member with a name (or Manage → **Change name**) → vans, beat salesperson chips, visit history and accountant activity show the name instead of the number.
+- **37M.3 Credit limit on two phones:** open a customer on A and B; set ₹50,000 on A; then ₹20,000 on B → B shows "Credit limit changed on another device" with ₹50,000, and nothing is saved from B.
 
 ---
 
@@ -1566,7 +1611,9 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 35. Import: preview a khata CSV (nothing saved), import it, then preview it again → 0 to import.
 36. Offline: airplane mode → add 3 entries → home says 3 waiting → reconnect → All synced, no duplicates. Edit one customer on two phones → the conflict screen asks which to keep.
 37. Accountant: invite a CA → they can open ledgers and download the Tally CSV but see no add/edit buttons; Remove access → their next screen signs them out; Team → Accountant activity lists what they opened, in IST.
-38. Log out → back to Login (the language stays).
+38. GST: three GST sales get consecutive server numbers; the GSTR-1 HSN sheet shows quantity and UQC; offline GST sale shows the same total after sync.
+39. Reconciliation: one ₹1,000 bank line matched by hand to ₹600 + ₹400; Undo; delete the statement and import it again.
+40. Log out → back to Login (the language stays).
 
 ---
 
@@ -1594,7 +1641,9 @@ Tick before shipping to production:
 - [ ] Staff beat isolation verified with two staff accounts, including the direct-ID 403 check (§37A.3).
 - [ ] GST rate list and B2CL limit confirmed with the CA, and the CA test passed for a pilot month with 0 fields re-typed (§37C.7).
 - [ ] Reconciliation checked with real statement exports from the banks your users use (CSV and .xlsx), and Daily close reaches ₹0.00 after confirming (§37B).
-- [ ] Regression smoke checklist (all 29) passes on both iOS and Android.
+- [ ] Regression smoke checklist passes on both iOS and Android.
+- [ ] iOS: the TestFlight build opens the file picker from Import bank statement and Import old khata (CI checks the pod is linked; this checks the build).
+- [ ] Native-speaker corrections applied from the review sheets (`scripts/i18n_review_sheets.py`), reconciliation/payments first, then GST, stock, beats.
 
 ---
 

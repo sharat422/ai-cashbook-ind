@@ -11,11 +11,18 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from fastapi import HTTPException
 
-# Allowed rates. 5 / 18 / 40 are the slabs since 22 Sep 2025; 12 and 28 stay for
-# older invoices and goods still taxed at them (e.g. tobacco); 0.25 cut diamonds,
-# 3 gold/silver. ponytail: confirm this list with the CA before shipping and on
-# every GST Council change — it is the only place rates are defined.
-GST_RATES = {Decimal(r) for r in ("0", "0.25", "3", "5", "12", "18", "28", "40")}
+# Rates in force today (GST 2.0, from 22 Sep 2025): 0, 5, 18 and 40%, plus the
+# special 3% (gold, silver, jewellery) and 0.25% (rough diamonds).
+CURRENT_RATES = {Decimal(r) for r in ("0", "0.25", "3", "5", "18", "40")}
+# Retired slabs and the first day they no longer apply. They stay valid on
+# invoices dated before that day (late entries, corrections, imports):
+#   12%: folded into 5/18% from 22 Sep 2025;
+#   28%: kept for tobacco and pan masala until the compensation cess ended on
+#        1 Feb 2026, when those moved to 40%.
+RETIRED_RATES = {Decimal("12"): "2025-09-22", Decimal("28"): "2026-02-01"}
+# Every rate any invoice can carry (tests and exports).
+GST_RATES = CURRENT_RATES | set(RETIRED_RATES)
+# ponytail: the only place rates live — re-check on every GST Council change.
 
 # GST state codes (first two digits of a GSTIN; "place of supply" in returns).
 STATE_CODES = {
@@ -77,6 +84,35 @@ def clean_gstin(value: str | None) -> str | None:
     return v
 
 
+# GST Unique Quantity Codes (GSTN master), used in invoices and GSTR-1 table 12.
+UQC = {
+    "BAG": "Bags", "BAL": "Bale", "BDL": "Bundles", "BKL": "Buckles", "BOU": "Billion of units",
+    "BOX": "Box", "BTL": "Bottles", "BUN": "Bunches", "CAN": "Cans", "CBM": "Cubic meters",
+    "CCM": "Cubic centimeters", "CMS": "Centimeters", "CTN": "Cartons", "DOZ": "Dozens",
+    "DRM": "Drums", "GGK": "Great gross", "GMS": "Grammes", "GRS": "Gross", "GYD": "Gross yards",
+    "KGS": "Kilograms", "KLR": "Kilolitre", "KME": "Kilometre", "LTR": "Litres", "MLT": "Millilitre",
+    "MTR": "Meters", "MTS": "Metric ton", "NOS": "Numbers", "OTH": "Others", "PAC": "Packs",
+    "PCS": "Pieces", "PRS": "Pairs", "QTL": "Quintal", "ROL": "Rolls", "SET": "Sets",
+    "SQF": "Square feet", "SQM": "Square meters", "SQY": "Square yards", "TBS": "Tablets",
+    "TGM": "Ten gross", "THD": "Thousands", "TON": "Tonnes", "TUB": "Tubes", "UGS": "US gallons",
+    "UNT": "Units", "YDS": "Yards",
+}
+
+
+def clean_line(quantity, uqc: str | None) -> tuple[Decimal, str]:
+    """Quantity and unit of a GST invoice line — both required (Rule 46)."""
+    code = (uqc or "").strip().upper()
+    if code not in UQC:
+        raise _reject("Pick the unit (UQC) for this invoice, e.g. BOX, PCS or KGS.")
+    try:
+        q = Decimal(str(quantity)).quantize(Decimal("0.001"))
+    except (InvalidOperation, ValueError, TypeError):
+        raise _reject("Enter the quantity sold.") from None
+    if not q.is_finite() or q <= 0 or q > Decimal("10000000"):
+        raise _reject("Enter the quantity sold.")
+    return q, code
+
+
 def clean_hsn(value: str | None) -> str:
     v = re.sub(r"\s", "", value or "")
     if not _HSN_RE.match(v):
@@ -84,13 +120,21 @@ def clean_hsn(value: str | None) -> str:
     return v
 
 
-def clean_rate(value) -> Decimal:
+def rates_on(day: str | None) -> set[Decimal]:
+    """Rates allowed on an invoice dated `day` (YYYY-MM-DD); None = today."""
+    return CURRENT_RATES | {r for r, ends in RETIRED_RATES.items() if day is not None and day < ends}
+
+
+def clean_rate(value, day: str | None = None) -> Decimal:
     try:
         rate = Decimal(str(value))
     except (InvalidOperation, ValueError):
         raise _reject("Enter a GST rate.") from None
-    if rate not in GST_RATES:
-        allowed = ", ".join(f"{r.normalize():f}" for r in sorted(GST_RATES))
+    if rate in RETIRED_RATES and rate not in rates_on(day):
+        raise _reject(f"{rate.normalize():f}% GST ended on {RETIRED_RATES[rate]}. Use the current rate "
+                      "for this item (0, 5, 18 or 40%; 3% gold/silver; 0.25% rough diamonds).")
+    if rate not in rates_on(day):
+        allowed = ", ".join(f"{r.normalize():f}" for r in sorted(rates_on(day)))
         raise _reject(f"GST rate must be one of {allowed}%.")
     return rate
 
@@ -128,8 +172,18 @@ def split(amount, rate: Decimal, inclusive: bool, inter_state: bool) -> dict[str
     }
 
 
+def seller_gstin(gstin: str | None, state: str | None) -> str | None:
+    """The business's own GSTIN, checked against its state (first two digits)."""
+    v = clean_gstin(gstin)
+    if v and state_code(state) and v[:2] != state_code(state):
+        raise _reject(f"This GSTIN is registered in {STATE_NAMES[v[:2]]}, not {state}. "
+                      "Check the GSTIN or the business state.")
+    return v
+
+
 def invoice(business, *, amount, rate, inclusive: bool, hsn: str | None,
-            customer_gstin: str | None, place_of_supply: str | None) -> dict:
+            customer_gstin: str | None, place_of_supply: str | None,
+            day: str | None = None) -> dict:
     """Validate the GST inputs for a sale and compute its tax.
 
     Place of supply: the customer's GSTIN state when they have one, else the
@@ -137,9 +191,9 @@ def invoice(business, *, amount, rate, inclusive: bool, hsn: str | None,
     """
     if not business.gst_registered:
         raise _reject("Turn on 'GST registered' in your business details to add GST.")
-    seller = state_code(business.state)
-    if seller is None:
-        raise _reject("Set your business state in business details to add GST.")
+    if not getattr(business, "gstin", None):
+        raise _reject("Add your GSTIN in business details to add GST. A GST invoice must show it.")
+    seller = business.gstin[:2]
     gstin = clean_gstin(customer_gstin)
     if gstin:
         pos = gstin[:2]
@@ -149,7 +203,7 @@ def invoice(business, *, amount, rate, inclusive: bool, hsn: str | None,
             raise _reject("Pick the customer's state.")
     else:
         pos = seller
-    rate = clean_rate(rate)
+    rate = clean_rate(rate, day)
     inter = pos != seller
     return {
         "customer_gstin": gstin,
@@ -160,6 +214,18 @@ def invoice(business, *, amount, rate, inclusive: bool, hsn: str | None,
         "inter_state": inter,
         **split(amount, rate, inclusive, inter),
     }
+
+
+def financial_year(day: str) -> str:
+    """'2026-11-07' -> '26-27' (Indian FY, April to March)."""
+    y, m = int(day[:4]), int(day[5:7])
+    start = y if m >= 4 else y - 1
+    return f"{start % 100:02d}-{(start + 1) % 100:02d}"
+
+
+def invoice_number(fy: str, serial: int) -> str:
+    """Rule 46: consecutive, unique in the FY, at most 16 characters."""
+    return f"{fy}/{serial:05d}"  # '26-27/00001' — 11 characters
 
 
 def money(x: Decimal | None) -> str | None:

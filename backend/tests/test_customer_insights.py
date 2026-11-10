@@ -58,3 +58,20 @@ def test_insights_lists(user, client):
 
 def test_insights_requires_auth(client):
     assert client.get("/api/v1/customer-insights").status_code in (401, 403)
+
+
+def test_credit_limit_conflict_server_wins_with_a_notice(user, client):
+    cid = add_customer(client, user.headers)["id"]
+    path = f"/api/v1/customers/{cid}/credit-limit"
+    a = client.put(path, headers=user.headers, json={"creditLimit": 50000, "expectedVersion": 0}).json()
+    assert (a["credit_limit"], a["credit_limit_version"]) == (50000, 1)
+    # Phone B still thinks it's version 0 (never set): refused, nothing changes.
+    r = client.put(path, headers=user.headers, json={"creditLimit": 20000, "expectedVersion": 0})
+    assert r.status_code == 409
+    assert r.json()["detail"] == "The credit limit was changed on another device to ₹50,000. Yours wasn't saved."
+    assert client.get(f"/api/v1/customers/{cid}", headers=user.headers).json()["credit_limit"] == 50000
+    # With the current version it saves; clearing counts as a change too.
+    b = client.put(path, headers=user.headers, json={"creditLimit": None, "expectedVersion": 1}).json()
+    assert (b["credit_limit"], b["credit_limit_version"]) == (None, 2)
+    r = client.put(path, headers=user.headers, json={"creditLimit": 1, "expectedVersion": 1})
+    assert r.status_code == 409 and "to no limit" in r.json()["detail"]

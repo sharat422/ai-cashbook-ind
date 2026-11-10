@@ -21,6 +21,8 @@ export interface Van {
   userId: string;
   mobile: string;
   role: string;
+  /** The owner's name for this person; label vans with personLabel(). */
+  name: string | null;
 }
 
 export interface VanItem {
@@ -44,6 +46,10 @@ export interface StockMove {
   groupId: string | null;
   counted: Qty | null;
   note: string | null;
+  /** Purchases: who from, price per unit, and their bill number. */
+  supplier: string | null;
+  unitPrice: string | null;
+  billRef: string | null;
   createdBy: string | null;
   createdAt: string;
 }
@@ -74,6 +80,10 @@ export interface MoveInput {
   vanUserId?: string;
   date: string;
   note?: string;
+  /** Required for a purchase. */
+  supplier?: string;
+  unitPrice?: string;
+  billRef?: string;
 }
 
 export interface TransferInput {

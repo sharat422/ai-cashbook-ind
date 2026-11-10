@@ -38,10 +38,10 @@ export const customerRemote = {
   },
 
   /** Set the credit limit in INR, or clear it with null. */
-  async setCreditLimit(id: string, creditLimit: number | null): Promise<Customer> {
+  async setCreditLimit(id: string, creditLimit: number | null, expectedVersion?: number): Promise<Customer> {
     const dto = await apiRequest<CustomerDto>(`/customers/${id}/credit-limit`, {
       method: 'PUT',
-      body: {creditLimit},
+      body: {creditLimit, expectedVersion},
     });
     return toCustomer(dto);
   },

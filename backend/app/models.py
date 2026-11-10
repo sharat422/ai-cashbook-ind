@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Float,
     ForeignKey,
     Index,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy import text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .crypto import EncryptedText
@@ -60,6 +62,9 @@ class BusinessMember(Base):
     status: Mapped[str] = mapped_column(String(20), default="active")
     # Mobile the owner invited (for display before that user first logs in).
     invited_by_mobile: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # What the owner calls this person ("Ravi", "Van 2 – Suresh"); shown on
+    # teams, vans, beats and logs instead of the mobile number.
+    display_name: Mapped[str | None] = mapped_column(String(60), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     __table_args__ = (
@@ -77,6 +82,9 @@ class Business(Base):
     business_type: Mapped[str] = mapped_column(String(60))
     state: Mapped[str] = mapped_column(String(80))
     gst_registered: Mapped[bool] = mapped_column(Boolean, default=False)
+    # The seller's own GSTIN, printed on every GST invoice; its first two
+    # digits are the seller's state for CGST/SGST vs IGST.
+    gstin: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     user: Mapped[User] = relationship(back_populates="businesses")
@@ -167,6 +175,8 @@ class Customer(Base):
     is_overdue: Mapped[bool] = mapped_column(Boolean, default=False)
     # INR; None = no limit. Server-side so staff on a beat see the same limit.
     credit_limit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # +1 on every limit change; 0 = never set. A stale limit save gets a 409.
+    credit_limit_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
     updated_at: Mapped[str] = mapped_column(String(40), default=now_iso)
     # Monotonic optimistic-concurrency token: +1 on every edit. A stale edit
@@ -195,6 +205,17 @@ class LedgerEntry(Base):
     reference_number: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     attachment_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    # A UPI payment saved by an app version from before the UTR rule, with no
+    # UTR: accepted (never lost) and flagged until the owner adds the UTR.
+    utr_missing: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # Bank-transfer / cheque references: a WARNING on repeats, never a block
+    # (cheque numbers repeat across banks, accounts and years). ref_hash is a
+    # blind index of rail + reference (+ bank + account for a cheque), not
+    # unique; ref_duplicate_of is the earlier entry the warning named.
+    cheque_bank: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    cheque_account: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    ref_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    ref_duplicate_of: Mapped[str | None] = mapped_column(String(40), nullable=True)
     # Who recorded it (set by the server from the token) and, when recorded from
     # a beat day-list, which beat. Both feed the per-beat daily close.
     salesman_id: Mapped[str | None] = mapped_column(
@@ -216,6 +237,9 @@ class LedgerEntry(Base):
     cgst: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     sgst: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     igst: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # Quantity and unit of the invoice line (Rule 46; GSTR-1 table 12).
+    gst_quantity: Mapped[Decimal | None] = mapped_column(Numeric(12, 3), nullable=True)
+    gst_uqc: Mapped[str | None] = mapped_column(String(3), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     customer: Mapped[Customer] = relationship(back_populates="ledger")
@@ -278,6 +302,13 @@ class BankImport(Base):
     file_hash: Mapped[str] = mapped_column(String(64))
     filename: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    # Soft delete: the statement and its lines stay for the record, but they
+    # leave every list and total; file_hash is freed so it can be re-imported.
+    deleted_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    deleted_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # The real hash while deleted, so a restore can tell whether the same file
+    # was imported again in the meantime.
+    deleted_file_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("business_id", "file_hash", name="uq_bank_import_hash"),
@@ -300,7 +331,8 @@ class BankLine(Base):
     amount_paise: Mapped[int] = mapped_column(Integer)  # exact; no float money
     utr: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     narration: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
-    # Set only by a person confirming the match. Unique: one entry, one line.
+    # Legacy one-to-one match (before BankMatch); moved into bank_matches on
+    # boot and no longer written. ponytail: drop once every server has migrated.
     matched_entry_id: Mapped[str | None] = mapped_column(
         ForeignKey("ledger_entries.id", ondelete="SET NULL"), nullable=True, unique=True
     )
@@ -308,6 +340,107 @@ class BankLine(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     confirmed_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    deleted_at: Mapped[str | None] = mapped_column(String(40), nullable=True)  # its statement was deleted
+
+
+class CashCount(Base):
+    """Cash physically counted at day end for a beat (or the whole business).
+    Every count is kept; the latest is the one shown. It is only compared
+    with the cash recorded — it never changes a sale or a payment."""
+
+    __tablename__ = "cash_counts"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    beat_id: Mapped[str | None] = mapped_column(String(40), nullable=True)  # None = whole business
+    # The salesperson whose cash this is; None = the whole beat (or business).
+    user_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    counted_paise: Mapped[int] = mapped_column(Integer)
+    counted_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    note: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
+class CashDeposit(Base):
+    """Cash the owner already took to the bank (kind "deposit"), or cash kept
+    back in the shop as float (kind "float") — a record of money moved, never
+    a sale or a collection, and never edited: a short deposit is a deposit
+    row plus a float row. A deposit is matched to its bank line through
+    bank_matches (deposit_id), like a collection."""
+
+    __tablename__ = "cash_deposits"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    beat_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)  # None = whole business
+    # The salesperson whose cash this is; None = the whole beat (or business).
+    user_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    kind: Mapped[str] = mapped_column(String(10), default="deposit")  # deposit | float
+    amount_paise: Mapped[int] = mapped_column(Integer)
+    counted_cash_id: Mapped[str | None] = mapped_column(
+        ForeignKey("cash_counts.id", ondelete="SET NULL"), nullable=True
+    )
+    note: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    deleted_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("kind IN ('deposit', 'float')", name="ck_cash_deposit_kind"),
+        CheckConstraint("amount_paise > 0", name="ck_cash_deposit_amount"),
+    )
+
+
+class BankMatch(Base):
+    """An allocation: part of a bank line paying part of a collection. One line
+    can cover several collections (₹1,000 = ₹600 + ₹400), or one collection can
+    be split across several lines (₹600 + ₹400 transfers for a ₹1,000 payment);
+    never both at once. Rows saved together share group_id and are undone
+    together; a collection is only ever fully allocated. Undo keeps the row
+    (undone_at/by) as the record."""
+
+    __tablename__ = "bank_matches"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    bank_line_id: Mapped[str] = mapped_column(
+        ForeignKey("bank_lines.id", ondelete="CASCADE"), index=True
+    )
+    # A collection, or (deposit_id) a cash deposit; exactly one of the two.
+    entry_id: Mapped[str | None] = mapped_column(
+        ForeignKey("ledger_entries.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    deposit_id: Mapped[str | None] = mapped_column(
+        ForeignKey("cash_deposits.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    amount_paise: Mapped[int] = mapped_column(Integer)
+    group_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    # 0 for a collection's first line, 1, 2… for the other lines of a split.
+    part: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    confirmed_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    confirmed_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    undone_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    undone_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    undo_reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    __table_args__ = (
+        # One active match per collection, enforced by the database: a second
+        # match would reuse part 0. A split's other lines are parts 1, 2…
+        Index("uq_bank_match_active_part", "entry_id", "part", unique=True,
+              sqlite_where=text("undone_at IS NULL"), postgresql_where=text("undone_at IS NULL")),
+        # A deposit is in at most one active match.
+        Index("uq_bank_match_active_deposit", "deposit_id", unique=True,
+              sqlite_where=text("undone_at IS NULL AND deposit_id IS NOT NULL"),
+              postgresql_where=text("undone_at IS NULL AND deposit_id IS NOT NULL")),
+    )
 
 
 class Beat(Base):
@@ -324,7 +457,38 @@ class Beat(Base):
     assigned_user_id: Mapped[str | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Soft delete: gone from every list, but its visits and daily closes stay.
+    deleted_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # assigned_user_id mirrors the open primary assignment (older app versions
+    # read it); who may work the beat is decided by beat_assignments.
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
+BEAT_ROLES = ("primary", "secondary")
+
+
+class BeatAssignment(Base):
+    """Who works a beat, and when. A beat can have several staff; exactly one
+    open primary at a time, who owns the beat's daily close. Ending an
+    assignment sets valid_to (last day it applies); history stays."""
+
+    __tablename__ = "beat_assignments"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    beat_id: Mapped[str] = mapped_column(ForeignKey("beats.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(10))  # BEAT_ROLES
+    valid_from: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD (IST)
+    valid_to: Mapped[str | None] = mapped_column(String(10), nullable=True)  # last day; None = open
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        # Exactly one open primary per beat, enforced by the database.
+        Index("uq_beat_open_primary", "beat_id", unique=True,
+              sqlite_where=text("role = 'primary' AND valid_to IS NULL"),
+              postgresql_where=text("role = 'primary' AND valid_to IS NULL")),
+        CheckConstraint("role IN ('primary', 'secondary')", name="ck_beat_assignment_role"),
+    )
 
 
 class BeatRetailer(Base):
@@ -430,12 +594,38 @@ class StockMove(Base):
     group_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
     client_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Purchases only: who it was bought from, at what price, on which bill.
+    supplier: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    unit_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    bill_ref: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     __table_args__ = (
         # Retry-safe: the app's client_id goes on the first move of a request only.
         UniqueConstraint("business_id", "client_id", name="uq_stock_move_client"),
+    )
+
+
+class StockLevel(Base):
+    """Current stock of one item at one place. Changed only by a single
+    conditional UPDATE (app/stock.py), so two sales at the same moment can't
+    both take the last box; the CHECK is the database's own backstop."""
+
+    __tablename__ = "stock_levels"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    item_id: Mapped[str] = mapped_column(ForeignKey("items.id", ondelete="CASCADE"), index=True)
+    location: Mapped[str] = mapped_column(String(10))  # godown | van
+    van_key: Mapped[str] = mapped_column(String(40), default="")  # "" = godown, else van user id
+    qty: Mapped[Decimal] = mapped_column(Numeric(12, 3), default=Decimal("0"))
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "item_id", "location", "van_key", name="uq_stock_level_place"),
+        CheckConstraint("qty >= 0", name="ck_stock_level_not_negative"),
     )
 
 
@@ -608,6 +798,53 @@ class StatementEvent(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso, index=True)
+
+
+class PaymentUtr(Base):
+    """One row per UPI payment's UTR, per business. A UTR identifies exactly
+    one UPI transaction, so a second payment with the same UTR is a typo or a
+    reused-UTR fraud — never a real second payment. The UTR itself stays
+    encrypted on the entry; this holds only its keyed hash."""
+
+    __tablename__ = "payment_utrs"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    utr_hash: Mapped[str] = mapped_column(String(64))
+    ledger_entry_id: Mapped[str] = mapped_column(
+        ForeignKey("ledger_entries.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (UniqueConstraint("business_id", "utr_hash", name="uq_payment_utr"),)
+
+
+class GstInvoiceNumber(Base):
+    """Every GST invoice number the server has issued, per business per
+    financial year. Unique and consecutive (Rule 46). Kept when the entry is
+    deleted (ledger_entry_id becomes NULL = cancelled), so numbers are never
+    reused and gaps are explained."""
+
+    __tablename__ = "gst_invoice_numbers"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    fy: Mapped[str] = mapped_column(String(5))  # "26-27"
+    serial: Mapped[int] = mapped_column(Integer)
+    number: Mapped[str] = mapped_column(String(16))
+    ledger_entry_id: Mapped[str | None] = mapped_column(
+        ForeignKey("ledger_entries.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "fy", "serial", name="uq_gst_invoice_serial"),
+        UniqueConstraint("business_id", "fy", "number", name="uq_gst_invoice_number"),
+    )
 
 
 class GstRateChangeLog(Base):

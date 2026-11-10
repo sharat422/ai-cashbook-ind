@@ -19,6 +19,8 @@ export interface ReceivePaymentInput {
   date: string;
   paymentMethod: PaymentMethod;
   referenceNumber?: string;
+  chequeBank?: string;
+  chequeAccount?: string;
   notes?: string;
 }
 
@@ -61,6 +63,8 @@ export function ReceivePaymentSheet({
   const [method, setMethod] = useState<PaymentMethod>('upi');
   const [date, setDate] = useState<string>(todayIST());
   const [reference, setReference] = useState('');
+  const [chequeBank, setChequeBank] = useState('');
+  const [chequeAccount, setChequeAccount] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [refError, setRefError] = useState<string | null>(null);
@@ -72,6 +76,8 @@ export function ReceivePaymentSheet({
       setMethod('upi');
       setDate(todayIST());
       setReference('');
+      setChequeBank('');
+      setChequeAccount('');
       setNotes('');
       setError(null);
       setRefError(null);
@@ -99,6 +105,8 @@ export function ReceivePaymentSheet({
       date,
       paymentMethod: method,
       referenceNumber: reference.trim() || undefined,
+      chequeBank: method === 'cheque' ? chequeBank.trim() || undefined : undefined,
+      chequeAccount: method === 'cheque' ? chequeAccount.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
     });
   };
@@ -212,6 +220,20 @@ export function ReceivePaymentSheet({
               maxLength={40}
             />
           </FormField>
+
+          {/* A cheque number repeats across banks and accounts: these tell two apart. */}
+          {method === 'cheque' ? (
+            <>
+              <FormField label={t('payments.chequeBank')} hint={t('common.optional')}>
+                <TextField testID="cheque-bank" value={chequeBank} onChangeText={setChequeBank}
+                  placeholder={t('payments.chequeBankPlaceholder')} maxLength={60} />
+              </FormField>
+              <FormField label={t('payments.chequeAccount')} hint={t('common.optional')}>
+                <TextField testID="cheque-account" value={chequeAccount} onChangeText={setChequeAccount}
+                  keyboardType="number-pad" maxLength={20} />
+              </FormField>
+            </>
+          ) : null}
 
           <FormField label={t('form.notes')} hint={t('common.optional')}>
             <NotesInput

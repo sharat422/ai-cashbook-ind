@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import gst
 from ..config import settings
 from ..database import get_db
 from ..monitoring import record_failed_login
@@ -49,6 +50,7 @@ class CreateBusinessInput(BaseModel):
     businessType: str = Field(min_length=1, max_length=60)
     state: str = Field(min_length=1, max_length=80)
     gstRegistered: bool = False
+    gstin: str | None = Field(default=None, max_length=20)
 
 
 @router.post("/auth/otp/request")
@@ -125,6 +127,7 @@ def create_business(
         business_type=body.businessType,
         state=body.state,
         gst_registered=body.gstRegistered,
+        gstin=gst.seller_gstin(body.gstin, body.state),
     )
     db.add(business)
     db.flush()  # assign business.id before creating the membership
@@ -171,6 +174,7 @@ class UpdateBusinessInput(BaseModel):
     businessType: str | None = Field(default=None, min_length=1, max_length=60)
     state: str | None = Field(default=None, min_length=1, max_length=80)
     gstRegistered: bool | None = None
+    gstin: str | None = Field(default=None, max_length=20)  # "" clears it
 
 
 @router.patch("/businesses/me")
@@ -191,6 +195,10 @@ def update_business(
         business.state = body.state
     if body.gstRegistered is not None:
         business.gst_registered = body.gstRegistered
+    if body.gstin is not None or body.state is not None:
+        # Re-check on a state change too: the GSTIN's state must still match.
+        business.gstin = gst.seller_gstin(
+            business.gstin if body.gstin is None else body.gstin, business.state)
     db.commit()
     db.refresh(business)
     return business_dto(business)

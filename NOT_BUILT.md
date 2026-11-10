@@ -2,80 +2,84 @@
 
 Things that were asked for, or came up, but are not in the code. Delete a line when it ships.
 
-## 1. Beat plan: gaps left after the first version (November 2026)
+## 0. Open questions — decisions needed (November 2026)
 
-The beat plan and the staff day-list are built. See MANUAL_TESTING.md §37A. These parts are not built yet:
+Each one is built the way described below until someone decides otherwise.
 
-- **Editing a beat.** There is no `PUT` or `DELETE /beats/{id}`, so the name, weekdays and salesperson can't be changed and a beat can't be deleted. For now, create a new beat. The shop list and its order can be changed.
-- **Data export.** Beats and visits are not in "Download my data".
-- **Visit history screen.** Visits are saved, but the app only shows today's visit and the last promise date. There's no list of past visits for a shop or a salesperson.
-- **One salesperson per beat.** A beat can't be shared by two staff members.
-- **Old phone-only credit limits.** If the owner had different limits saved on two phones, the last phone to upload wins.
-- **Translations.** The `beats.*` strings were machine-translated and need a native speaker to review them, as the te/ta/ml chatbot strings already do.
+1. **12% for bricks and tiles: fix now or after the CA confirms?** Notification 14/2025 keeps 12% from 22 Sep 2025 for building bricks, fly ash bricks/blocks/aggregates and earthen/roofing tiles (HSN 6815, 6904, 6905); the code refuses it (§3). The fix is small (allow 12% after that date only for those HSN prefixes). G1 says build nothing in GST before the CA test. Decide: fix before the pilot, or pick a pilot that doesn't sell these.
+2. **The 6% brick scheme.** Some sources mention a 6% option for bricks with no input tax credit (Notification 02/2022-CT(Rate)). The app has no 6% rate. Ask the CA whether any pilot distributor uses it.
+3. **Daily close difference counts cash until it's banked (R3).** Since R3, "Difference to explain" includes cash until it's deposited and matched, or recorded as kept back, so a day with cash collections is never 0.00 until then. The alternative is to leave cash out of the difference, as before R3, and show deposits separately. Keep it as is?
+4. **Staff see their own count only (B6).** With per-person counts, staff see their own counted cash and over/short but not the beat's total counted or over/short, because that would reveal a colleague's short. The spec only said "own row". Should staff see the beat total?
+5. **Staff see their own deposits only (R10).** Same rule for deposits: staff see whole-beat deposits and their own, not a colleague's. OK?
+6. **"Helpers" or "Also on this beat" (B4).** The B4 spec calls the section "Helpers"; the app still says "Also on this beat" so the reviewed wording wasn't changed. Rename (and retranslate)?
+7. **Helper dates show "16 Nov 2026", not "Mon 16 Nov" (B5).** The app has no weekday date format. Add one?
+8. **Daily close after restoring a statement (R5).** Restored lines come back unmatched, so the difference stays at its after-delete value until the owner re-confirms the matches; the R5 spec said "back to its pre-delete value". Keep as is (no silent re-match)?
 
-## 2. Manual UPI/bank reconciliation: gaps after the first version (November 2026)
+## Waiting on people, not code
 
-Built: UTR required for UPI (server and app), statement import (CSV/.xlsx), suggestions, confirm, exceptions, and daily close. See MANUAL_TESTING.md §37B. **Out of scope by design:** payment collection, wallets, bank login, or any endpoint that moves money.
+- **CA + Tally test (G1):** docs/CA_TALLY_TEST.md. Blocks the GST help articles (G2) and the rate confirmation (G3).
+- **Native translation review (R6, B3):** `review/<lang>.xlsx`, Telugu first; done when `scripts/i18n_review_sheets.py unreviewed <lang>` lists nothing, then the on-phone read-through.
+- **iOS file picker on TestFlight (R7):** the 7-step check in RELEASE_NOTES.md.
+- **One-off backfill after deploy (R9):** run `scripts/backfill_reference_fingerprints.py` once against production and record the counts in RELEASE_NOTES.md.
+- **Approved free-export wording:** see §7.
 
-These parts are not built yet:
+## 1. Beat plan: gaps left (updated November 2026)
 
-- **Undoing a confirmed match.** A wrong confirmation can't be undone in the app. For now, fix it in the database.
-- **Matching by hand.** Only suggested pairs can be confirmed. An unmatched bank line can't be paired with a collection the app didn't suggest (for example, more than 3 days apart). The API accepts any same-amount pair; only the screen is missing.
-- **Split or combined payments.** One bank line equals one collection. A customer paying ₹1,000 by UPI for two entries of ₹600 + ₹400 won't match.
-- **Old `.xls` files and PDF statements.** These are refused; the user must save the statement as .xlsx or CSV. HTML-disguised ".xls" exports from some banks aren't handled either.
-- **Column mapping screen.** Columns are found by their header names. A bank with unusual headers gets "Couldn't find the header row" and no way to pick the columns.
-- **Dates are read day-first** (Indian format). A US-style `MM/DD/YYYY` export would be misread or rejected.
-- **Counted cash.** "Cash in hand" is the cash the app recorded, not cash physically counted at day end. There's no field to enter the counted amount and see a cash shortfall.
-- **Cash deposits.** Cash paid into the bank isn't matched to cash collections.
-- **Deleting an import.** An imported statement can't be removed in the app.
-- **UTR uniqueness.** The same UTR can be entered on two collections.
-- **Phones on the old app version.** UPI payments without a UTR, saved offline by an older app before this update, will fail to sync and stay flagged on that phone.
-- **Export.** Bank lines and matches are not in "Download my data".
-- **Translations.** The `recon.*`, `close.*` and `payments.*` strings are machine-translated and need native review.
-- **iOS build.** The new file picker (`@react-native-documents/picker`) is a native module. It needs `pod install` (CI does this) and a fresh build before import works on a phone.
+The beat plan, the staff day-list, shared beats (a primary plus helpers, which the owner adds and removes in Beat plan → Edit, including cover planned ahead), editing a beat (name, days, salesperson), deleting one (soft delete — its visits and daily closes stay), restoring a deleted beat (owner: Beat plan → Deleted beats), and the visit history (by shop, salesperson or beat) are built. Beats and visits are in "Download my data". See MANUAL_TESTING.md §37A and §37J. These parts are not built yet:
 
-## 3. GST invoices and CA/Tally export: gaps after the first version (November 2026)
+- **Shared beats** (`beat_assignments`, one open primary per beat enforced by the database; helpers added and removed in Beat plan → Edit, with a start date and optional last day for cover planned ahead, see §37J.4, §37J.7 and §37J.8). What's left: only helpers can be planned ahead; a change of salesperson still takes effect the day it's made. Daily close shows each salesperson's subtotal, and cash can be counted per salesperson (§37K.14).
+- **Translations.** The `beats.*` and `visits.*` strings are machine-translated; reviewers use `scripts/i18n_review_sheets.py` (sheet 4).
 
-Built: GST fields on a sale on credit (GSTIN, HSN, rate, price with/without GST, place of supply), the server's tax split with a live preview, the rate-change log, and four CA files (GSTR-1-ready, GSTR-3B summary, Tally Excel/CSV). See MANUAL_TESTING.md §37C. **Out of scope by design:** filing returns and e-invoicing (IRN/QR).
+## 2. Manual UPI/bank reconciliation: gaps left (updated November 2026)
+
+Built: UTR required for UPI (server and app) and unique per business; a warning, never a block, when a bank-transfer reference or a cheque (number + bank + account) repeats an earlier payment; statement import (CSV, .xlsx, and old .xls — real Excel 97-2003 or an HTML table saved as .xls, told apart by the file's first bytes; the server needs `xlrd` from requirements.txt) with a column-mapping screen and a date-format choice, suggestions, matching by hand, one bank line covering several collections, one collection paid in several transfers, several transfers paying several collections (the server refuses any match that isn't covered exactly), undo (a split is undone as a whole), deleting a statement (its matches are undone first) and restoring it (its lines come back unmatched; refused if the same file or its lines were imported again since), counted cash with over/short, cash deposits (the owner records cash taken to the bank or kept back in the shop, per salesperson or for the whole beat; a deposit is matched to its bank line, and the daily close difference counts cash until it's deposited or kept back), and old-app UTR-less payments kept and fixable. See MANUAL_TESTING.md §37B and §37K. **Out of scope by design:** payment collection, wallets, bank login, or any endpoint that moves money.
 
 These parts are not built yet:
 
-- **The CA test itself.** It needs a real CA and Tally. Until a pilot month imports with 0 fields re-typed, treat the Tally layout as unproven.
-- **Rate list and B2CL limit not confirmed.** The rates (0, 0.25, 3, 5, 12, 18, 28, 40%) and the ₹1 lakh B2CL limit are from the rules as of late 2025. The CA must confirm them; they live in `backend/app/gst.py` and `backend/app/gst_reports.py`.
-- **One line per invoice.** An invoice has one HSN and one rate. A bill with items at different rates must be entered as separate invoices.
-- **No item picker on the sale.** HSN and rate are typed or chosen on the sale; they aren't filled from the item catalog.
-- **HSN quantity and unit (UQC).** Not recorded, so the HSN sheets leave them blank and the CA fills them in.
+- **PDF statements — out of scope by design.** Per-bank PDF layouts plus OCR are a project of their own and unreliable on scans. A PDF is refused with "save it as .xlsx or .csv"; the user downloads the statement from the bank in one of those.
+- **Old cheques match on number only.** `scripts/backfill_reference_fingerprints.py` (run once after deploy) brings payments saved before the warning into it, but cheques saved before bank and account were asked for have only a number, so they match only a later cheque entered without bank and account. Payments with no reference stored are skipped. Duplicate UPI UTRs saved before the UPI rule are kept as they are (the first one is indexed; the rest are logged at boot).
+- **Cash with no salesperson.** Cash is counted and deposited per salesperson or for the whole beat. Cash recorded with no salesperson (e.g. the owner's own entry) can only be in the whole-beat figures, so with per-person counts the beat's over/short waits until that cash is counted that way. An old SQLite dev database can't match deposits until it's recreated (Postgres is migrated); recreate it.
+- **Translations (R6).** The `recon.*`, `close.*`, `bankImport.*`, `bankMatch.*`, `payments.*` and `deposit.*` strings are machine-translated; review sheets are built (`review/<lang>.xlsx`), Telugu first, then an on-phone read-through. Waiting on a native reviewer, who writes a correction or OK on every sheet-1 line; `scripts/i18n_review_sheets.py unreviewed te` lists what's left.
+- **iOS file picker not yet checked on a phone (R7).** CI fails the iOS build if the file-picker pod isn't linked, but that doesn't prove the picker opens. The 7-step check (Import bank statement and Import old khata on a TestFlight build) is in RELEASE_NOTES.md; record device, iOS version and build number there. A failure to open is a P0.
+
+## 3. GST invoices and CA/Tally export: gaps left (updated November 2026)
+
+Built: GST fields on a sale on credit; rates by invoice date (0, 5, 18, 40% plus 3% gold/silver and 0.25% rough diamonds from 22 Sep 2025; 12% only before 22 Sep 2025 — wrong for bricks and tiles, see the bug below — and 28% only before 1 Feb 2026); the seller's own GSTIN (checked against the business state); every state and UT; server-assigned invoice numbers, consecutive and unique per business per financial year (Rule 46), never reused after a delete; quantity and UQC on every new GST invoice, in the GSTR-1 HSN sheets; an item picker that fills HSN, rate and unit; the same tax split on the phone for an offline sale; the rate-change log (IST days); and four CA files. See MANUAL_TESTING.md §37C and §37L. **Out of scope by design:** filing returns and e-invoicing (IRN/QR).
+
+These parts are not built yet:
+
+- **BLOCKED — the CA + Tally test.** Needs a real CA and Tally, one pilot month, 0 fields re-typed, 0 GST Offline Tool errors, a signed discrepancy note. Runbook: docs/CA_TALLY_TEST.md. Its prerequisites (invoice numbers, quantity/UQC) are in; nothing else in GST is built until it runs.
+- **BUG — 12% refused for bricks and tiles.** `backend/app/gst.py` treats 12% as retired from 22 Sep 2025, but Notification 14/2025 keeps 12% for building bricks, fly ash bricks/blocks/aggregates and earthen/roofing tiles (HSN 6815, 6904, 6905). Those invoices can't be entered today. The "12% only before 22 Sep 2025" line below describes the code, not the law.
+- **BLOCKED — GST help articles (G2).** Written only after the CA test, from the CA's discrepancy note (steps in docs/CA_TALLY_TEST.md, "After the test"). The assistant has no GST help article yet, and says "not in the help guide" for GST questions; that's deliberate until then.
+- **Rate list confirmed by the CA (G3).** The dated rates are in `backend/app/gst.py` (one place). Have the CA confirm them, including any special rate the distributors' goods use (12% bricks and tiles, the 6% brick scheme; see §0).
+- **GSTR-1 file never checked against the GST Offline Tool.** Nothing has loaded the GSTR-1-ready Excel into the Offline Tool's import template yet; the CA test's Offline Tool step is the first check and may find errors.
+- **One line per invoice.** An invoice has one item, HSN and rate. A bill with several items must be entered as separate invoices.
+- **The amount isn't filled from the item.** The item picker fills HSN, rate and unit; the price is still typed.
+- **Old invoices.** GST invoices saved before this release have no quantity/UQC (their HSN rows have a blank unit for the CA to fill) and keep the invoice numbers typed in the app.
 - **Cash sales.** Only sales on credit (Add credit) can be GST invoices; income entries can't.
-- **Credit notes, sales returns, cancelled invoices, cess, reverse charge, exports/SEZ.** None of these exist.
-- **Purchases and input tax credit.** Expenses carry no GST, so the GSTR-3B summary has no table 4.
-- **Duplicate invoice numbers.** The same invoice number can be used twice in a year.
-- **Editing a GST invoice.** Entries can't be edited; delete and re-enter.
-- **Offline balance.** A GST sale "before GST" saved offline shows the pre-tax amount until it syncs.
-- **Business details.** The seller's own GSTIN isn't stored, and states missing from the app's state list (e.g. Jammu and Kashmir, Chandigarh, Puducherry) can't be picked.
+- **Credit notes, sales returns, cancelled invoices, cess, reverse charge, exports/SEZ.** None of these exist. A deleted invoice's number is kept as cancelled in the database but isn't reported yet (GSTR-1 table 13).
+- **Purchases and input tax credit.** Purchases record supplier, price and bill but no GST, so the GSTR-3B summary has no table 4.
+- **Editing a GST invoice.** Entries can't be edited; delete and re-enter (the deleted number isn't reused).
 - **CA test results stay on the phone.** They are shared with the Share button, not saved on the server.
-- **Help article.** The assistant has no help article for GST reports.
-- **Export.** GST fields are not in "Download my data".
-- **Translations.** The `gst.*` strings are machine-translated and need native review.
+- **Translations.** The `gst.*` strings are machine-translated; sheet 2 of the review files.
 
-## 4. Stock basics: gaps after the first version (November 2026)
+## 4. Stock basics: gaps left (updated November 2026)
 
-Built: item catalog as the SKU master (unit, purchase/sale price, low-stock alert level), godown and per-salesperson van stock, purchases, sales from the godown or a van, godown → van loads, the low-stock list, the monthly count with logged corrections, and stock history. See MANUAL_TESTING.md §37D. **Out of scope by design (Phase 1):** warehouse/bin management, batches and expiry, manufacturing.
+Built: item catalog as the SKU master, godown and per-salesperson van stock, purchases (with supplier, price per unit and the supplier's bill number; the item keeps the latest price), sales from the godown or a van, godown → van loads, the low-stock list, the monthly count with logged corrections, stock history, and stock in "Download my data". Stock can't be oversold: taking stock out is one conditional database update, backed by a CHECK (qty ≥ 0) and a 20-sales-at-once test. Vans and people show the name the owner gives them. See MANUAL_TESTING.md §37D and §37M. **Out of scope by design (Phase 1):** warehouse/bin management, batches and expiry, manufacturing.
 
 These parts are not built yet:
 
-- **Add credit and income don't reduce stock.** Item bills (§5) do; a plain Add credit amount or an income entry has no items, so it can't.
+- **Add credit and income don't reduce stock.** Item bills do; a plain Add credit amount or an income entry has no items, so it can't.
 - **Van → godown returns and van → van moves.** Unsold stock can't be moved back; correct it with a van count.
-- **Purchases don't record a supplier, price or bill,** and don't create an expense.
+- **Purchases don't create an expense** or keep a supplier list; the supplier is typed each time.
 - **Editing or undoing a stock entry.** Not possible; correct it with a count.
 - **Offline.** Stock entries need a connection; there's no offline queue.
-- **Two sales at the same moment** could both pass the "enough stock?" check (see the `ponytail:` note in `backend/app/stock.py`).
 - **Units.** One unit per item; no conversion (e.g. box ↔ pieces).
 - **Low-stock notifications.** The list is on the Stock screen only; no push alert.
 - **Count reminders and month locking.** Nothing prompts the month-end count or locks a counted month.
 - **Stock value.** No valuation (FIFO/average) or stock value report.
-- **Vans are labelled by the salesperson's mobile number** (users have no names).
-- **Export.** Stock and its history are not in "Download my data".
-- **Translations.** The `stock.*` strings are machine-translated and need native review.
+- **Existing oversold stock.** If the old ledger already summed below zero somewhere, that place starts at 0 (logged at boot); the next count corrects it.
+- **Translations.** The `stock.*` strings are machine-translated; sheet 3 of the review files.
 
 ## 5. Item bills and FMCG schemes: gaps after the first version (November 2026)
 
@@ -136,10 +140,10 @@ These parts are not done:
 
 - **BLOCKED — low-end performance target device.** "[LOW-END TEST DEVICE AND ANDROID VERSION]" was not named, so the on-device timings (open, first offline entry under 2 s, 1,000-entry scroll) have not been measured. What was done: offline saves no longer wait for a network timeout; the ledger list mounts about a screenful of rows; and the payment-risk calculation on the customer screen went from O(credits × payments) to linear (1,000 entries: ~350 ms → a few ms on a laptop) — that loop would have frozen a low-end phone for seconds. Run §37H.5 on the device once it is chosen.
 - **Weak signal, not offline.** With bars but no data getting through, the first save waits up to the 15-second request timeout before it is queued. A truly offline phone (airplane mode, or Wi-Fi with no internet) queues at once.
-- **Conflicts cover customer details only.** Entries, payments and visits are never edited in place, so they can't conflict (two phones adding entries both keep theirs). Items, schemes, beats and team settings still save last-write-wins.
-- **Who resolves a conflict.** Owner and accountant (the roles that can edit a customer) choose on the phone where the conflict appeared; staff see the conflict but can't choose. The conflict lives on that phone, not on the server.
+- **Conflicts cover customer details and credit limits.** Customer edits get the side-by-side screen; a stale credit-limit save is refused and the server's limit is shown with a notice (old phone-only limits never overwrite a newer one). Entries, payments and visits are never edited in place, so they can't conflict. Items, schemes, beats and team settings still save last-write-wins.
+- **Who resolves a conflict.** The owner (the only role that can edit a customer) chooses on the phone where the conflict appeared; others see the conflict but can't choose. The conflict lives on that phone, not on the server.
 - **Failed entries can only be retried**, not edited or discarded, from the Sync status screen.
-- **Import limits.** One sheet (the first), 10,000 rows and 5 MB per file; old .xls must be saved as .xlsx or CSV. Mobile numbers, GSTIN and notes are not imported (new retailers are created by name). A retailer name shared by two existing customers is skipped, not guessed. Rows with no bill number still count as duplicates when the retailer, amount and date match — the preview lists them, so check it.
+- **Import limits.** One sheet (the first), 10,000 rows and 5 MB per file; old .xls is read too (same reader as bank statements); PDF is refused. Mobile numbers, GSTIN and notes are not imported (new retailers are created by name). A retailer name shared by two existing customers is skipped, not guessed. Rows with no bill number still count as duplicates when the retailer, amount and date match — the preview lists them, so check it.
 - **No undo.** An import is undone by restoring from the backup Excel by hand; there is no one-tap undo.
 - **Existing duplicate client ids.** If the production database already has two rows with one client id (see `scripts/reconcile.py`), the new unique index for that table is skipped at boot (logged) and the old look-up-first check still applies there until the duplicates are cleaned.
 

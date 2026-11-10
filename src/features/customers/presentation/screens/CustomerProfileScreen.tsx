@@ -1,3 +1,4 @@
+import {ApiError} from '@api/client';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
 import {
@@ -77,14 +78,29 @@ export function CustomerProfileScreen({
 
   const queryClient = useQueryClient();
   const [creditLimit, setCreditLimitValue] = useState(customer.creditLimit);
+  const [limitVersion, setLimitVersion] = useState(customer.creditLimitVersion ?? 0);
   const saveLimit = useMutation({
-    mutationFn: (amount: number | null) => customerRemote.setCreditLimit(customer.id, amount),
+    mutationFn: (amount: number | null) => customerRemote.setCreditLimit(customer.id, amount, limitVersion),
     onSuccess: updated => {
       setCreditLimitValue(updated.creditLimit);
+      setLimitVersion(updated.creditLimitVersion ?? 0);
       setLimitOpen(false);
       queryClient.invalidateQueries({queryKey: [CUSTOMERS_KEY]});
     },
-    onError: err => Alert.alert(t('form.couldNotSave'), err.message),
+    onError: async err => {
+      // Changed on another device first: the server's limit wins, and we say so.
+      if (err instanceof ApiError && err.status === 409) {
+        const fresh = await customerRemote.getById(customer.id).catch(() => null);
+        if (fresh) {
+          setCreditLimitValue(fresh.creditLimit);
+          setLimitVersion(fresh.creditLimitVersion ?? 0);
+        }
+        setLimitOpen(false);
+        Alert.alert(t('customers.limitChangedTitle'), err.message);
+        return;
+      }
+      Alert.alert(t('form.couldNotSave'), err.message);
+    },
   });
   const businessName = useAuthStore(s => s.business?.businessName);
 
@@ -266,6 +282,10 @@ export function CustomerProfileScreen({
             onPress={() => navigation.navigate('CustomerForm', {customer})}
           />
         ) : null}
+        <SecondaryAction
+          label={t('visits.forShop')}
+          onPress={() => navigation.navigate('VisitHistory', {customerId: customer.id, title: customer.fullName})}
+        />
         <SecondaryAction
           label={t('customers.call')}
           onPress={() => Linking.openURL(`tel:${customer.mobile}`)}

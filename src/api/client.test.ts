@@ -1,5 +1,6 @@
 import {
   ApiError,
+  apiErrorMessage,
   humanizeApiError,
   NetworkError,
   retryDelayMs,
@@ -60,5 +61,20 @@ describe('retryDelayMs', () => {
     expect(retryDelayMs(2)).toBe(6000);
     expect(retryDelayMs(3)).toBe(8000); // capped
     expect(retryDelayMs(10)).toBe(8000);
+  });
+});
+
+describe('apiErrorMessage', () => {
+  const {useAuthStore} = require('@store/auth.store');
+  const {translate} = require('@/i18n/useT');
+  const utr = 'This UTR is already on a UPI payment of ₹500.00 from Ramesh on 05-11-2026. Each UPI payment has its own UTR — check for a typo.';
+
+  it('keeps the server wording in English and gives the duplicate-UTR warning its own sentence elsewhere', () => {
+    useAuthStore.setState({preferredLanguage: 'en'});
+    expect(apiErrorMessage(409, utr)).toBe(utr);
+    useAuthStore.setState({preferredLanguage: 'te'});
+    expect(apiErrorMessage(409, utr)).toBe(translate('te', 'errors.utrDuplicate'));
+    expect(apiErrorMessage(409, 'Some other clash')).toBe(translate('te', 'errors.conflict'));
+    useAuthStore.setState({preferredLanguage: 'en'});
   });
 });

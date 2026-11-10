@@ -70,3 +70,6 @@ coverage/
 # Voice test recordings (personal audio, large): never commit
 /clips/*
 !/clips/manifest.csv
+
+# Native-speaker review sheets (scripts/i18n_review_sheets.py); apply them, don't commit them
+review/

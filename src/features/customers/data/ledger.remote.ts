@@ -31,16 +31,21 @@ export const ledgerRemote = {
     form.append('amount', String(draft.amount));
     form.append('date', draft.date);
     form.append('client_id', clientId); // idempotency key for retries
+    form.append('utr_rule', 'true'); // this app requires a UTR on UPI payments
     if (draft.invoiceNumber) form.append('invoice_number', draft.invoiceNumber);
     if (draft.notes) form.append('notes', draft.notes);
     if (draft.paymentMethod) form.append('payment_method', draft.paymentMethod);
     if (draft.referenceNumber) {
       form.append('reference_number', draft.referenceNumber);
     }
+    if (draft.chequeBank) form.append('cheque_bank', draft.chequeBank);
+    if (draft.chequeAccount) form.append('cheque_account', draft.chequeAccount);
     if (draft.beatId) form.append('beat_id', draft.beatId);
     if (draft.gst) {
       form.append('gst_rate', draft.gst.rate);
       form.append('hsn_code', draft.gst.hsn);
+      form.append('quantity', draft.gst.quantity);
+      form.append('uqc', draft.gst.uqc);
       form.append('price_includes_gst', String(draft.gst.priceIncludesGst));
       if (draft.gst.customerGstin) form.append('customer_gstin', draft.gst.customerGstin);
       if (draft.gst.placeOfSupply) form.append('place_of_supply', draft.gst.placeOfSupply);

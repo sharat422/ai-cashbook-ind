@@ -1,3 +1,4 @@
+import {personLabel} from '@utils/personLabel';
 import React, {useEffect, useState} from 'react';
 import {Alert, ScrollView, View} from 'react-native';
 
@@ -27,7 +28,8 @@ export function StockMoveSheet({
   onClose,
 }: {
   action: StockAction | null;
-  item: {id: string; name: string; unit: string | null; godown?: string; vanQty?: Record<string, string>} | null;
+  item: {id: string; name: string; unit: string | null; godown?: string; vanQty?: Record<string, string>;
+    purchasePrice?: number} | null;
   vans: Van[];
   ownVanOnly?: boolean;
   onClose: () => void;
@@ -37,6 +39,9 @@ export function StockMoveSheet({
   const [qty, setQty] = useState('');
   const [date, setDate] = useState(todayIST());
   const [note, setNote] = useState('');
+  const [supplier, setSupplier] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
+  const [billRef, setBillRef] = useState('');
   const [source, setSource] = useState<Source>({location: 'godown'});
   const [vanUserId, setVanUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +51,9 @@ export function StockMoveSheet({
   useEffect(() => {
     setQty('');
     setNote('');
+    setSupplier('');
+    setUnitPrice(item?.purchasePrice ? String(item.purchasePrice) : '');
+    setBillRef('');
     setError(null);
     setDate(todayIST());
     setSource(ownVanOnly ? {location: 'van'} : {location: 'godown'});
@@ -54,7 +62,7 @@ export function StockMoveSheet({
   }, [action, item?.id, ownVanOnly]);
 
   const pending = record.isPending || transfer.isPending;
-  const vanLabel = (v: Van) => `🚚 ${v.mobile}`;
+  const vanLabel = (v: Van) => `🚚 ${personLabel(v.name, v.mobile)}`;
 
   const submit = () => {
     if (!action || !item) return;
@@ -71,7 +79,12 @@ export function StockMoveSheet({
       }
       transfer.mutate({...base, vanUserId}, done);
     } else if (action === 'purchase') {
-      record.mutate({...base, kind: 'purchase', location: 'godown'}, done);
+      if (!supplier.trim() || !billRef.trim() || !isQty(unitPrice || 'x')) {
+        setError(t('stock.purchaseDetails'));
+        return;
+      }
+      record.mutate({...base, kind: 'purchase', location: 'godown', supplier: supplier.trim(),
+        unitPrice: unitPrice.trim(), billRef: billRef.trim()}, done);
     } else {
       record.mutate(
         {...base, kind: 'sale', location: source.location,
@@ -137,6 +150,21 @@ export function StockMoveSheet({
             autoFocus
           />
         </FormField>
+        {action === 'purchase' ? (
+          <>
+            <FormField label={t('stock.supplier')} required>
+              <TextField testID="purchase-supplier" value={supplier} onChangeText={setSupplier} maxLength={200} />
+            </FormField>
+            <FormField label={t('stock.unitPrice')} required>
+              <TextField testID="purchase-price" value={unitPrice} keyboardType="decimal-pad"
+                onChangeText={v => setUnitPrice(v.replace(/[^\d.]/g, ''))} />
+            </FormField>
+            <FormField label={t('stock.billRef')} required>
+              <TextField testID="purchase-bill" value={billRef} onChangeText={setBillRef} maxLength={40}
+                autoCapitalize="characters" />
+            </FormField>
+          </>
+        ) : null}
         <FormField label={t('form.date')} required>
           <DateField value={date} onChange={setDate} />
         </FormField>

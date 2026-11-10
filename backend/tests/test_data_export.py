@@ -10,7 +10,7 @@ import inspect
 from openpyxl import load_workbook
 from pypdf import PdfReader
 
-from conftest import _login, days_ago_iso
+from conftest import _login, days_ago_iso, today_iso
 from helpers import add_customer, add_expense, add_income, add_ledger
 from app import data_export
 from app.routers import account
@@ -37,7 +37,8 @@ def test_brand_new_free_business_exports_excel_and_pdf(make_user, client):
     assert x.status_code == 200, x.text
     assert x.headers["content-type"].startswith("application/vnd.openxmlformats")
     wb = load_workbook(io.BytesIO(x.content))
-    assert wb.sheetnames == ["Customers", "Ledger", "Income", "Expenses"]
+    assert wb.sheetnames[:4] == ["Customers", "Ledger", "Income", "Expenses"]
+    assert {"customers (all)", "ledger_entries (all)", "incomes (all)", "team (all)"} <= set(wb.sheetnames)
     cust = [list(r) for r in wb["Customers"].iter_rows(min_row=2, values_only=True)]
     assert cust[0][0] == "రమేష్ ట్రేడర్స్" and float(cust[0][4]) == 1099.5
     ledger = [list(r) for r in wb["Ledger"].iter_rows(min_row=2, values_only=True)]
@@ -78,3 +79,51 @@ def test_export_is_scoped_and_staff_cannot_download(make_user, client):
     staff = _login(client, "7012345678")
     assert client.get(f"{API}/account/export.xlsx", headers=staff).status_code == 403
     assert client.get(f"{API}/account/balances.pdf", headers=staff).status_code == 403
+
+
+
+def test_every_business_table_is_exported_or_deliberately_left_out():
+    # One shared builder: a new business table must be added to sections()
+    # (or to this short list of things that must never leave the server).
+    from app.database import Base
+    never = {"statement_links": "token hashes", "payment_utrs": "UTR index hashes",
+             "ai_decisions": "Ask AI log, deleted on request", "access_logs": None,
+             "businesses": "exported as 'business'", "feedback": "messages to the Bolcash team"}
+    exported = {"customers", "ledger_entries", "gst_invoice_numbers", "gst_rate_change_logs", "incomes",
+                "expenses", "recurring_expenses", "items", "stock_levels", "stock_moves", "schemes",
+                "scheme_items", "bills", "bill_lines", "scheme_applications", "beats", "beat_retailers",
+                "visits", "beat_assignments", "bank_imports", "bank_lines", "bank_matches", "cash_counts", "cash_deposits", "statement_events",
+                "import_logs", "business_members"}
+    owned = {t.name for t in Base.metadata.sorted_tables if "business_id" in t.c or "customer_id" in t.c
+             or t.name in {"scheme_items", "bill_lines", "beat_retailers", "beat_assignments"}}
+    assert owned - exported - set(never) == set()
+
+
+def test_download_my_data_holds_beats_visits_bank_gst_and_stock(make_user, client):
+    from test_beats import _beat, _team, _visit
+    from test_recon_rework import _dmy, _import, _pay, _statement
+    owner, [(a_id, staff)] = _team(make_user, client, "staff")
+    cid = _seed(client, owner)
+    beat = _beat(client, owner, "Market", user_id=a_id, customers=[cid])
+    _visit(client, staff, beat["id"], cid, "v1")
+    e = _pay(client, owner.headers, cid, 75, "u1", "791111111111")
+    _import(client, owner.headers, _statement([f"{_dmy(today_iso())},UPI 791111111111,75.00,"]))
+    sugg = client.get(f"{API}/reconciliation/suggestions", headers=owner.headers).json()
+    client.post(f"{API}/reconciliation/confirm", headers=owner.headers,
+                json={"bankLineId": sugg[0]["bankLine"]["id"], "entryId": e})
+    client.post(f"{API}/items", headers=owner.headers, json={"name": "Soap", "sale_price": 25,
+                                                             "track_stock": True, "stock_qty": 40})
+
+    data = client.get(f"{API}/account/export", headers=owner.headers).json()
+    assert data["schema_version"] == 2
+    t = data["businesses"][0]["all_tables"]
+    assert [b["name"] for b in t["beats"]] == ["Market"] and len(t["beat_retailers"]) == 1
+    assert len(t["visits"]) == 1 and t["visits"][0]["outcome"] == "visited_no_order"
+    assert len(t["bank_lines"]) == 1 and t["bank_matches"][0]["entry_id"] == e
+    assert "file_hash" not in t["bank_statements"][0]
+    assert t["stock_levels"][0]["qty"] == "40.000" and t["stock_moves"][0]["kind"] == "opening"
+    assert {"gst_invoice_numbers", "gst_rate_changes", "cash_counts", "khata_imports"} <= set(t)
+    assert any(x["invoice_number"] == "INV-1" for x in t["ledger_entries"])
+    wb = load_workbook(io.BytesIO(client.get(f"{API}/account/export.xlsx", headers=owner.headers).content))
+    assert {f"{n} (all)" for n in ("beats", "visits", "bank_lines", "bank_matches", "stock_levels",
+                                   "stock_moves")} <= set(wb.sheetnames)

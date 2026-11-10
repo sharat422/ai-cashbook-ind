@@ -78,9 +78,16 @@ def test_item_negative_price_rejected(user, client, field, label):
     assert r.json()["detail"] == f"{label} can't be negative."
 
 
-@pytest.mark.parametrize("rate", [0, 0.25, 3, 5, 12, 18, 28])
+@pytest.mark.parametrize("rate", [0, 0.25, 3, 5, 18, 40])
 def test_item_valid_gst_rates_accepted(user, client, rate):
     assert _item(client, user.headers, gst_rate=rate).status_code == 200
+
+
+@pytest.mark.parametrize("rate", [12, 28])
+def test_item_retired_gst_rates_rejected(user, client, rate):
+    # An item is priced for today: the 12% and 28% slabs have ended (GST 2.0).
+    r = _item(client, user.headers, gst_rate=rate)
+    assert r.status_code == 422 and "ended on" in r.json()["detail"]
 
 
 @pytest.mark.parametrize("rate", [7, -5, 100])

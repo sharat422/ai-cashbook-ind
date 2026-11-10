@@ -12,8 +12,8 @@ export function useTeamMutations() {
   const invalidate = () => qc.invalidateQueries({queryKey: ['team']});
 
   const add = useMutation({
-    mutationFn: ({mobile, role}: {mobile: string; role: Role}) =>
-      teamRemote.add(mobile, role),
+    mutationFn: ({mobile, role, name}: {mobile: string; role: Role; name?: string}) =>
+      teamRemote.add(mobile, role, name),
     onSuccess: invalidate,
   });
   const updateRole = useMutation({
@@ -26,5 +26,9 @@ export function useTeamMutations() {
     onSuccess: invalidate,
   });
 
-  return {add, updateRole, remove};
+  const rename = useMutation({
+    mutationFn: ({userId, name}: {userId: string; name: string}) => teamRemote.rename(userId, name),
+    onSuccess: invalidate,
+  });
+  return {add, updateRole, remove, rename};
 }

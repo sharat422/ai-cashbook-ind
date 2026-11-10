@@ -15,7 +15,8 @@ export const ITEM_UNITS = [
 ] as const;
 
 /** Standard Indian GST slabs. */
-export const GST_RATES = [0, 5, 12, 18, 28, 40] as const;
+/** GST 2.0 slabs (from 22 Sep 2025); 12% and 28% have ended. */
+export const GST_RATES = [0, 5, 18, 40] as const;
 
 export type ItemType = 'product' | 'service';
 

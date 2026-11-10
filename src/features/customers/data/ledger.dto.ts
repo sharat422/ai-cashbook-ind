@@ -1,4 +1,5 @@
 import type {
+  DuplicateReference,
   LedgerEntry,
   LedgerEntryType,
   PaymentMethod,
@@ -15,6 +16,10 @@ export interface LedgerEntryDto {
   notes: string | null;
   payment_method: PaymentMethod | null;
   reference_number: string | null;
+  cheque_bank?: string | null;
+  cheque_account?: string | null;
+  /** Only on the save response: this bank/cheque reference repeats an earlier payment. */
+  warning?: DuplicateReference;
   attachment_url: string | null;
   created_at: string;
 }
@@ -30,6 +35,9 @@ export function toLedgerEntry(dto: LedgerEntryDto): LedgerEntry {
     notes: dto.notes ?? undefined,
     paymentMethod: dto.payment_method ?? undefined,
     referenceNumber: dto.reference_number ?? undefined,
+    chequeBank: dto.cheque_bank ?? undefined,
+    chequeAccount: dto.cheque_account ?? undefined,
+    warning: dto.warning,
     attachmentUrl: dto.attachment_url ?? undefined,
     attachment: null,
     createdAt: dto.created_at,

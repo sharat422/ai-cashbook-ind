@@ -1,8 +1,19 @@
+import {gstSplit, placeOfSupply} from '@features/gst/domain/gstSplit';
+import {useAuthStore} from '@store/auth.store';
 import type {LedgerEntry, LedgerEntryDraft} from '@features/customers/domain/ledger';
 import {
   usePendingLedgerStore,
   type PendingLedgerEntry,
 } from '@features/customers/presentation/store/pendingLedger.store';
+
+/** What the customer owes for this entry: for a GST sale, the invoice total the
+ *  server will compute (same formula on the phone), not the pre-tax price. */
+export function invoiceTotal(draft: LedgerEntryDraft): number {
+  const seller = useAuthStore.getState().business?.gstin;
+  if (!draft.gst || !seller) return draft.amount;
+  const pos = placeOfSupply(seller, draft.gst.customerGstin, draft.gst.placeOfSupply);
+  return Number(gstSplit(draft.amount, draft.gst.rate, draft.gst.priceIncludesGst, pos !== seller.slice(0, 2)).total);
+}
 
 /** Map a queued pending entry to an optimistic LedgerEntry for the timeline. */
 export function pendingToEntry(pending: PendingLedgerEntry): LedgerEntry {
@@ -10,7 +21,7 @@ export function pendingToEntry(pending: PendingLedgerEntry): LedgerEntry {
   return {
     id: pending.localId,
     type: draft.type,
-    amount: draft.amount,
+    amount: invoiceTotal(draft),
     date: draft.date,
     invoiceNumber: draft.invoiceNumber,
     notes: draft.notes,

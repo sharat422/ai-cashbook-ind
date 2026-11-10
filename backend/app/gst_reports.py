@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .calc import IST
-from .gst import money, place_label
+from .gst import UQC, money, place_label
 from .models import Business, Customer, GstRateChangeLog, LedgerEntry
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -177,15 +177,18 @@ def gstr1_xlsx(rows: list[tuple], changes: list) -> bytes:
             b2cl.append([e.invoice_number, when, total, pos, "", rate, taxable, ZERO, ""])
         else:
             b2cs[(pos, rate)] += taxable
-        key = ("b2b" if e.customer_gstin else "b2c", e.hsn_code, rate)
-        acc = hsn.setdefault(key, [ZERO] * 5)
-        for i, v in enumerate((total, taxable, _d(e.igst), _d(e.cgst), _d(e.sgst))):
+        # One row per HSN + unit + rate. Invoices saved before quantity/UQC were
+        # recorded group under a blank unit, for the CA to fill.
+        key = ("b2b" if e.customer_gstin else "b2c", e.hsn_code, e.gst_uqc or "", rate)
+        acc = hsn.setdefault(key, [ZERO] * 6)
+        for i, v in enumerate((total, taxable, _d(e.igst), _d(e.cgst), _d(e.sgst),
+                               Decimal(e.gst_quantity or 0))):
             acc[i] += v
 
     def hsn_rows(kind):
-        # UQC and quantity aren't recorded; the CA fills them (see NOT_BUILT.md).
-        return [[h, "", "", "", acc[0], rate, acc[1], acc[2], acc[3], acc[4], ZERO]
-                for (k, h, rate), acc in sorted(hsn.items()) if k == kind]
+        return [[h, "", f"{u}-{UQC[u].upper()}" if u else "", (acc[5].normalize() + 0) if u else "",
+                 acc[0], rate, acc[1], acc[2], acc[3], acc[4], ZERO]
+                for (k, h, u, rate), acc in sorted(hsn.items()) if k == kind]
 
     hsn_header = ["HSN", "Description", "UQC", "Total Quantity", "Total Value", "Rate",
                   "Taxable Value", "Integrated Tax Amount", "Central Tax Amount",

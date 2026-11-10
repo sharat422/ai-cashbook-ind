@@ -1,8 +1,10 @@
 """Stock basics for a distributor: godown and per-salesperson van stock.
 
-Stock at a place is the sum of its StockMove rows, so every change is in the
-audit log by construction. Phase 1 only: no warehouses/bins, batches, expiry
-or manufacturing.
+Every change is a StockMove (the audit log) plus one atomic change to the
+place's StockLevel. Taking stock out is a single conditional UPDATE
+(`qty >= n`), so two sales at the same moment can never both take the last
+box; a CHECK (qty >= 0) in the database is the backstop. Phase 1 only: no
+warehouses/bins, batches, expiry or manufacturing.
 """
 from __future__ import annotations
 
@@ -10,11 +12,13 @@ from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .models import Business, BusinessMember, Item, StockMove, User, gen_id
+from .models import Business, BusinessMember, Item, StockLevel, StockMove, User, gen_id
 from .rbac import ENTRY_EDIT, role_can
 
 QTY = Decimal("0.001")
@@ -73,21 +77,54 @@ def place(db: Session, business: Business, user: User, role: str,
 
 def levels(db: Session, business: Business, item_ids: list[str] | None = None
            ) -> dict[str, dict[Place, Decimal]]:
-    """{item_id: {place: qty}} from the move ledger."""
-    q = (select(StockMove.item_id, StockMove.location, StockMove.van_user_id,
-                func.sum(StockMove.quantity))
-         .where(StockMove.business_id == business.id)
-         .group_by(StockMove.item_id, StockMove.location, StockMove.van_user_id))
+    """{item_id: {place: qty}} — current stock per place."""
+    q = select(StockLevel).where(StockLevel.business_id == business.id)
     if item_ids is not None:
-        q = q.where(StockMove.item_id.in_(item_ids))
+        q = q.where(StockLevel.item_id.in_(item_ids))
     out: dict[str, dict[Place, Decimal]] = defaultdict(dict)
-    for item_id, loc, van, total in db.execute(q).all():
-        out[item_id][(loc, van)] = Decimal(str(total or 0)).quantize(QTY)
+    for lv in db.scalars(q).all():
+        out[lv.item_id][(lv.location, lv.van_key or None)] = Decimal(str(lv.qty)).quantize(QTY)
     return out
 
 
 def at(db: Session, business: Business, item: Item, where: Place) -> Decimal:
     return levels(db, business, [item.id]).get(item.id, {}).get(where, ZERO)
+
+
+def _place_filter(business: Business, item: Item, where: Place):
+    return (StockLevel.business_id == business.id, StockLevel.item_id == item.id,
+            StockLevel.location == where[0], StockLevel.van_key == (where[1] or ""))
+
+
+def take(db: Session, business: Business, item: Item, where: Place, q: Decimal) -> None:
+    """Take q out of a place in ONE statement that only succeeds if the stock
+    is there. Never read-then-write: that's how two sales oversold."""
+    done = db.execute(update(StockLevel).where(*_place_filter(business, item, where), StockLevel.qty >= q)
+                      .values(qty=StockLevel.qty - q))
+    if done.rowcount != 1:
+        raise _short(at(db, business, item, where), item, where)
+
+
+def put(db: Session, business: Business, item: Item, where: Place, q: Decimal) -> None:
+    """Add q to a place (creating its level row on first use), atomically."""
+    insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
+    stmt = insert(StockLevel).values(id=gen_id(), business_id=business.id, item_id=item.id,
+                                     location=where[0], van_key=where[1] or "", qty=q)
+    db.execute(stmt.on_conflict_do_update(
+        index_elements=["business_id", "item_id", "location", "van_key"],
+        set_={"qty": StockLevel.qty + stmt.excluded.qty}))
+
+
+def set_count(db: Session, business: Business, item: Item, where: Place, counted: Decimal) -> Decimal:
+    """Set a place to the physically counted figure; returns what it was. The
+    row lock keeps a sale from slipping in between read and write."""
+    put(db, business, item, where, ZERO)  # make sure the row exists
+    lv = db.scalars(select(StockLevel).where(*_place_filter(business, item, where))
+                    .with_for_update()).one()
+    db.refresh(lv)
+    before = Decimal(str(lv.qty)).quantize(QTY)
+    lv.qty = counted
+    return before
 
 
 def _sync_total(db: Session, business: Business, item: Item) -> None:
@@ -142,32 +179,49 @@ def _short(have: Decimal, item: Item, where: Place) -> HTTPException:
 
 
 # ---------------------------------------------------------------- operations
-# ponytail: the "enough stock?" check isn't locked, so two sales at the same
-# instant could both pass; add SELECT … FOR UPDATE on Postgres if that happens.
+
+def purchase_details(supplier: str | None, unit_price, bill_ref: str | None) -> dict:
+    """A purchase must say who it was bought from, at what price, on which bill."""
+    name = " ".join((supplier or "").split())
+    if not name or len(name) > 200:
+        raise _reject("Enter the supplier you bought from.")
+    ref = (bill_ref or "").strip()
+    if not ref or len(ref) > 40:
+        raise _reject("Enter the supplier's bill number (up to 40 characters).")
+    try:
+        price = Decimal(str(unit_price)).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError, TypeError):
+        raise _reject("Enter the purchase price per unit.") from None
+    if not price.is_finite() or price < 0 or price > Decimal("10000000"):
+        raise _reject("Enter the purchase price per unit.")
+    return {"supplier": name, "unit_price": price, "bill_ref": ref}
+
 
 def record(db: Session, business: Business, user: User, role: str, *, kind: str,
            item_id: str, qty, location: str, van_user_id: str | None, day: str,
-           client_id: str | None, note: str | None) -> list[StockMove]:
-    """A purchase (into the godown) or a sale (out of the godown or a van)."""
+           client_id: str | None, note: str | None, purchase: dict | None = None) -> list[StockMove]:
+    """A purchase (into the godown, with supplier, price and bill) or a sale
+    (out of the godown or a van)."""
     if (first := _existing(db, business, client_id)) is not None:
         return group(db, first)
     item = owned_item(db, business, item_id)
     q = quantity(qty)
+    extra: dict = {}
     if kind == "purchase":
         if location != "godown":
             raise _reject("Purchases go into the godown; transfer to a van after.")
         where = place(db, business, user, role, "godown", None)
+        extra = purchase_details(**(purchase or {}))
+        item.purchase_price = float(extra["unit_price"])  # the latest price paid
         signed = q
     elif kind == "sale":
         where = place(db, business, user, role, location, van_user_id)
-        have = at(db, business, item, where)
-        if have < q:
-            raise _short(have, item, where)
         signed = -q
     else:
         raise _reject("Kind must be 'purchase' or 'sale'.")
+    (put if signed > 0 else take)(db, business, item, where, abs(signed))
     return _save(db, business, [item], [_move(business, item, where, kind, signed, day, user,
-                                               note=note)], client_id)
+                                               note=note, **extra)], client_id)
 
 
 def transfer(db: Session, business: Business, user: User, role: str, *, item_id: str, qty,
@@ -181,9 +235,8 @@ def transfer(db: Session, business: Business, user: User, role: str, *, item_id:
     item = owned_item(db, business, item_id)
     q = quantity(qty)
     van = place(db, business, user, role, "van", van_user_id)
-    have = at(db, business, item, GODOWN)
-    if have < q:
-        raise _short(have, item, GODOWN)
+    take(db, business, item, GODOWN, q)
+    put(db, business, item, van, q)
     gid = gen_id()
     moves = [_move(business, item, GODOWN, "transfer", -q, day, user, group_id=gid, note=note),
              _move(business, item, van, "transfer", q, day, user, group_id=gid, note=note)]
@@ -204,12 +257,11 @@ def count(db: Session, business: Business, user: User, role: str, *, location: s
             raise _reject("Each item can be counted once per count.")
         where = place(db, business, user, role, location, van_user_id)
         items = [owned_item(db, business, i) for i, _ in lines]
-        current = levels(db, business, [i.id for i in items])
         gid = gen_id()
         moves = []
         for item, (_, counted) in zip(items, lines):
-            system = current.get(item.id, {}).get(where, ZERO)
             c = quantity(counted, allow_zero=True)
+            system = set_count(db, business, item, where, c)
             moves.append(_move(business, item, where, "count", c - system, day, user,
                                group_id=gid, counted=c, note="stock count"))
         moves = _save(db, business, items, moves, client_id)
@@ -233,6 +285,8 @@ def count_line(m: StockMove) -> dict:
 def opening(db: Session, business: Business, user: User | None, item: Item, qty: float) -> None:
     """Opening stock entered on the item form goes into the godown."""
     if qty:
+        db.flush()  # the item row must exist before its stock level
+        put(db, business, item, GODOWN, quantity(qty))
         db.add(StockMove(business_id=business.id, item_id=item.id, location="godown",
                          kind="opening", quantity=quantity(qty), date=item.created_at[:10],
                          created_by=user.id if user else None, note="opening stock"))

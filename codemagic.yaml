@@ -65,6 +65,11 @@ definitions:
         cd ios
         bundle install
         bundle exec pod install
+        # Native modules must be linked into this build, or the screen that
+        # uses them fails at runtime (e.g. bank-statement / khata import).
+        for pod in react-native-document-picker; do
+          grep -q "^  - $pod " Podfile.lock || { echo "Missing native pod: $pod"; exit 1; }
+        done
 
     - name: Set up iOS code signing
       script: |

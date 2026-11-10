@@ -146,11 +146,9 @@ def save(db: Session, business: Business, user: User, role: str, *, customer_id:
     tracked = {i.id: i for i in db.scalars(select(Item).where(
         Item.id.in_(list(needed)), Item.business_id == business.id,
         Item.track_stock.is_(True))).all()}
-    levels = stock.levels(db, business, list(tracked))
+    # Atomic per item; if any is short the whole bill is refused (nothing commits).
     for item_id, item in tracked.items():
-        have = levels.get(item_id, {}).get(where, ZERO_QTY)
-        if have < needed[item_id]:
-            raise stock._short(have, item, where)
+        stock.take(db, business, item, where, needed[item_id])
 
     count = db.scalar(select(func.count()).select_from(Bill).where(Bill.business_id == business.id))
     bill = Bill(business_id=business.id, customer_id=customer.id, bill_number=f"B-{count + 1}",

@@ -1,3 +1,4 @@
+import {personLabel} from '@utils/personLabel';
 import {useQuery} from '@tanstack/react-query';
 import React from 'react';
 import {RefreshControl, ScrollView, View} from 'react-native';
@@ -46,7 +47,7 @@ export function AccountantActivityScreen({route}: AppScreenProps<'AccountantActi
                   {e.customer ? ` · ${e.customer}` : ''}
                 </Text>
                 <Text variant="caption">
-                  {formatTimestamp(e.at)} IST · +91 {e.mobile}
+                  {formatTimestamp(e.at)} IST · {personLabel(e.name, e.mobile)}
                 </Text>
               </View>
             ))

@@ -54,3 +54,14 @@ describe('translate', () => {
     }
   });
 });
+
+/** What a salesperson reads on a shop's doorstep: in every script language,
+ *  the beat and visit strings exist and carry no English words. */
+describe('beat and visit strings stay in their own script', () => {
+  const keys = Object.keys(en).filter(k => k.startsWith('beats.') || k.startsWith('visits.'));
+  it.each(['hi', 'te', 'ta', 'kn', 'mr', 'gu', 'bn', 'ml', 'pa'] as const)('%s', lang => {
+    const table = translations[lang] as Record<string, string>;
+    const leaks = keys.filter(k => !table[k] || /[A-Za-z]{2,}/.test(table[k].replace(/\{\w+\}/g, '')));
+    expect(leaks).toEqual([]);
+  });
+});

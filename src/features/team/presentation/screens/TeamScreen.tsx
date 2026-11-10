@@ -26,7 +26,10 @@ const hintKey = (r: Role) => `team.hint.${r}` as TKey;
 export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Element {
   const t = useT();
   const {data, isLoading, isError, error, refetch, isRefetching} = useTeam();
-  const {add, updateRole, remove} = useTeamMutations();
+  const {add, updateRole, remove, rename} = useTeamMutations();
+  const [name, setName] = useState('');
+  const [renaming, setRenaming] = useState<TeamMember | null>(null);
+  const [newName, setNewName] = useState('');
 
   const [mobile, setMobile] = useState('');
   const [role, setRole] = useState<Role>('staff');
@@ -42,10 +45,11 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
     }
     setFormError(null);
     add.mutate(
-      {mobile, role},
+      {mobile, role, name: name.trim() || undefined},
       {
         onSuccess: () => {
           setMobile('');
+          setName('');
           setRole('staff');
         },
         onError: failed('team.addFailed'),
@@ -69,6 +73,7 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
         text: t('team.makeRole', {role: t(roleKey(r))}),
         onPress: () => updateRole.mutate({userId: m.userId, role: r}, {onError: failed('team.updateFailed')}),
       })),
+      {text: t('team.rename'), onPress: () => { setRenaming(m); setNewName(m.name ?? ''); }},
       ...(m.role === 'accountant'
         ? [{text: t('team.viewActivity'), onPress: () => navigation.navigate('AccountantActivity', {userId: m.userId, mobile: m.mobile})}]
         : []),
@@ -102,11 +107,26 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
               maxLength={10}
             />
           </FormField>
+          <FormField label={t('team.name')} hint={t('common.optional')}>
+            <TextField testID="team-name" placeholder={t('team.namePlaceholder')} value={name}
+              onChangeText={setName} maxLength={60} />
+          </FormField>
           <FormField label={t('team.roleLabel')} hint={t(hintKey(role))}>
             <SegmentedControl value={role} options={ROLES.map(r => ({label: t(roleKey(r)), value: r}))} onChange={setRole} />
           </FormField>
           <Button testID="team-add" title={t('team.add')} className="mt-3" loading={add.isPending} onPress={onAdd} />
         </View>
+
+        {renaming ? (
+          <View testID="team-rename" className="mt-4 rounded-2xl border border-primary bg-white p-4" style={{gap: 10}}>
+            <Text className="text-sm font-semibold">{t('team.renameTitle', {mobile: renaming.mobile})}</Text>
+            <TextField value={newName} onChangeText={setNewName} maxLength={60} placeholder={t('team.namePlaceholder')} />
+            <Button title={t('common.save')} loading={rename.isPending}
+              onPress={() => rename.mutate({userId: renaming.userId, name: newName.trim()},
+                {onSuccess: () => setRenaming(null), onError: failed('team.updateFailed')})} />
+            <Button title={t('common.cancel')} variant="ghost" onPress={() => setRenaming(null)} />
+          </View>
+        ) : null}
 
         <Button testID="team-activity" title={t('team.activityAll')} variant="secondary" className="mt-4"
           onPress={() => navigation.navigate('AccountantActivity', {})} />
@@ -126,7 +146,7 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
               <View key={m.userId} className="flex-row items-center justify-between rounded-2xl border border-border bg-white px-4 py-3">
                 <View className="flex-1 pr-3">
                   <Text className="font-semibold text-slate-900">
-                    {m.mobile ? `+91 ${m.mobile}` : t('team.pending')}
+                    {m.name ? `${m.name} · +91 ${m.mobile}` : m.mobile ? `+91 ${m.mobile}` : t('team.pending')}
                     {m.isSelf ? ` · ${t('team.you')}` : ''}
                   </Text>
                   <Text variant="caption" className="mt-0.5">

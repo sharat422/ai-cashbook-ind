@@ -34,10 +34,12 @@ def _levels(client, headers, item_id):
     return items[item_id]
 
 
-def _move(client, headers, item_id, kind, qty, location="godown", van=None, cid=None):
-    return client.post(f"{API}/stock/moves", headers=headers, json={
-        "kind": kind, "itemId": item_id, "quantity": qty, "location": location,
-        "vanUserId": van, "date": today_iso(), "clientId": cid})
+def _move(client, headers, item_id, kind, qty, location="godown", van=None, cid=None, **purchase):
+    body = {"kind": kind, "itemId": item_id, "quantity": qty, "location": location,
+            "vanUserId": van, "date": today_iso(), "clientId": cid}
+    if kind == "purchase":
+        body |= {"supplier": "Hindustan Distributors", "unitPrice": "80", "billRef": "HD/101", **purchase}
+    return client.post(f"{API}/stock/moves", headers=headers, json=body)
 
 
 def _transfer(client, headers, item_id, qty, van, cid=None):
@@ -200,3 +202,22 @@ def test_item_form_stock_is_opening_only(make_user, client):
     assert client.delete(f"{API}/items/{item}", headers=owner.headers).status_code == 204
     with SessionLocal() as db:
         assert db.query(StockMove).filter_by(item_id=item).count() == 0
+
+
+
+def test_a_purchase_records_supplier_price_and_bill(make_user, client):
+    owner = make_user()
+    item = _item(client, owner.headers)
+    for missing in ({"supplier": ""}, {"billRef": " "}, {"unitPrice": None}, {"unitPrice": "-1"},
+                    {"unitPrice": "abc"}):
+        r = _move(client, owner.headers, item, "purchase", 5, **missing)
+        assert r.status_code == 422, missing
+    r = _move(client, owner.headers, item, "purchase", 12, supplier="  Sri  Venkateswara Agencies ",
+              unitPrice="76.50", billRef="SVA-2291")
+    assert r.status_code == 200, r.text
+    m = r.json()[0]
+    assert (m["supplier"], m["unitPrice"], m["billRef"]) == ("Sri Venkateswara Agencies", "76.50", "SVA-2291")
+    history = client.get(f"{API}/stock/moves", headers=owner.headers, params={"itemId": item}).json()
+    assert any(h.get("billRef") == "SVA-2291" for h in history)
+    got = client.get(f"{API}/items/{item}", headers=owner.headers).json()
+    assert got["purchase_price"] == 76.5  # the item keeps the latest price paid

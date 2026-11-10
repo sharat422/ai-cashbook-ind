@@ -54,6 +54,15 @@ from ..models import (
     StockMove,
     User,
     now_iso,
+    AccessLog,
+    BankMatch,
+    BeatAssignment,
+    CashCount,
+    CashDeposit,
+    GstInvoiceNumber,
+    ImportLog,
+    PaymentUtr,
+    StockLevel,
 )
 from ..security import get_current_user
 from ..serializers import (
@@ -83,7 +92,7 @@ def export_account(
 ) -> dict:
     """Everything we hold for this user, as portable JSON."""
     out: dict = {
-        "schema_version": 1,
+        "schema_version": 2,
         "exported_at": now_iso(),
         "account": {
             "id": user.id,
@@ -105,6 +114,8 @@ def export_account(
             else []
         )
         out["businesses"].append({
+            # Every table, from the one shared builder (also behind the Excel export).
+            "all_tables": data_export.sections(db, b),
             "business": business_dto(b),
             "incomes": [income_dto(x) for x in db.scalars(
                 select(Income).where(Income.business_id == b.id)).all()],
@@ -182,6 +193,10 @@ def delete_account(
         # whether the DB enforces ON DELETE CASCADE (SQLite often doesn't).
         beat_ids = [b.id for b in db.scalars(
             select(Beat).where(Beat.business_id.in_(biz_ids))).all()]
+        counts["bank_matches"] += db.query(BankMatch).filter(
+            BankMatch.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        counts["cash_deposits"] += db.query(CashDeposit).filter(
+            CashDeposit.business_id.in_(biz_ids)).delete(synchronize_session=False)
         counts["bank_lines"] += db.query(BankLine).filter(
             BankLine.business_id.in_(biz_ids)).delete(synchronize_session=False)
         counts["bank_imports"] += db.query(BankImport).filter(
@@ -189,10 +204,16 @@ def delete_account(
         counts["visits"] += db.query(Visit).filter(
             Visit.business_id.in_(biz_ids)).delete(synchronize_session=False)
         if beat_ids:
+            counts["beat_assignments"] += db.query(BeatAssignment).filter(
+                BeatAssignment.beat_id.in_(beat_ids)).delete(synchronize_session=False)
             counts["beat_retailers"] += db.query(BeatRetailer).filter(
                 BeatRetailer.beat_id.in_(beat_ids)).delete(synchronize_session=False)
         counts["beats"] += db.query(Beat).filter(
             Beat.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        # Rows that point at ledger entries go first (no SQLite cascade).
+        for model in (PaymentUtr, GstInvoiceNumber):
+            counts[model.__tablename__] += db.query(model).filter(
+                model.business_id.in_(biz_ids)).delete(synchronize_session=False)
         if cust_ids:
             counts["ledger_entries"] += db.query(LedgerEntry).filter(
                 LedgerEntry.customer_id.in_(cust_ids)
@@ -205,7 +226,7 @@ def delete_account(
         if scheme_ids:
             counts["scheme_items"] += db.query(SchemeItem).filter(
                 SchemeItem.scheme_id.in_(scheme_ids)).delete(synchronize_session=False)
-        for model in (StatementLink, StatementEvent, SchemeApplication, Bill, Scheme, GstRateChangeLog, StockMove, Income, Expense, Item, RecurringExpense, Customer,
+        for model in (StatementLink, StatementEvent, SchemeApplication, Bill, Scheme, GstRateChangeLog, StockMove, StockLevel, ImportLog, AccessLog, CashCount, Income, Expense, Item, RecurringExpense, Customer,
                       AiDecision):
             counts[model.__tablename__] += db.query(model).filter(
                 model.business_id.in_(biz_ids)

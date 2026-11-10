@@ -37,6 +37,18 @@ def _build_cipher() -> MultiFernet:
 _cipher = _build_cipher()
 
 
+def blind_index(value: str) -> str:
+    """Deterministic keyed hash, for uniqueness checks on encrypted values
+    (Fernet ciphertext is random, so it can't be indexed). Keyed with the
+    OLDEST key, so adding a new key in front for rotation keeps every hash."""
+    import hashlib
+    import hmac
+
+    raw = settings.app_encryption_key or _DEV_FALLBACK_KEY
+    key = [k.strip() for k in raw.split(",") if k.strip()][-1]
+    return hmac.new(f"bolcash-index:{key}".encode(), value.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
 def encrypt(value: str) -> str:
     return _cipher.encrypt(value.encode("utf-8")).decode("ascii")
 

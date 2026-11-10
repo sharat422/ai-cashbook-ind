@@ -20,6 +20,8 @@ export interface LedgerEntryInput {
   notes?: string;
   paymentMethod?: PaymentMethod;
   referenceNumber?: string;
+  chequeBank?: string;
+  chequeAccount?: string;
   attachment?: Attachment | null;
   beatId?: string;
   gst?: GstInvoiceInput;
@@ -40,7 +42,7 @@ function assertValid(draft: LedgerEntryDraft): void {
   }
   if (draft.gst) {
     if (draft.type !== 'credit') throw new Error(tNow('errors.gstOnPayment'));
-    const problem = gstInputError(draft.invoiceNumber, draft.gst);
+    const problem = gstInputError(draft.gst);
     if (problem) throw new Error(problem.message);
   }
 }
@@ -56,10 +58,13 @@ export function makeLedgerUseCases(repo: LedgerRepository) {
       type,
       amount: input.amount,
       date: input.date,
-      invoiceNumber: input.invoiceNumber?.trim() || undefined,
+      // A GST invoice's number is assigned by the server; never send our own.
+      invoiceNumber: input.gst ? undefined : input.invoiceNumber?.trim() || undefined,
       notes: input.notes?.trim() || undefined,
       paymentMethod: input.paymentMethod,
       referenceNumber: input.referenceNumber?.trim() || undefined,
+      chequeBank: input.paymentMethod === 'cheque' ? input.chequeBank?.trim() || undefined : undefined,
+      chequeAccount: input.paymentMethod === 'cheque' ? input.chequeAccount?.trim() || undefined : undefined,
       attachment: input.attachment ?? null,
       beatId: input.beatId,
       gst: input.gst,

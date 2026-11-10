@@ -1,3 +1,4 @@
+from decimal import Decimal
 """Plain-dict serializers producing the exact JSON the mobile DTOs expect.
 
 The app's auth/business DTOs are camelCase; all other DTOs are snake_case.
@@ -53,6 +54,7 @@ def customer_dto(m: Customer) -> dict:
         "last_transaction_date": m.last_transaction_date,
         "is_overdue": m.is_overdue,
         "credit_limit": m.credit_limit,
+        "credit_limit_version": m.credit_limit_version or 0,
         "created_at": m.created_at,
         "updated_at": m.updated_at or m.created_at,
         # Optimistic-concurrency token the client echoes back on edit.
@@ -68,9 +70,13 @@ def ledger_dto(m: LedgerEntry) -> dict:
         "amount": m.amount,
         "date": m.date,
         "invoice_number": m.invoice_number,
+        "utr_missing": bool(m.utr_missing),
         "notes": m.notes,
         "payment_method": m.payment_method,
         "reference_number": m.reference_number,
+        "cheque_bank": m.cheque_bank,
+        "cheque_account": m.cheque_account,
+        "ref_duplicate_of": m.ref_duplicate_of,
         "attachment_url": m.attachment_url,
         "salesman_id": m.salesman_id,
         "beat_id": m.beat_id,
@@ -93,6 +99,8 @@ def gst_dto(m: LedgerEntry) -> dict | None:
         "cgst": money(m.cgst),
         "sgst": money(m.sgst),
         "igst": money(m.igst),
+        "quantity": None if m.gst_quantity is None else f"{Decimal(m.gst_quantity).normalize():f}",
+        "uqc": m.gst_uqc,
     }
 
 
@@ -144,4 +152,5 @@ def business_dto(m: Business) -> dict:
         "businessType": m.business_type,
         "state": m.state,
         "gstRegistered": m.gst_registered,
+        "gstin": m.gstin,
     }

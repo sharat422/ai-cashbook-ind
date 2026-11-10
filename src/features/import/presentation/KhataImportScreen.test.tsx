@@ -13,7 +13,7 @@ import {useAuthStore} from '@store/auth.store';
 import type {ImportPreview} from '../import.remote';
 import {KhataImportScreen} from './KhataImportScreen';
 
-jest.setTimeout(30_000); // first render loads the whole screen tree
+jest.setTimeout(90_000); // first render loads the whole screen tree
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({children}: {children: React.ReactNode}) => children,

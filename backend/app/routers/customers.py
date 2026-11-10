@@ -1,24 +1,27 @@
+import logging
 import re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field, ConfigDict
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import gst
 from ..calc import recompute_customer
+from ..crypto import blind_index
 from ..database import get_db
 from ..beats import assert_beat_access
 from ..deps import get_current_membership, require
 from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
-from ..models import BankLine, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, Customer, LedgerEntry, User, Visit, now_iso
+from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, Customer, GstInvoiceNumber, LedgerEntry, PaymentUtr, User, Visit, now_iso
 from ..security import get_current_user
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
 from ..validation import validate_date, validate_text, validate_amount, validate_mobile
 
 router = APIRouter(tags=["customers"])
+log = logging.getLogger(__name__)
 
 
 class CustomerBody(BaseModel):
@@ -34,18 +37,64 @@ class CustomerBody(BaseModel):
 
 
 _GST_COLUMNS = ("customer_gstin", "hsn_code", "place_of_supply", "gst_rate",
-                "price_includes_gst", "taxable_value", "cgst", "sgst", "igst")
-# GSTR-1 limit: up to 16 letters, digits, / or -.
-_GST_INVOICE_RE = re.compile(r"^[A-Za-z0-9/-]{1,16}$")
+                "price_includes_gst", "taxable_value", "cgst", "sgst", "igst",
+                "gst_quantity", "gst_uqc")
+def _issue_invoice_number(db: Session, business: Business, day: str) -> GstInvoiceNumber:
+    """The next consecutive GST invoice number for this business in that
+    financial year (Rule 46). The server always assigns it; the business row
+    lock makes two sales at once get two different numbers."""
+    db.execute(select(Business.id).where(Business.id == business.id).with_for_update())
+    fy = gst.financial_year(day)
+    last = db.scalar(select(func.max(GstInvoiceNumber.serial)).where(
+        GstInvoiceNumber.business_id == business.id, GstInvoiceNumber.fy == fy)) or 0
+    issued = GstInvoiceNumber(business_id=business.id, fy=fy, serial=last + 1,
+                              number=gst.invoice_number(fy, last + 1))
+    db.add(issued)
+    return issued
 
 
-def _gst_invoice_number(value: str | None) -> str:
-    v = (value or "").strip().upper()
-    if not _GST_INVOICE_RE.match(v):
-        raise HTTPException(
-            422, "A GST invoice needs an invoice number: up to 16 letters, digits, / or -."
-        )
-    return v
+def _refuse_duplicate_utr(db: Session, business: Business, utr_hash: str) -> None:
+    """409 naming the earlier payment, so the person can spot the typo."""
+    earlier = db.execute(
+        select(LedgerEntry, Customer)
+        .join(PaymentUtr, PaymentUtr.ledger_entry_id == LedgerEntry.id)
+        .join(Customer, Customer.id == LedgerEntry.customer_id)
+        .where(PaymentUtr.business_id == business.id, PaymentUtr.utr_hash == utr_hash)
+    ).first()
+    if earlier is not None:
+        entry, who = earlier
+        d = entry.date
+        raise HTTPException(409, (
+            f"This UTR is already on a UPI payment of ₹{entry.amount:,.2f} from {who.full_name} "
+            f"on {d[8:10]}-{d[5:7]}-{d[:4]}. Each UPI payment has its own UTR — check for a typo."))
+
+
+def _ref_key(method: str | None, reference: str | None, bank: str | None, account: str | None) -> str | None:
+    """Blind index for the bank-transfer / cheque duplicate WARNING. The rail
+    is part of the key, so a UPI UTR is never compared with a bank reference.
+    A cheque is only "the same" with the same number, bank and account."""
+    if not reference or method not in ("bank", "cheque"):
+        return None
+    norm = lambda v: "".join((v or "").upper().split())  # noqa: E731
+    parts = [method, norm(reference)] + ([norm(bank), norm(account)] if method == "cheque" else [])
+    return blind_index("|".join(parts))
+
+
+def _duplicate_ref(db: Session, business: Business, ref_hash: str) -> tuple[LedgerEntry, Customer] | None:
+    return db.execute(
+        select(LedgerEntry, Customer).join(Customer, Customer.id == LedgerEntry.customer_id)
+        .where(Customer.business_id == business.id, LedgerEntry.ref_hash == ref_hash)
+        .order_by(LedgerEntry.created_at)
+    ).first()
+
+
+def _ref_warning(method: str, earlier: LedgerEntry, who: Customer) -> dict:
+    d = earlier.date
+    what = "cheque" if method == "cheque" else "bank reference"
+    return {"code": "duplicate_reference", "entryId": earlier.id, "customerName": who.full_name,
+            "amount": f"{earlier.amount:.2f}", "date": d,
+            "message": (f"Same {what} as ₹{earlier.amount:,.2f} from {who.full_name} on "
+                        f"{d[8:10]}-{d[5:7]}-{d[:4]} — check it isn't entered twice.")}
 
 
 class GstPreviewBody(BaseModel):
@@ -54,6 +103,7 @@ class GstPreviewBody(BaseModel):
     price_includes_gst: bool = False
     customer_gstin: str | None = None
     place_of_supply: str | None = None
+    date: str | None = None  # the invoice date decides which rates are allowed
 
 
 @router.post("/gst/preview")
@@ -66,7 +116,8 @@ def gst_preview(
     tax = gst.invoice(business, amount=validate_amount(body.amount), rate=body.rate,
                       inclusive=body.price_includes_gst, hsn=None,
                       customer_gstin=body.customer_gstin,
-                      place_of_supply=body.place_of_supply)
+                      place_of_supply=body.place_of_supply,
+                      day=validate_date(body.date) if body.date else None)
     return {
         "place_of_supply": gst.place_label(tax["place_of_supply"]),
         "inter_state": tax["inter_state"],
@@ -220,15 +271,20 @@ def delete_customer(
     db.query(BeatRetailer).filter(BeatRetailer.customer_id == customer_id).delete(synchronize_session=False)
     # A bank line matched to one of these entries goes back to unmatched.
     entry_ids = select(LedgerEntry.id).where(LedgerEntry.customer_id == customer_id)
-    db.query(BankLine).filter(BankLine.matched_entry_id.in_(entry_ids)).update(
-        {BankLine.matched_entry_id: None, BankLine.confirmed_by: None, BankLine.confirmed_at: None},
-        synchronize_session=False)
+    db.query(PaymentUtr).filter(PaymentUtr.ledger_entry_id.in_(entry_ids)).delete(synchronize_session=False)
+    # Issued GST invoice numbers stay (as cancelled), so they're never reused.
+    db.query(GstInvoiceNumber).filter(GstInvoiceNumber.ledger_entry_id.in_(entry_ids)).update(
+        {GstInvoiceNumber.ledger_entry_id: None}, synchronize_session=False)
+    db.query(BankMatch).filter(BankMatch.entry_id.in_(entry_ids)).delete(synchronize_session=False)
     db.delete(customer)
     db.commit()
 
 
 class CreditLimitBody(BaseModel):
     credit_limit: float | None = Field(alias="creditLimit")
+    # The limit version this save was based on (0 = "only if never set").
+    # Omitted by old app versions only.
+    expected_version: int | None = Field(default=None, alias="expectedVersion")
 
 
 @router.put("/customers/{customer_id}/credit-limit")
@@ -238,11 +294,19 @@ def set_credit_limit(
     business: Business = Depends(require(ENTRY_EDIT)),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Set (or clear, with null) the customer's credit limit in INR."""
+    """Set (or clear, with null) the customer's credit limit in INR. If it was
+    changed on another device since `expectedVersion`, nothing is saved: 409,
+    and the app shows the server's limit (server wins, with a notice)."""
     customer = _owned_customer(db, business, customer_id)
+    current = customer.credit_limit_version or 0
+    if body.expected_version is not None and body.expected_version != current:
+        now = "no limit" if customer.credit_limit is None else f"₹{customer.credit_limit:,.0f}"
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            f"The credit limit was changed on another device to {now}. Yours wasn't saved.")
     customer.credit_limit = (
         None if body.credit_limit is None else validate_amount(body.credit_limit)
     )
+    customer.credit_limit_version = current + 1
     customer.updated_at = now_iso()
     db.commit()
     db.refresh(customer)
@@ -255,7 +319,7 @@ _REFERENCE_RE = re.compile(r"^[A-Za-z0-9/_.-]{6,40}$")
 
 
 def _validate_payment(
-    entry_type: str, method: str | None, reference: str | None
+    entry_type: str, method: str | None, reference: str | None, utr_rule: bool = True
 ) -> tuple[str | None, str | None]:
     """Server-side rule: a UPI payment must carry its UTR / transaction ID, so
     it can be checked against the bank statement. Enforced here, not only in
@@ -270,6 +334,8 @@ def _validate_payment(
         raise HTTPException(422, "Reference must not exceed 40 characters.")
     if entry_type == "payment" and method == "upi":
         if reference is None:
+            if not utr_rule:
+                return method, None  # an old app's offline payment: saved, flagged utr_missing
             raise HTTPException(422, "Enter the UPI transaction ID (UTR) for a UPI payment.")
         if not _REFERENCE_RE.match(reference):
             raise HTTPException(422, "The UTR should be 6 to 40 letters or digits.")
@@ -301,14 +367,21 @@ def add_ledger_entry(
     notes: str | None = Form(None),
     payment_method: str | None = Form(None),
     reference_number: str | None = Form(None),
+    cheque_bank: str | None = Form(None),  # cheque: the drawer's bank and account
+    cheque_account: str | None = Form(None),
     beat_id: str | None = Form(None),
     # GST invoice (credit only): the server computes the tax split from these.
     gst_rate: str | None = Form(None),
     hsn_code: str | None = Form(None),
+    quantity: str | None = Form(None),  # GST invoice: quantity and unit (UQC), both required
+    uqc: str | None = Form(None),
     customer_gstin: str | None = Form(None),
     price_includes_gst: bool = Form(False),
     place_of_supply: str | None = Form(None),
     attachment: UploadFile | None = File(None),
+    # Sent by app versions that enforce the UTR rule. Older apps don't send it;
+    # their UTR-less UPI payments (queued offline before the update) are kept.
+    utr_rule: bool = Form(False),
     business: Business = Depends(require(ENTRY_CREATE)),
     membership: tuple[Business, str] = Depends(get_current_membership),
     user: User = Depends(get_current_user),
@@ -325,15 +398,17 @@ def add_ledger_entry(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "Entry type must be 'credit' or 'payment'.",
         )
-    payment_method, reference_number = _validate_payment(type, payment_method, reference_number)
+    payment_method, reference_number = _validate_payment(type, payment_method, reference_number,
+                                                         utr_rule=utr_rule)
+    utr_missing = type == "payment" and payment_method == "upi" and reference_number is None
     tax: dict = {}
     if gst_rate not in (None, ""):
         if type != "credit":
             raise HTTPException(422, "GST applies to a sale (credit), not a payment.")
-        invoice_number = _gst_invoice_number(invoice_number)
         tax = gst.invoice(business, amount=amount, rate=gst_rate, inclusive=price_includes_gst,
                           hsn=hsn_code or "", customer_gstin=customer_gstin,
-                          place_of_supply=place_of_supply)
+                          place_of_supply=place_of_supply, day=date)
+        tax["gst_quantity"], tax["gst_uqc"] = gst.clean_line(quantity, uqc)
         amount = float(tax["total"])
 
     find = select(LedgerEntry).where(
@@ -350,6 +425,17 @@ def add_ledger_entry(
         if on_beat is None:
             raise HTTPException(422, "This customer isn't on that beat.")
 
+    utr_hash = (blind_index(reference_number.upper())
+                if type == "payment" and payment_method == "upi" and reference_number else None)
+    if utr_hash:
+        _refuse_duplicate_utr(db, business, utr_hash)
+    cheque_bank, cheque_account = ((v or "").strip()[:60] or None if payment_method == "cheque" else None
+                                   for v in (cheque_bank, cheque_account))
+    ref_hash = _ref_key(payment_method, reference_number, cheque_bank, cheque_account) if type == "payment" else None
+    repeat = _duplicate_ref(db, business, ref_hash) if ref_hash else None
+    issued = _issue_invoice_number(db, business, date) if tax else None
+    if issued is not None:
+        invoice_number = issued.number  # never the app's own number for a GST invoice
     row = LedgerEntry(
         customer_id=customer_id,
         type=type,
@@ -359,7 +445,12 @@ def add_ledger_entry(
         notes=notes,
         payment_method=payment_method,
         reference_number=reference_number,
+        cheque_bank=cheque_bank,
+        cheque_account=cheque_account,
+        ref_hash=ref_hash,
+        ref_duplicate_of=repeat[0].id if repeat else None,
         client_id=client_id,
+        utr_missing=utr_missing or None,
         salesman_id=user.id,
         beat_id=beat_id or None,
         attachment_url=save_upload(attachment),
@@ -370,8 +461,56 @@ def add_ledger_entry(
         db.flush()
     except IntegrityError:  # a concurrent retry with this client_id saved first
         db.rollback()
-        return ledger_dto(db.scalars(find).one())
+        existing = db.scalars(find).first()
+        if existing is None:
+            raise HTTPException(409, "Another entry was saved at the same moment. Please try again.") from None
+        return ledger_dto(existing)
+    if issued is not None:
+        issued.ledger_entry_id = row.id
+    if utr_hash:
+        db.add(PaymentUtr(business_id=business.id, utr_hash=utr_hash, ledger_entry_id=row.id))
+        try:
+            db.flush()
+        except IntegrityError:  # the same UTR saved by another request this instant
+            db.rollback()
+            _refuse_duplicate_utr(db, business, utr_hash)
+            raise
     recompute_customer(db, customer)
     db.commit()
     db.refresh(row)
-    return ledger_dto(row)
+    if repeat is None:
+        return ledger_dto(row)
+    log.info("duplicate %s reference: entry %s repeats %s", payment_method, row.id, repeat[0].id)
+    return {**ledger_dto(row), "warning": _ref_warning(payment_method, *repeat)}
+
+
+class UtrBody(BaseModel):
+    utr: str = Field(max_length=60)
+
+
+@router.patch("/customers/{customer_id}/ledger/{entry_id}/utr")
+def add_missing_utr(
+    customer_id: str,
+    entry_id: str,
+    body: UtrBody,
+    business: Business = Depends(require(ENTRY_EDIT)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Add the UTR to a UPI payment an old app saved without one."""
+    _owned_customer(db, business, customer_id)
+    entry = db.get(LedgerEntry, entry_id)
+    if entry is None or entry.customer_id != customer_id or not entry.utr_missing:
+        raise HTTPException(404, "No UPI payment without a UTR here.")
+    _, reference = _validate_payment("payment", "upi", body.utr)
+    utr_hash = blind_index(reference.upper())
+    _refuse_duplicate_utr(db, business, utr_hash)
+    entry.reference_number, entry.utr_missing = reference, None
+    db.add(PaymentUtr(business_id=business.id, utr_hash=utr_hash, ledger_entry_id=entry.id))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        _refuse_duplicate_utr(db, business, utr_hash)
+        raise
+    db.refresh(entry)
+    return ledger_dto(entry)

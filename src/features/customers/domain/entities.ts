@@ -23,6 +23,8 @@ export interface Customer {
   version?: number;
   /** Credit limit in INR (server-side, shared by every device); undefined = none. */
   creditLimit?: number;
+  /** Changes on every limit save; a stale save is refused (409). */
+  creditLimitVersion?: number;
 }
 
 /** The editable fields collected on the add/edit form. */

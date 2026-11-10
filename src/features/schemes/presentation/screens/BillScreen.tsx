@@ -1,3 +1,4 @@
+import {personLabel} from '@utils/personLabel';
 import {useQuery} from '@tanstack/react-query';
 import React, {useState} from 'react';
 import {Alert, Pressable, ScrollView, View} from 'react-native';
@@ -108,7 +109,7 @@ export function BillScreen({navigation, route}: AppScreenProps<'Bill'>): React.J
             <FilterChip label={t('stock.myVan')} selected onPress={() => undefined} />
           )}
           {vans.map(v => (
-            <FilterChip key={v.userId} label={`🚚 ${v.mobile}`} selected={where === v.userId}
+            <FilterChip key={v.userId} label={`🚚 ${personLabel(v.name, v.mobile)}`} selected={where === v.userId}
               onPress={() => setWhere(v.userId)} />
           ))}
         </View>

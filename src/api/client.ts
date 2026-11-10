@@ -31,10 +31,17 @@ const STATUS_KEY: Record<number, TKey> = {
  * for the status instead — never English-only text. English keeps the
  * server's more specific wording.
  */
+/** Server messages important enough to have their own translated sentence. */
+const DETAIL_KEY: [RegExp, TKey][] = [
+  [/^This UTR is already on a UPI payment/, 'errors.utrDuplicate'],
+  [/^The credit limit was changed on another device/, 'errors.limitChanged'],
+];
+
 export function apiErrorMessage(status: number, detail: string): string {
   const lang = useAuthStore.getState().preferredLanguage;
   if (lang === 'en') return detail;
-  const key = STATUS_KEY[status] ?? (status >= 500 ? 'errors.server' : 'errors.checkInput');
+  const key = DETAIL_KEY.find(([re]) => re.test(detail))?.[1] ??
+    STATUS_KEY[status] ?? (status >= 500 ? 'errors.server' : 'errors.checkInput');
   return translate(lang, key);
 }
 

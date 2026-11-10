@@ -1,3 +1,4 @@
+import {personLabel} from '@utils/personLabel';
 import React, {useState} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
 
@@ -41,7 +42,10 @@ export function StockScreen({navigation}: AppScreenProps<'Stock'>): React.JSX.El
   const {items, vans}: {items: StockItem[]; vans: Van[]} = levels.data;
   const lowCount = items.filter(i => i.low).length;
   const shown = lowOnly ? items.filter(i => i.low) : items;
-  const vanName = (userId: string) => vans.find(v => v.userId === userId)?.mobile ?? userId.slice(0, 6);
+  const vanName = (userId: string) => {
+    const v = vans.find(x => x.userId === userId);
+    return v ? personLabel(v.name, v.mobile) : userId.slice(0, 6);
+  };
 
   return (
     <Screen scroll={false}>

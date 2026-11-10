@@ -31,6 +31,7 @@ import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScree
 import {RecurringListScreen} from '@features/recurring/presentation/screens/RecurringListScreen';
 import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
 import {BeatDayListScreen} from '@features/beats/presentation/screens/BeatDayListScreen';
+import {VisitHistoryScreen} from '@features/beats/presentation/screens/VisitHistoryScreen';
 import {BeatPlanScreen} from '@features/beats/presentation/screens/BeatPlanScreen';
 import {BillScreen} from '@features/schemes/presentation/screens/BillScreen';
 import {SchemeFormScreen} from '@features/schemes/presentation/screens/SchemeFormScreen';
@@ -42,6 +43,8 @@ import {StockScreen} from '@features/stock/presentation/screens/StockScreen';
 import {VanStockScreen} from '@features/stock/presentation/screens/VanStockScreen';
 import {GstReportsScreen} from '@features/gst/presentation/GstReportsScreen';
 import {DailyCloseScreen} from '@features/reconciliation/presentation/screens/DailyCloseScreen';
+import {BankImportScreen} from '@features/reconciliation/presentation/screens/BankImportScreen';
+import {BankMatchScreen} from '@features/reconciliation/presentation/screens/BankMatchScreen';
 import {ReconciliationScreen} from '@features/reconciliation/presentation/screens/ReconciliationScreen';
 import {AccountantActivityScreen} from '@features/team/presentation/screens/AccountantActivityScreen';
 import {TeamScreen} from '@features/team/presentation/screens/TeamScreen';
@@ -79,6 +82,8 @@ const Guarded = {
   CategorizationScreen: withPermission(CategorizationScreen, PERMISSIONS.ENTRY_EDIT),
   StockCountScreen: withPermission(StockCountScreen, PERMISSIONS.ENTRY_EDIT),
   KhataImportScreen: withPermission(KhataImportScreen, PERMISSIONS.ENTRY_EDIT),
+  BankImportScreen: withPermission(BankImportScreen, PERMISSIONS.ENTRY_EDIT),
+  BankMatchScreen: withPermission(BankMatchScreen, PERMISSIONS.ENTRY_EDIT),
   BusinessEditScreen: withPermission(BusinessEditScreen, PERMISSIONS.SETTINGS_MANAGE),
   ItemFormScreen: withPermission(ItemFormScreen, PERMISSIONS.SETTINGS_MANAGE),
   RecurringFormScreen: withPermission(RecurringFormScreen, PERMISSIONS.SETTINGS_MANAGE),
@@ -103,6 +108,9 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="SyncStatus" component={SyncStatusScreen} />
       <Stack.Screen name="SyncConflict" component={SyncConflictScreen} />
       <Stack.Screen name="KhataImport" component={Guarded.KhataImportScreen} />
+      <Stack.Screen name="BankImport" component={Guarded.BankImportScreen} />
+      <Stack.Screen name="VisitHistory" component={VisitHistoryScreen} />
+      <Stack.Screen name="BankMatch" component={Guarded.BankMatchScreen} />
       <Stack.Screen name="LegalDoc" component={LegalDocScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="CustomerInsights" component={CustomerInsightsScreen} />

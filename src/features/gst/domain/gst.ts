@@ -5,12 +5,12 @@ import {tNow} from '@/i18n';
  * server — never here.
  */
 
-/** Rates the app offers; the server holds the full list. Confirm with the CA. */
-export const GST_RATES = ['0', '5', '12', '18', '28', '40'] as const;
+/** Slabs in force since 22 Sep 2025 (GST 2.0). 12% and 28% have ended; the
+ *  server still accepts them on invoices dated before they ended. */
+export const GST_RATES = ['0', '5', '18', '40'] as const;
 
 const GSTIN_RE = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const HSN_RE = /^(\d{4}|\d{6}|\d{8})$/;
-const INVOICE_RE = /^[A-Za-z0-9/-]{1,16}$/;
 const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 export const cleanGstin = (value: string): string => value.replace(/\s/g, '').toUpperCase();
@@ -26,15 +26,40 @@ export function isValidGstin(value: string): boolean {
   return CHARS[(36 - (total % 36)) % 36] === v[14];
 }
 
-export type GstField = 'invoice' | 'gstin' | 'hsn';
+/** GST Unique Quantity Codes (as backend/app/gst.py UQC). */
+export const UQC_CODES = ['BAG', 'BAL', 'BDL', 'BKL', 'BOU', 'BOX', 'BTL', 'BUN', 'CAN', 'CBM', 'CCM',
+  'CMS', 'CTN', 'DOZ', 'DRM', 'GGK', 'GMS', 'GRS', 'GYD', 'KGS', 'KLR', 'KME', 'LTR', 'MLT', 'MTR',
+  'MTS', 'NOS', 'OTH', 'PAC', 'PCS', 'PRS', 'QTL', 'ROL', 'SET', 'SQF', 'SQM', 'SQY', 'TBS', 'TGM',
+  'THD', 'TON', 'TUB', 'UGS', 'UNT', 'YDS'] as const;
 
-/** First problem with a GST invoice's inputs, or null when it can be saved. */
+/** Best guess of the UQC for an item's free-text unit ("box", "kg", "pcs"…). */
+export function uqcForUnit(unit?: string | null): string | null {
+  const u = (unit ?? '').trim().toLowerCase().replace(/\.$/, '');
+  const map: Record<string, string> = {
+    box: 'BOX', boxes: 'BOX', bag: 'BAG', bags: 'BAG', bottle: 'BTL', btl: 'BTL', can: 'CAN',
+    carton: 'CTN', ctn: 'CTN', dozen: 'DOZ', doz: 'DOZ', kg: 'KGS', kgs: 'KGS', kilo: 'KGS',
+    g: 'GMS', gm: 'GMS', gram: 'GMS', l: 'LTR', ltr: 'LTR', litre: 'LTR', liter: 'LTR',
+    ml: 'MLT', m: 'MTR', mtr: 'MTR', metre: 'MTR', nos: 'NOS', no: 'NOS', pc: 'PCS', pcs: 'PCS',
+    piece: 'PCS', pieces: 'PCS', pack: 'PAC', packet: 'PAC', pkt: 'PAC', pair: 'PRS', set: 'SET',
+    roll: 'ROL', ton: 'TON', tonne: 'TON', quintal: 'QTL', unit: 'UNT', units: 'UNT', tube: 'TUB',
+  };
+  const code = u.toUpperCase();
+  return map[u] ?? ((UQC_CODES as readonly string[]).includes(code) ? code : null);
+}
+
+export type GstField = 'gstin' | 'hsn' | 'quantity' | 'uqc';
+
+/** First problem with a GST invoice's inputs, or null when it can be saved.
+ *  The invoice number isn't one: the server assigns it (Rule 46). */
 export function gstInputError(
-  invoiceNumber: string | undefined,
-  gst: {hsn: string; customerGstin?: string},
+  gst: {hsn: string; customerGstin?: string; quantity?: string; uqc?: string},
 ): {field: GstField; message: string} | null {
-  if (!INVOICE_RE.test((invoiceNumber ?? '').trim())) {
-    return {field: 'invoice', message: tNow('errors.gstInvoiceNo')};
+  const qty = Number(gst.quantity);
+  if (!gst.quantity || !Number.isFinite(qty) || qty <= 0) {
+    return {field: 'quantity', message: tNow('errors.gstQuantity')};
+  }
+  if (!gst.uqc || !(UQC_CODES as readonly string[]).includes(gst.uqc)) {
+    return {field: 'uqc', message: tNow('errors.gstUqc')};
   }
   if (gst.customerGstin && !isValidGstin(gst.customerGstin)) {
     return {field: 'gstin', message: tNow('errors.gstinCheck')};

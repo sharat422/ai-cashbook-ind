@@ -55,21 +55,27 @@ export const BUSINESS_TYPES = [
 
 export type BusinessType = (typeof BUSINESS_TYPES)[number];
 
-/** Indian states & union territories for the State picker. */
+/** All 28 states and 8 Union Territories, spelt as the server's GST state codes (backend/app/gst.py). */
 export const INDIAN_STATES = [
+  'Andaman and Nicobar Islands',
   'Andhra Pradesh',
   'Arunachal Pradesh',
   'Assam',
   'Bihar',
+  'Chandigarh',
   'Chhattisgarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
   'Delhi',
   'Goa',
   'Gujarat',
   'Haryana',
   'Himachal Pradesh',
+  'Jammu and Kashmir',
   'Jharkhand',
   'Karnataka',
   'Kerala',
+  'Ladakh',
+  'Lakshadweep',
   'Madhya Pradesh',
   'Maharashtra',
   'Manipur',
@@ -77,6 +83,7 @@ export const INDIAN_STATES = [
   'Mizoram',
   'Nagaland',
   'Odisha',
+  'Puducherry',
   'Punjab',
   'Rajasthan',
   'Sikkim',

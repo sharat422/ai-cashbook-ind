@@ -66,6 +66,11 @@ const SCOPE = [
   'features/team/presentation/screens/AccountantActivityScreen.tsx',
   'features/auth/components/BusinessSwitcher.tsx',
   'navigation/withPermission.tsx',
+  // reconciliation rework, beats, GST lines
+  'features/reconciliation/presentation/screens/BankImportScreen.tsx',
+  'features/reconciliation/presentation/screens/BankMatchScreen.tsx',
+  'features/beats/presentation/screens/VisitHistoryScreen.tsx',
+  'features/gst/presentation/GstInvoiceSection.tsx',
 ];
 
 describe('Telugu-first screens have no hard-coded English', () => {

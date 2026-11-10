@@ -1,3 +1,4 @@
+import type {BankLine, CashDeposit, Collection} from '@features/reconciliation/data/reconciliation.remote';
 import type {Scheme} from '@features/schemes/data/schemes.remote';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
@@ -40,6 +41,10 @@ export type AppStackParamList = {
   SyncStatus: undefined;
   SyncConflict: {customerId: string};
   KhataImport: undefined;
+  BankImport: undefined;
+  VisitHistory: {customerId?: string; userId?: string; beatId?: string; title?: string} | undefined;
+  /** By hand: collections for a bank line, or bank lines for one collection (a split). */
+  BankMatch: {line: BankLine} | {collection: Collection} | {deposit: CashDeposit};
   AccountantActivity: {userId?: string; mobile?: string} | undefined;
   LegalDoc: {doc: 'privacy' | 'terms'};
   Business: undefined;

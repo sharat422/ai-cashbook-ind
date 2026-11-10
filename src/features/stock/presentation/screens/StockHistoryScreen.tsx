@@ -1,3 +1,4 @@
+import {personLabel} from '@utils/personLabel';
 import React from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
 
@@ -18,7 +19,7 @@ export function StockHistoryScreen({route}: AppScreenProps<'StockHistory'>): Rea
   const items: StockItem[] = levels.data?.items ?? [];
   const vans: Van[] = levels.data?.vans ?? [];
   const place = (location: string, van: string | null) =>
-    location === 'godown' ? `🏬 ${t('stock.godown')}` : `🚚 ${vans.find(v => v.userId === van)?.mobile ?? ''}`;
+    location === 'godown' ? `🏬 ${t('stock.godown')}` : `🚚 ${(v => personLabel(v?.name, v?.mobile))(vans.find(x => x.userId === van))}`;
 
   if (moves.isLoading) {
     return (

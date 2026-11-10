@@ -27,7 +27,8 @@ const CLASS_LIST = /^\s*[a-z0-9:/[\]%.#-]+(?:\s+[a-z0-9:/[\]%.#-]+)*\s*$/;
 
 export function hasWords(text: string): boolean {
   if (CLASS_LIST.test(text) && /-/.test(text)) return false;
-  const words = text.match(/[A-Za-z][A-Za-z'’]+/g) ?? [];
+  // Codes with digits (a GSTIN example like 29ABCDE1234F1Z5) aren't words.
+  const words = text.replace(/\S*\d\S*/g, ' ').match(/[A-Za-z][A-Za-z'’]+/g) ?? [];
   return words.some(w => !ALLOWED.test(w));
 }
 
