@@ -38,13 +38,24 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 const navigation = {navigate: jest.fn()} as any;
+// Every tree is unmounted after its test: a screen left mounted keeps running
+// animation frames after Jest tears the environment down, which fails the run.
+const mounted: ReactTestRenderer[] = [];
 const render = () => {
   let tree!: ReactTestRenderer;
   act(() => {
     tree = create(<AssistantScreen navigation={navigation} route={{} as any} />);
   });
+  mounted.push(tree);
   return tree;
 };
+afterEach(async () => {
+  act(() => mounted.splice(0).forEach(t => t.unmount()));
+  // Let animation frames already queued run while Jest is still up.
+  await act(async () => {
+    await new Promise(res => setTimeout(res, 50));
+  });
+});
 /** The button whose label is exactly `label`. */
 const button = (tree: ReactTestRenderer, label: string) =>
   tree.root
