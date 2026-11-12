@@ -46,7 +46,7 @@ test('two lines and three collections: Match only when both sides are covered ex
   try {
     await act(async () => {
       r = create(
-        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false, gcTime: Infinity}, mutations: {gcTime: Infinity}}})}>
           <BankMatchScreen navigation={{goBack} as any} route={{params: {line: line('l900', '900.00')}} as any} />
         </QueryClientProvider>,
       );

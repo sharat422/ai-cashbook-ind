@@ -41,7 +41,7 @@ test('a deleted beat is restored after the owner confirms', async () => {
   try {
   await act(async () => {
     r = create(
-      <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+      <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false, gcTime: Infinity}, mutations: {gcTime: Infinity}}})}>
         <BeatPlanScreen navigation={{navigate: jest.fn()} as any} route={{} as any} />
       </QueryClientProvider>,
     );

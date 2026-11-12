@@ -52,7 +52,7 @@ test('planned cover shows its dates and a helper taken off today can be added ba
   try {
     await act(async () => {
       r = create(
-        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false, gcTime: Infinity}, mutations: {gcTime: Infinity}}})}>
           <BeatPlanScreen navigation={{navigate: jest.fn()} as any} route={{} as any} />
         </QueryClientProvider>,
       );
