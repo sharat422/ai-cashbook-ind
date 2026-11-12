@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from .. import statements as svc
 from ..database import get_db
 from ..deps import require
-from ..models import Business, StatementEvent, User
+from ..models import Bill, Business, StatementEvent, User
 from ..notifications import WhatsAppNotConfigured, WhatsAppSendError, send_whatsapp_text
 from ..rbac import DATA_VIEW, ENTRY_EDIT
 from ..security import get_current_user
@@ -87,6 +87,18 @@ def create_link(
     return {"url": url, "expiresInDays": svc.LINK_DAYS}
 
 
+def _require_opt_in(db: Session, business: Business, customer, user: User, channel: str, *,
+                    what: str, hint: str, note: str | None = None) -> None:
+    """The one WhatsApp consent gate, for statements and bills alike: without
+    the retailer's current opt-in the share is refused (409) and logged."""
+    if svc.consent(db, business.id, customer.id)["status"] != "opted_in":
+        svc.log(db, business.id, customer.id, "blocked", "system", channel=channel,
+                note=note or "No WhatsApp opt-in from this retailer", user=user)
+        db.commit()
+        raise HTTPException(409, f"{customer.full_name} hasn't agreed to get {what} on WhatsApp. "
+                                 f"{hint}")
+
+
 @router.post("/customers/{customer_id}/statement-whatsapp")
 def share_on_whatsapp(
     customer_id: str,
@@ -102,12 +114,8 @@ def share_on_whatsapp(
     a current opt-in, and an opt-out stops it at once.
     """
     customer = _owned_customer(db, business, customer_id)
-    if svc.consent(db, business.id, customer.id)["status"] != "opted_in":
-        svc.log(db, business.id, customer.id, "blocked", "system", channel=f"whatsapp_{body.via}",
-                note="No WhatsApp opt-in from this retailer", user=user)
-        db.commit()
-        raise HTTPException(409, f"{customer.full_name} hasn't agreed to get statements on WhatsApp. "
-                                 "Ask them first, or share the link another way.")
+    _require_opt_in(db, business, customer, user, f"whatsapp_{body.via}", what="statements",
+                    hint="Ask them first, or share the link another way.")
     if not customer.mobile:
         raise HTTPException(422, "Add the retailer's mobile number first.")
     start = validate_date(body.period_from) if body.period_from else None
@@ -148,6 +156,38 @@ def printable_ledger(
     pdf = svc.render(business, customer, svc.build(db, customer, start, end), kind="ledger")
     return Response(pdf, media_type="application/pdf", headers={
         "Content-Disposition": f'attachment; filename="Ledger_{customer.id[:8]}.pdf"'})
+
+
+@router.get("/bills/{bill_id}.pdf")
+def bill_pdf(
+    bill_id: str,
+    business: Business = Depends(require(DATA_VIEW)),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The bill's PDF, for sending to the retailer on WhatsApp.
+
+    This is the only way to get a bill PDF, and it goes through the same
+    consent gate and log as statements: no opt-in, no PDF (409, logged as
+    'blocked'); with opt-in it is logged as 'sent'. So the phone's share
+    sheet can only ever pass on a PDF that was cleared and logged here (ST3).
+    Until the approved template (ST1) exists, the app attaches it in the
+    owner's own WhatsApp.
+    """
+    bill = db.get(Bill, bill_id)
+    if bill is None or bill.business_id != business.id:
+        raise HTTPException(404, "Bill not found")
+    customer = _owned_customer(db, business, bill.customer_id)
+    note = f"Bill {bill.bill_number}"
+    _require_opt_in(db, business, customer, user, "whatsapp_phone", what="bills",
+                    hint="Ask them first.", note=f"{note}: no WhatsApp opt-in from this retailer")
+    pdf = svc.render_bill(db, business, customer, bill)
+    svc.log(db, business.id, customer.id, "sent", "owner", channel="whatsapp_phone", note=note,
+            user=user)
+    db.commit()
+    return Response(pdf, media_type="application/pdf", headers={
+        "Cache-Control": "no-store",
+        "Content-Disposition": f'attachment; filename="Bill_{bill.bill_number}.pdf"'})
 
 
 # ------------------------------------------------------------ public (retailer)

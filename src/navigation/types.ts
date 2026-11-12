@@ -67,7 +67,7 @@ export type AppStackParamList = {
   StockCount: undefined;
   StockHistory: {itemId?: string; name?: string};
   VanStock: undefined;
-  Bill: {customer: {id: string; fullName: string}; beatId?: string};
+  Bill: {customer: {id: string; fullName: string; mobile?: string}; beatId?: string};
   Schemes: undefined;
   SchemeForm: {scheme?: Scheme};
   SchemeReport: {customerId?: string; customerName?: string};

@@ -5,8 +5,8 @@ import {ApiError, apiErrorMessage} from '@api/client';
 import {API_ROOT} from '@config/env';
 import {useAuthStore} from '@store/auth.store';
 
-/** Download an authenticated API file (PDF/Excel/CSV) and open the share sheet. */
-export async function downloadAndShare(path: string, fileName: string, mime: string): Promise<void> {
+/** Download an authenticated API file to the app's documents folder; returns its path. */
+export async function downloadFile(path: string, fileName: string): Promise<string> {
   const toFile = `${RNFS.DocumentDirectoryPath}/${fileName}`;
   const token = useAuthStore.getState().token;
   const {statusCode} = await RNFS.downloadFile({
@@ -19,5 +19,11 @@ export async function downloadAndShare(path: string, fileName: string, mime: str
     const detail = `Download failed (${statusCode}).`;
     throw new ApiError(statusCode, apiErrorMessage(statusCode, detail), detail);
   }
+  return toFile;
+}
+
+/** Download an authenticated API file (PDF/Excel/CSV) and open the share sheet. */
+export async function downloadAndShare(path: string, fileName: string, mime: string): Promise<void> {
+  const toFile = await downloadFile(path, fileName);
   await Share.open({url: `file://${toFile}`, type: mime, failOnCancel: false});
 }

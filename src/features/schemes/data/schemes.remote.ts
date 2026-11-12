@@ -1,4 +1,5 @@
 import {apiRequest} from '@api/client';
+import {downloadFile} from '@api/download';
 
 /** Exact strings from the server: money "12.50", quantity "2.000". */
 export type Money = string;
@@ -143,6 +144,11 @@ export const schemesRemote = {
   remove: (id: string) => apiRequest<void>(`/schemes/${id}`, {method: 'DELETE'}),
   preview: (input: BillInput) => apiRequest<BillPreview>('/bills/preview', {method: 'POST', body: input}),
   createBill: (input: BillInput) => apiRequest<Bill>('/bills', {method: 'POST', body: input}),
+  /**
+   * The bill's PDF, downloaded to the phone for WhatsApp. The server sends it
+   * only if the retailer opted in (409 otherwise) and logs every try.
+   */
+  billPdf: (billId: string, billNumber: string) => downloadFile(`/bills/${billId}.pdf`, `Bill_${billNumber}.pdf`),
   log: (from: string, to: string, customerId?: string) =>
     apiRequest<SchemeApplication[]>(`/schemes/log?${qs({from, to, customerId})}`, {method: 'GET'}),
   report: (from: string, to: string, schemeId?: string, itemId?: string) =>
