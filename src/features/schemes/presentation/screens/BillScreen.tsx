@@ -11,8 +11,11 @@ import {PERMISSIONS} from '@features/auth/rbac';
 import {itemRemote} from '@features/items/data/item.remote';
 import type {Item} from '@features/items/domain/entities';
 import {formatMoney} from '@features/reconciliation/domain/money';
-import {schemesRemote, type BillInput, type BillPreview, type PreviewLine} from '@features/schemes/data/schemes.remote';
+import {statementsRemote, type StatementConsent} from '@features/customers/data/statements.remote';
+import {consentKey} from '@features/customers/presentation/components/StatementConsentCard';
+import {schemesRemote, type Bill, type BillInput, type BillPreview, type PreviewLine} from '@features/schemes/data/schemes.remote';
 import {makeBillClientId, useCreateBill} from '@features/schemes/presentation/hooks';
+import {shareBillOnWhatsApp} from '@features/schemes/presentation/shareBill';
 import type {Van, VanItem} from '@features/stock/data/stock.remote';
 import {formatQty, isQty} from '@features/stock/domain/qty';
 import {useStockLevels, useVanStock} from '@features/stock/presentation/hooks';
@@ -29,7 +32,8 @@ interface Line {
 /**
  * An item bill to a retailer. Schemes are applied by the server and shown as
  * their own lines; saving puts the total on the retailer's credit and takes
- * the goods (paid + free) out of the godown or the salesperson's van.
+ * the goods (paid + free) out of the godown or the salesperson's van. A saved
+ * bill can be shared as a PDF on WhatsApp, only to a retailer who opted in.
  */
 export function BillScreen({navigation, route}: AppScreenProps<'Bill'>): React.JSX.Element {
   const t = useT();
@@ -54,6 +58,7 @@ export function BillScreen({navigation, route}: AppScreenProps<'Bill'>): React.J
   const [date, setDate] = useState(todayIST());
   const [lines, setLines] = useState<Line[]>([]);
   const [clientId] = useState(makeBillClientId);
+  const [saved, setSaved] = useState<Bill | null>(null);
   const createBill = useCreateBill();
 
   const input: BillInput = {
@@ -83,16 +88,16 @@ export function BillScreen({navigation, route}: AppScreenProps<'Bill'>): React.J
     createBill.mutate(
       input,
       {
-        onSuccess: bill => {
-          Alert.alert(
-            t('bill.savedTitle', {number: bill.billNumber}),
-            t('bill.savedMsg', {total: formatMoney(bill.total), name: customer.fullName}),
-          );
-          navigation.goBack();
-        },
+        onSuccess: bill => setSaved(bill),
         onError: e => Alert.alert(t('form.couldNotSave'), e.message),
       },
     );
+
+  if (saved) {
+    return (
+      <SavedBill bill={saved} customer={customer} canShare={seesAll} onDone={() => navigation.goBack()} />
+    );
+  }
 
   const p: BillPreview | undefined = preview.data;
   const ready = input.lines.length > 0 && input.lines.length === lines.length;
@@ -198,5 +203,55 @@ function Total({label, value, bold}: {label: string; value: string; bold?: boole
       <Text className={`text-sm ${bold ? 'font-bold' : ''} text-white`}>{label}</Text>
       <Text className={`text-sm ${bold ? 'font-bold' : 'font-semibold'} text-white`}>{value}</Text>
     </View>
+  );
+}
+
+/**
+ * The saved bill, with Share (PDF). Sharing uses the retailer's WhatsApp
+ * statement consent: without an opt-in the button is disabled ("No consent"),
+ * and the server refuses and logs any attempt anyway.
+ */
+function SavedBill({bill, customer, canShare, onDone}: {
+  bill: Bill;
+  customer: {id: string; fullName: string; mobile?: string};
+  canShare: boolean;
+  onDone: () => void;
+}) {
+  const t = useT();
+  const consent = useQuery<StatementConsent>({
+    queryKey: consentKey(customer.id),
+    queryFn: () => statementsRemote.consent(customer.id),
+    enabled: canShare,
+  });
+  const [sharing, setSharing] = useState(false);
+  const optedIn = consent.data?.status === 'opted_in';
+  const share = async () => {
+    setSharing(true);
+    const ok = await shareBillOnWhatsApp(bill, customer);
+    setSharing(false);
+    consent.refetch();
+    if (!ok) Alert.alert(t('bill.noConsent'), t('bill.noConsentMsg', {name: customer.fullName}));
+  };
+  return (
+    <Screen>
+      <View className="py-6" style={{gap: 12}}>
+        <Text variant="title">{t('bill.savedTitle', {number: bill.billNumber})}</Text>
+        <Text variant="subtitle">{t('bill.savedMsg', {total: formatMoney(bill.total), name: customer.fullName})}</Text>
+        {canShare ? (
+          <View testID="bill-share" style={{gap: 6}}>
+            <Button
+              title={optedIn || consent.isLoading ? t('bill.sharePdf') : `${t('bill.sharePdf')} · ${t('bill.noConsent')}`}
+              disabled={!optedIn || sharing}
+              loading={sharing || consent.isLoading}
+              onPress={share}
+            />
+            {!optedIn && !consent.isLoading ? (
+              <Text variant="caption">{t('bill.noConsentMsg', {name: customer.fullName})}</Text>
+            ) : null}
+          </View>
+        ) : null}
+        <Button title={t('common.done')} variant="secondary" onPress={onDone} />
+      </View>
+    </Screen>
   );
 }

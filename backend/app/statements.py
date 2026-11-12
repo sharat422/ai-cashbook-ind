@@ -1,5 +1,6 @@
 """Retailer statements without the app: a scoped browser link and PDF, opt-in
-WhatsApp sharing with opt-out, and a printable ledger with page totals.
+WhatsApp sharing with opt-out, and a printable ledger with page totals. Bill
+PDFs (render_bill) use the same PDF builder and the same consent and log.
 
 Scoping: a link's token resolves to one (business, customer) pair and every
 query below filters on that pair — a link has no way to name another retailer.
@@ -23,7 +24,8 @@ from sqlalchemy.orm import Session
 
 from .calc import days_since, today_iso
 from .config import settings
-from .models import Business, Customer, LedgerEntry, StatementEvent, StatementLink, User
+from .models import (Bill, BillLine, Business, Customer, LedgerEntry, SchemeApplication,
+                     StatementEvent, StatementLink, User)
 
 LINK_DAYS = 30
 ZERO = Decimal("0.00")
@@ -279,6 +281,87 @@ def render(business: Business, customer: Customer, st: Statement, *, kind: str) 
         pdf.set_font("Noto", "", 7)
         pdf.cell(0, 4, f"Generated {dmy(today_iso())} by {business.business_name} with Bolcash. "
                        "Positive balance = amount due to the distributor.", align="C")
+    return bytes(pdf.output())
+
+
+# ------------------------------------------------------------------ bill PDF
+
+def balance_after(db: Session, customer: Customer, bill: Bill) -> Decimal:
+    """The retailer's balance right after this bill: every ledger entry up to
+    and including the bill's own credit entry, in ledger order. Later entries
+    (payments, newer bills) never change what this bill's PDF says."""
+    entries = db.scalars(select(LedgerEntry).where(LedgerEntry.customer_id == customer.id)
+                         .order_by(LedgerEntry.date, LedgerEntry.created_at, LedgerEntry.id)).all()
+    own = next((e for e in entries if e.id == bill.ledger_entry_id), None)
+    cut = (own.date, own.created_at) if own else (bill.date, bill.created_at)
+    signed = lambda e: money(e.amount) if e.type == "credit" else -money(e.amount)  # noqa: E731
+    return sum((signed(e) for e in entries if (e.date, e.created_at) <= cut), ZERO)
+
+
+def _q(x) -> str:
+    """20.000 -> 20, 1.500 -> 1.5"""
+    d = Decimal(x).normalize()
+    return f"{d:f}"
+
+
+BILL_COLS = (("Item", 84, "L"), ("Qty", 26, "R"), ("Rate", 38, "R"), ("Amount", 38, "R"))
+
+
+def render_bill(db: Session, business: Business, customer: Customer, bill: Bill) -> bytes:
+    """The retailer's copy of one bill: lines, scheme lines, total, and the
+    balance after this bill. English, like every server file (TE5)."""
+    lines = db.scalars(select(BillLine).where(BillLine.bill_id == bill.id)
+                       .order_by(BillLine.id)).all()
+    schemes = db.scalars(select(SchemeApplication).where(
+        SchemeApplication.bill_id == bill.id, SchemeApplication.status == "applied")
+        .order_by(SchemeApplication.id)).all()
+    order = {ln.item_id: i for i, ln in enumerate(lines)}
+    schemes = sorted(schemes, key=lambda a: order.get(a.item_id, len(order)))
+    party = customer.full_name + (f" ({customer.business_name})" if customer.business_name else "")
+    pdf = _Pdf()
+
+    def header(first: bool) -> None:
+        pdf.add_page()
+        pdf.set_font("Noto", "B", 14)
+        pdf.cell(0, 7, business.business_name, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Noto", "", 9)
+        pdf.cell(0, 5, f"Bill {bill.bill_number} · {dmy(bill.date)}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 5, f"To: {party}" + ("" if first else " (continued)"),
+                 new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+        row([c[0] for c in BILL_COLS], bold=True, fill=True)
+
+    def row(cells: list[str], bold: bool = False, fill: bool = False) -> None:
+        if pdf.get_y() > 265:
+            header(False)
+        pdf.set_font("Noto", "B" if bold else "", 9)
+        if fill:
+            pdf.set_fill_color(241, 245, 249)
+        for (_, w, align), text in zip(BILL_COLS, cells):
+            pdf.cell(w, 6, text, border="B", align=align, fill=fill)
+        pdf.ln(6)
+
+    header(True)
+    for ln in lines:
+        unit = f" {ln.unit}" if ln.unit else ""
+        row([ln.item_name, f"{_q(ln.quantity)}{unit}", inr(money(ln.rate)), inr(money(ln.amount))])
+    if schemes:
+        row(["Schemes", "", "", ""], bold=True)
+        for a in schemes:
+            if a.free_item_id and Decimal(a.free_qty) > 0:
+                what = f"{_q(a.free_qty)} {a.free_item_name or 'item'} free"
+                row([f"{a.scheme_name} · {a.item_name}: {what}", _q(a.free_qty), "", "Free"])
+            else:
+                row([f"{a.scheme_name} · {a.item_name}", "", "", inr(-money(a.discount))])
+    row(["Items total", "", "", inr(money(bill.subtotal))])
+    row(["Scheme discount", "", "", inr(-money(bill.discount))])
+    row(["Bill total", "", "", inr(money(bill.total))], bold=True, fill=True)
+    row(["Balance after this bill", "", "", inr(balance_after(db, customer, bill))],
+        bold=True, fill=True)
+    pdf.set_y(-14)
+    pdf.set_font("Noto", "", 7)
+    pdf.cell(0, 4, f"Generated {dmy(today_iso())} by {business.business_name} with Bolcash. "
+                   "Positive balance = amount due to the distributor.", align="C")
     return bytes(pdf.output())
 
 

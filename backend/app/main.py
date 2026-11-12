@@ -161,8 +161,9 @@ for module in (
     consent,
     beats,
     reconciliation,
-    schemes,
+    # Before schemes: GET /bills/{id}.pdf must win over GET /bills/{id}.
     statements,
+    schemes,
     stock,
     imports,
 ):

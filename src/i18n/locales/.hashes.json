@@ -1486,7 +1486,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "gu": {
     "account.deleteAccount": "5b4180f40b06",
@@ -2975,7 +2979,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "hi": {
     "account.deleteAccount": "5b4180f40b06",
@@ -4464,7 +4472,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "hinglish": {
     "account.deleteAccount": "5b4180f40b06",
@@ -5953,7 +5965,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "kn": {
     "account.deleteAccount": "5b4180f40b06",
@@ -7442,7 +7458,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "ml": {
     "account.deleteAccount": "5b4180f40b06",
@@ -8931,7 +8951,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "mr": {
     "account.deleteAccount": "5b4180f40b06",
@@ -10420,7 +10444,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "pa": {
     "account.deleteAccount": "5b4180f40b06",
@@ -11909,7 +11937,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "ta": {
     "account.deleteAccount": "5b4180f40b06",
@@ -13398,7 +13430,11 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   },
   "te": {
     "account.deleteAccount": "5b4180f40b06",
@@ -14887,6 +14923,10 @@
     "bankMatch.addLines": "390b5b4908b0",
     "bankMatch.pickedBank": "ef034d866031",
     "bankMatch.pickedCollections": "037e0bfbe493",
-    "deposit.wholeBeat": "35ba0d93670f"
+    "deposit.wholeBeat": "35ba0d93670f",
+    "bill.sharePdf": "9cf9d115c212",
+    "bill.noConsent": "a22c7ed3c251",
+    "bill.noConsentMsg": "158f390beea5",
+    "bill.noWhatsappMsg": "8515bc5c04de"
   }
 }

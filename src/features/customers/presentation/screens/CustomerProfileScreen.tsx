@@ -261,7 +261,7 @@ export function CustomerProfileScreen({
         {canAdd ? (
           <SecondaryAction
             label={t('bill.new')}
-            onPress={() => navigation.navigate('Bill', {customer: {id: customer.id, fullName: customer.fullName}})}
+            onPress={() => navigation.navigate('Bill', {customer: {id: customer.id, fullName: customer.fullName, mobile: customer.mobile}})}
           />
         ) : null}
         <SecondaryAction

@@ -48,7 +48,7 @@ test('Match is enabled only when the ticked lines cover the collection exactly',
   try {
     await act(async () => {
       r = create(
-        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false, gcTime: Infinity}, mutations: {gcTime: Infinity}}})}>
           <BankMatchScreen navigation={{goBack} as any} route={{params: {collection}} as any} />
         </QueryClientProvider>,
       );
@@ -80,7 +80,7 @@ test('a cash deposit matches only a bank line of the same amount, after a confir
   try {
     await act(async () => {
       r = create(
-        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false, gcTime: Infinity}, mutations: {gcTime: Infinity}}})}>
           <BankMatchScreen navigation={{goBack} as any} route={{params: {deposit}} as any} />
         </QueryClientProvider>,
       );
