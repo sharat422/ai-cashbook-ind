@@ -156,16 +156,6 @@ in the wrong language, or crashes.
 - **Steps:** Airplane mode. Add 5 incomes, 5 expenses, 3 udhar and 2 payments, and 5 beat visits. Kill the app halfway. (Optional: wait 2 hours.) Reconnect and open the app.
 - **Expected:** Each save finishes at once with "will sync". Home shows "⏳ 20 waiting to sync · offline", also after the kill. After reconnecting → "✓ All synced". On phone B (or the web) exactly 20 new records, none twice.
 
-**Weak signal (IM2), MANUAL_TESTING.md 37H.2a** *(acceptance)*
-- **Steps:** a hotspot or proxy that accepts the connection but never answers. Save an udhar and an income; time each. Airplane mode → one more. Restore the connection; wait 30 s.
-- **Expected:** weak-signal saves finish in **under 3 s** and show "Queued — weak signal" on Sync status. The airplane-mode save queues at once. After the connection returns, all of them sync, each exactly once.
-
-**Fix or discard a failed entry (IM5), MANUAL_TESTING.md 37H.2b**
-- **Steps:** make a failed UPI payment (a UTR already used). Edit the UTR → Save and sync. Make another failed entry → Discard → confirm. Repeat Discard offline. Log in as staff.
-- **Expected:** the edited payment syncs once. The Discard confirm shows the amount on its button, and the entry never reaches phone B. Offline, Discard is refused with "needs a connection". Staff get no Discard.
-
-**Offline bill (SC7)** — MANUAL_TESTING.md 37E.3f on a real phone in airplane mode: the bill waits, shows on the retailer's ledger as waiting to sync, syncs once with one number; a short-stock or ended-scheme bill goes to the conflict screen with the reason.
-
 **Offline messages (4.5, 8.9, 11.4, 37C.3, 37H.4)**
 - Home offline: the status line ends "· offline" and the amber "offline figures" banner shows.
 - Khata dashboard offline → "Offline — on-device trend & collections only".
@@ -184,13 +174,9 @@ in the wrong language, or crashes.
 **WhatsApp consent (37F.3)**
 - Before consent: 🟢 WhatsApp link refused. Retailer agreed → it opens WhatsApp to the retailer with the link.
 
-**Email invite on a real phone (AC2, MANUAL_TESTING.md 37I.1a)**
-- The email arrives (staging SMTP set). On Android and on iOS, the page's **Open in Bolcash** opens the app; logged out, the invite is accepted right after login. Resend makes the old link fail; Team → Invites shows Expired after 7 days.
-
 **Two phones on one business (16.2, 37H.3, 37I.5)**
 - Set a credit limit on phone A → the same limit shows on phone B and on the staff day-list.
 - Open the same customer on both; save an edit on B, then a different edit on A → A shows **Changed on two phones** with both versions; nothing changes until you pick.
-- Open the same beat's **Shops & order** on both (two owner logins); save a new order on A, then a different one on B → B shows "<beat>: changed on another phone — review and save again" and the list shows A's order (37H.3a).
 - Phone B logged in as the accountant, a customer open → owner removes access on A → B's next tap signs it out with "The owner has removed your access…".
 
 ---
@@ -282,32 +268,32 @@ their screens once.
 | 1.11 | Logout clears the session | `auth.store.test.ts` |
 | 4.4a, 5.2–5.4, 6.5 | Future dates refused (in IST), amount and notes limits on app and server | `test_input_rules.py`, `test_validation.py`, `validation.test.ts`, `date.test.ts` |
 | 4.6 | Server error vs offline told apart | `client.test.ts`, `dashboard.repository.test.ts` |
-| 5.6, 6.4, 10.8, 25.1–25.5, 37A.6, 37H.1, 37H.2a (logic) | Offline queue, sync once, retries, failed vs pending, survives restart; weak signal queues in 2 s (simulated network) and syncs once when the server answers | `weakSignal.test.tsx` (IM2), `failedEntries.test.tsx` and `test_sync_discard.py` (IM5: edit keeps the client id, discard owner-only with an audit row, a discarded id can't be created), `offlineSync.test.ts`, `income.repository.test.ts`, `ledger.repository.test.ts`, `visitQueue.test.ts`, `test_income_expense.py`, `test_customers_ledger.py`, `test_ledger_import.py` (unique client id) |
+| 5.6, 6.4, 10.8, 25.1–25.5, 37A.6, 37H.1 (logic) | Offline queue, sync once, retries, failed vs pending, survives restart | `offlineSync.test.ts`, `income.repository.test.ts`, `ledger.repository.test.ts`, `visitQueue.test.ts`, `test_income_expense.py`, `test_customers_ledger.py`, `test_ledger_import.py` (unique client id) |
 | 7.x, 8.3, 8.4 | Transaction filters/sort, P&L and category totals | `test_transactions.py`, `test_reports.py`, `reportTransactions.test.ts`, `report.repository.test.ts`, `exportReport.test.ts` |
 | 9.2, 9.4, 10.5, 10.6 | Customer create/edit rules, balance sign, overdue after 30 days | `test_customers.py`, `test_customers_ledger.py`, `test_aggregates.py`, `risk.test.ts` |
 | 16.2a, 16.4 | Old phone limits upload once; ageing buckets, oldest dues paid first | `creditLimit.store.test.ts`, `test_customer_insights.py` |
 | 17.1–17.4a (offline parser) | The no-AI parser reads the listed sentences | `test_ai_parse.py`, `test_expense_parse.py` |
 | 18.x | Business summary figures | `test_summary_insights.py` |
-| 19.2–19.3, 19.6–19.9, 19.13 (rules) | Tool answers from the server, refusals without the AI, help guides, hourly and voice limits, consent and role gates (the real-model check is the pack in group 7) | `test_chatbot_*.py` (incl. `test_chatbot_hinglish.py`, TE6), `test_voice_live.py`, `test_ai_consent_gate.py`, `AssistantScreen.test.tsx`, `transcript.test.ts`, `collection/domain/templates.test.ts` |
+| 19.2–19.3, 19.6–19.9, 19.13 (rules) | Tool answers from the server, refusals without the AI, help guides, hourly and voice limits, consent and role gates (the real-model check is the pack in group 7) | `test_chatbot_*.py`, `test_voice_live.py`, `test_ai_consent_gate.py`, `AssistantScreen.test.tsx` |
 | 20.1, 20.4 | UPI ID format, QR link text | `upi.test.ts` |
 | 21.4a | Item price and GST slab rules | `test_items.py`, `test_gst.py` |
 | 22.5–22.7 | Month-end, catch-up, one expense per due date | `test_recurring.py` |
 | 23 | Cash counter totals | `denominations.test.ts` |
-| 25.6, 37H.3, 37H.3a (logic) | Two-device customer edit becomes a conflict, never an overwrite; a stale beat edit is refused (409) and the first stays | `conflict.test.tsx`, `test_beat_versions.py`, `BeatConflict.test.tsx` |
+| 25.6, 37H.3 (logic) | Two-device customer edit becomes a conflict, never an overwrite | `conflict.test.tsx` |
 | 26.x, 27.x (logic) | PIN hashing, lock state | `pinHash.test.ts`, `appLock.store.test.ts` |
 | 28.5, 28.2 | Account deletion really erases and is logged; export contents | `test_account.py` |
 | 29.2–29.4 | AI gated on consent both ways, marketing independent | `test_consent.py`, `test_ai_consent_gate.py`, `test_insights_privacy.py` |
 | 33.1 | Feedback saved, 2,000-character limit | `test_feedback.py` |
 | 34.2 | Errors recorded in the log | `errorLog.store.test.ts`, `collectDiagnostics.test.ts` |
-| 36.2, 36.4 (keys), 36.7–36.9, TE4 | Every key translated, Telugu screens and errors with no English (every screen, with what it imports, and no English left in its Telugu), a new screen must be added to the check, IST dates | `i18n.test.ts`, `teluguFirst.test.tsx`, `screens.i18n.test.ts`, `date.test.ts`, `npm run i18n:check` |
-| 37.x, 37I.x, AC1, AC2 (`test_team_email_invite.py`, `EmailInvite.test.tsx`: same membership, expiry, re-send, no business data in the link), AC3 (`test_business_picker.py`, `BusinessPicker.test.tsx`), AC4 (`test_audit_log_export.py`, `AuditLogExport.test.tsx`: IST date filter, the same rows in Excel, the export alert clears when opened, entries older than a year kept), AC7 (`test_ask_ai_audit.py`: the figures an answer cited, "Used: none", no phone, bank detail or OTP in the log) | Role rules on every route, staff/accountant blocks (an accountant's refused write names the change, with a code), last-owner guard, revoke, scoping, audit log in IST | `test_rbac.py`, `test_accountant.py`, `test_owner_guard.py`, `test_cross_tenant_idor.py`, `accountantAccess.test.tsx` |
+| 36.2, 36.4 (keys), 36.7–36.9 | Every key translated, Telugu screens and errors with no English, IST dates | `i18n.test.ts`, `teluguFirst.test.tsx`, `screens.i18n.test.ts`, `date.test.ts`, `npm run i18n:check` |
+| 37.x, 37I.x | Role rules on every route, staff/accountant blocks, last-owner guard, revoke, scoping, audit log in IST | `test_rbac.py`, `test_accountant.py`, `test_owner_guard.py`, `test_cross_tenant_idor.py`, `accountantAccess.test.tsx` |
 | 37A.x, 37J | Beat access per staff, day-list figures, visit rules, edit, soft delete, restore, visit history, names on visits | `test_beats.py`, `test_beats_edit.py`, `test_beat_restore.py`, `test_beat_helpers.py`, `test_beat_future_helpers.py`, `test_rbac.py` |
 | 37B.1–37B.8, 37K | UTR rule and uniqueness, statement parsing, column mapping and date formats, re-import, paisa-exact and split matching, undo, statement delete, counted cash, old-app UTR backfill, permissions | `test_reconciliation.py`, `test_recon_rework.py`, `test_recon_split.py`, `test_recon_many_to_many.py`, `test_statement_xls.py`, `test_cash_deposits.py`, `test_cash_deposits_per_person.py`, `test_reference_warning.py`, `test_reference_backfill.py`, `test_statement_restore.py`, `test_utr_unique.py`, `test_cash_count.py`, `test_cash_count_per_person.py`, `money.test.ts` |
-| 37C.1–37C.6, 37L | CGST/SGST vs IGST, rates by date, seller GSTIN, every state/UT, consecutive invoice numbers per FY, quantity/UQC in GSTR-1, the phone's tax split = the server's (2,976 cases), rate-change log, CSV formula guard | `test_gst.py`, `test_gst_item_amount.py`, `test_invoice_qty_backfill.py`, `test_gst_cash_sale.py`, `test_credit_notes.py`, `test_itc_review.py`, `test_gst_drafts.py`, `test_ca_tests.py`, `test_stock_transfers.py`, `test_suppliers.py`, `test_stock_reversal.py`, `test_stock_offline_sync.py`, `test_stock_units.py`, `test_stock_month_lock.py`, `test_item_bills_not_gst.py`, `test_group_schemes.py`, `test_bill_schemes.py`, `test_bill_cancel.py`, `test_bill_pdf.py`, `test_bill_offline_sync.py`, `test_bill_rate.py`, `BillRate.test.tsx`, `test_item_pages.py`, `ItemPicker.test.tsx`, `test_bill_numbers.py`, `BillPrefixCard.test.tsx`, `test_bill_race.py`, `test_statement_template.py`, `test_whatsapp_stop.py`, `test_pdf_share.py`, `sharePdf.test.ts`, `test_statement_revoke.py`, `StatementLinksCard.test.tsx`, `test_statement_language.py`, `StatementLanguage.test.tsx`, `test_export_language.py` (TE5: balances PDF and Excel in the owner's language), `test_statement_bill_detail.py`, `test_statement_bulk.py`, `BulkStatements.test.tsx`, `test_statement_link_limits.py`, `test_error_codes.py`, `client.test.ts` (error codes), `test_data_export.py` (Bills / Scheme log sheets), `BillDetail.test.tsx`, `BillConflict.test.tsx`, `SchemeGroup.test.tsx`, `MonthEndCard.test.tsx`, `stockQueue.test.ts`, `StockHistory.test.tsx`, `StockMoveSheet.test.tsx`, `CaTests.test.tsx`, `GstInvoiceStatus.test.tsx`, `gst.test.ts`, `gstSplit.test.ts`, `AmountFromItem.test.tsx` |
+| 37C.1–37C.6, 37L | CGST/SGST vs IGST, rates by date, seller GSTIN, every state/UT, consecutive invoice numbers per FY, quantity/UQC in GSTR-1, the phone's tax split = the server's (2,976 cases), rate-change log, CSV formula guard | `test_gst.py`, `gst.test.ts`, `gstSplit.test.ts` |
 | 37D.x, 37M.1 | Stock places, van loads, purchases with supplier/price/bill, low stock, counts, retries, no overselling under 20 concurrent sales, CHECK backstop | `test_stock.py`, `test_stock_race.py`, `qty.test.ts` |
 | 37E.x | Scheme maths, priority, expiry, slabs, free goods, van bills, report totals | `test_schemes.py`, `schemeText.test.ts` |
 | 37F.2–37F.5 (logic) | Link scoping and expiry, consent and opt-out, printable ledger totals | `test_statements.py`, `exportStatement.test.ts` |
-| 37G.x, 37G.3a | Preview = dry run, mapping, duplicates, re-import adds 0, log, backup, permissions; undo removes exactly the import's rows, refused while later work rests on it or twice, owner only | `test_ledger_import.py`, `test_import_undo.py`, `KhataImportScreen.test.tsx`, `ImportUndo.test.tsx` |
+| 37G.x | Preview = dry run, mapping, duplicates, re-import adds 0, log, backup, permissions | `test_ledger_import.py`, `KhataImportScreen.test.tsx` |
 | 37H.5 (logic) | 1,000-entry ledger: fast balances/risk, list mounts a screenful | `ledgerPerf.test.tsx` |
 | 39.1–39.3 (logic) | Rate-limit maths per IP/user/auth path, OTP single use and attempt limit, session not persisted | `test_monitoring.py`, `test_production_guards.py`, `secureAuthStorage.test.ts` |
 
