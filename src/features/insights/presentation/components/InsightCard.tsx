@@ -2,6 +2,7 @@ import React from 'react';
 import {Pressable, View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import type {Insight} from '@features/insights/domain/entities';
 import {SENTIMENT_STYLE, TYPE_ICON} from './insightStyle';
 
@@ -18,6 +19,7 @@ function InsightCardBase({
   insight,
   onPress,
 }: InsightCardProps): React.JSX.Element {
+  const t = useT();
   const s = SENTIMENT_STYLE[insight.sentiment];
   const drillable = insight.drill.target !== 'none';
 
@@ -63,7 +65,7 @@ function InsightCardBase({
 
         {drillable ? (
           <Text className="mt-3 text-sm font-semibold text-primary">
-            View details →
+            {t('insights.viewDetails')}
           </Text>
         ) : null}
       </View>

@@ -44,6 +44,11 @@ function TransactionCardBase({
               : ''}
             {entry.syncStatus === 'pending' ? t('ledger.pendingSync') : ''}
           </Text>
+          {entry.queuedBillLines ? (
+            <Text testID="bill-waiting" className="mt-1 text-sm text-slate-700">
+              {t('bill.waitingToSync', {count: entry.queuedBillLines})}
+            </Text>
+          ) : null}
           {entry.notes ? (
             <Text className="mt-1 text-sm text-slate-700" numberOfLines={2}>
               {entry.notes}
@@ -56,8 +61,7 @@ function TransactionCardBase({
             className={`text-base font-bold ${
               isCredit ? 'text-amber-700' : 'text-success'
             }`}>
-            {isCredit ? '+' : '−'}
-            {formatINR(entry.amount)}
+            {entry.queuedBillLines ? '…' : `${isCredit ? '+' : '−'}${formatINR(entry.amount)}`}
           </Text>
           <Text className="mt-1 text-[11px] text-muted">
             {t('ledger.bal', {amount: formatINR(entry.balance)})}

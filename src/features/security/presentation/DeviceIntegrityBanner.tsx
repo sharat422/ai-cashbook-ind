@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {Pressable, View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import {reportDeviceIntegrity} from '@features/security/data/deviceIntegrity';
 
 /**
@@ -11,6 +12,7 @@ import {reportDeviceIntegrity} from '@features/security/data/deviceIntegrity';
  */
 export function DeviceIntegrityBanner(): React.JSX.Element | null {
   const [dismissed, setDismissed] = useState(false);
+  const t = useT();
   if (dismissed || !reportDeviceIntegrity()) return null;
 
   return (
@@ -18,17 +20,15 @@ export function DeviceIntegrityBanner(): React.JSX.Element | null {
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
           <Text className="text-sm font-bold text-amber-800">
-            ⚠️ Device security warning
+            {t('security.rootedTitle')}
           </Text>
           <Text className="mt-1 text-xs text-amber-700">
-            This device appears to be rooted or jailbroken. Your saved data may
-            be less secure — keep the app updated and avoid storing sensitive
-            details here.
+            {t('security.rootedBody')}
           </Text>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Dismiss security warning"
+          accessibilityLabel={t('security.rootedDismiss')}
           onPress={() => setDismissed(true)}
           hitSlop={8}>
           <Text className="text-base text-amber-700">✕</Text>

@@ -9,11 +9,15 @@
  */
 
 // --- Boundary mocks (hoisted by Jest) ---------------------------------------
-jest.mock('@api/client', () => ({
-  apiRequest: jest.fn(),
-  ApiError: class ApiError extends Error {},
-  NetworkError: class NetworkError extends Error {},
-}));
+jest.mock('@api/client', () => {
+  class NetworkError extends Error {}
+  return {
+    apiRequest: jest.fn(),
+    ApiError: class ApiError extends Error {},
+    NetworkError,
+    WeakSignalError: class WeakSignalError extends NetworkError {},
+  };
+});
 
 import {apiRequest} from '@api/client';
 import NetInfo from '@react-native-community/netinfo';

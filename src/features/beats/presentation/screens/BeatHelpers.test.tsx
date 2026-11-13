@@ -28,7 +28,7 @@ jest.mock('@features/team/presentation/hooks', () => ({
 jest.mock('@features/customers/presentation/hooks/useCustomers', () => ({useCustomers: () => ({data: []})}));
 
 const mockBeat = (): Beat => ({
-  id: 'b1', name: 'Ring Road', weekdays: [0], assignedUserId: null, retailers: [],
+  id: 'b1', name: 'Ring Road', version: 1, weekdays: [0], assignedUserId: null, retailers: [],
   assignments: [
     {userId: 'ravi', role: 'secondary', name: 'Ravi', mobile: null, validFrom: '2099-01-05', validTo: null},
     {userId: 'sita', role: 'secondary', name: 'Sita', mobile: null, validFrom: todayIST(), validTo: todayIST()},

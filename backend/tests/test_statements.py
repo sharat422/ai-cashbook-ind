@@ -109,7 +109,10 @@ def test_a_link_for_retailer_a_never_shows_retailer_b(make_user, client):
 
 def test_whatsapp_needs_opt_in_and_stops_after_opt_out(make_user, client, monkeypatch):
     sent = []
-    monkeypatch.setattr("app.routers.statements.send_whatsapp_text", lambda to, msg: sent.append((to, msg)))
+    # The server send is the approved template (ST1, test_statement_template.py).
+    monkeypatch.setattr("app.statement_send.template_status", lambda name: "APPROVED")
+    monkeypatch.setattr("app.statement_send.send_whatsapp_template",
+                        lambda to, name, params: sent.append((to, params)) or {"messages": [{"id": "wamid.1"}]})
     owner = make_user()
     cid = _shop(client, owner, "Ganesh Traders", [("credit", 500, 2)])
     share = lambda via="server": client.post(  # noqa: E731
@@ -124,15 +127,17 @@ def test_whatsapp_needs_opt_in_and_stops_after_opt_out(make_user, client, monkey
     assert r.json()["status"] == "opted_in"
 
     r = share()
-    assert r.status_code == 200 and len(sent) == 1
-    assert "/s/" in sent[0][1] and "Stop" in sent[0][1]
-    assert share("phone").json()["status"] == "ready"  # the phone path is gated the same way
+    assert r.status_code == 200 and r.json()["status"] == "sent" and len(sent) == 1
+    assert "/s/" in sent[0][1][3]  # the link is the template's 4th variable
+    phone = share("phone").json()
+    assert phone["status"] == "ready" and "Stop" in phone["message"]  # the phone path is gated the same way
 
     # The retailer opts out from their own link: it applies immediately.
-    token = _token(sent[0][1].split("here (no app needed): ")[1].split()[0])
+    token = _token(sent[0][1][3])
     r = client.post(f"/s/{token}/opt-out", follow_redirects=False)
-    assert r.status_code == 303
-    assert "won't get statements" in html.unescape(client.get(r.headers["location"]).text)
+    assert r.status_code == 200 and "won't get statements" in html.unescape(r.text)
+    # Opting out closes the retailer's live links too (ST4), this one included.
+    assert "This link has been revoked." in html.unescape(client.get(f"/s/{token}").text)
     for via in ("server", "phone"):
         assert share(via).status_code == 409
     assert len(sent) == 1  # nothing more went out
@@ -166,20 +171,28 @@ def _on_screen(entries: list[dict], start: str, end: str) -> dict:
     return {"opening": opening, "credit": credit, "paid": paid, "closing": opening + credit - paid}
 
 
+def _ledger_pdf(client, owner, cid, start, end):
+    """The ledger PDF the way the app gets it: through the PDF share check (ST3)."""
+    share = client.post(f"{API}/customers/{cid}/pdf-share", headers=owner.headers,
+                        json={"document": "ledger", "channel": "save", "from": start, "to": end})
+    assert share.status_code == 200, share.text
+    return client.get(f"{API}{share.json()['pdfUrl']}", headers=owner.headers)
+
+
 def test_printed_ledger_totals_match_the_screen(make_user, client):
     owner = make_user(business_name="Laxmi Agencies")
     entries = [("credit" if i % 3 else "payment", round(100 + i * 17.35, 2), 90 - i) for i in range(75)]
     cid = _shop(client, owner, "Mahadev Stores", entries)
     start, end = days_ago_iso(70), days_ago_iso(5)
 
-    r = client.get(f"{API}/customers/{cid}/ledger.pdf", headers=owner.headers,
-                   params={"from": start, "to": end})
+    r = _ledger_pdf(client, owner, cid, start, end)
     assert r.status_code == 200 and r.headers["content-type"] == "application/pdf"
     reader = PdfReader(io.BytesIO(r.content))
     text = "\n".join(p.extract_text() for p in reader.pages)
     assert "Laxmi Agencies" in text and "Customer ledger" in text
-    y, m, d = start.split("-")
-    assert f"Period: {d}-{m}-{y} to" in text
+    y, m, d = start.split("-")  # dates read "3 Sep 2026", the month in the document's language (ST5)
+    month = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()[int(m) - 1]
+    assert f"Period: {int(d)} {month} {y} to" in text
     assert f"Page 1 of {len(reader.pages)}" in text and len(reader.pages) >= 2  # 55 rows, 30 a page
 
     screen = _on_screen(client.get(f"{API}/customers/{cid}/ledger", headers=owner.headers).json(), start, end)
@@ -202,5 +215,4 @@ def test_printed_ledger_totals_match_the_screen(make_user, client):
         st = full(db, db.get(Customer, cid), None)
         assert st.closing == st.current and st.opening == 0
         assert sum(st.ageing.values()) == st.current
-    assert client.get(f"{API}/customers/{cid}/ledger.pdf", headers=owner.headers,
-                      params={"from": end, "to": start}).status_code == 422
+    assert _ledger_pdf(client, owner, cid, end, start).status_code == 422

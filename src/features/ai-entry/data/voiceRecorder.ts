@@ -1,3 +1,4 @@
+import {tNow} from '@/i18n';
 import {NativeModules, PermissionsAndroid, Platform} from 'react-native';
 import AudioRecorderPlayer, {
   AudioEncoderAndroidType,
@@ -98,7 +99,7 @@ export async function ensureMicPermission(): Promise<boolean> {
 
 export async function startRecording(): Promise<void> {
   if (!isVoiceAvailable()) {
-    throw new Error('Voice recording is unavailable in this build.');
+    throw new Error(tNow('voice.unavailable'));
   }
   const rec = recorder();
   peakDb = -160;

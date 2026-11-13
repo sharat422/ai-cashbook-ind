@@ -9,6 +9,8 @@ import {
 
 import {FilterChip, SearchBar} from '@components/filters';
 import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
+import {useT, type TKey} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import type {Transaction} from '@features/transactions/domain/entities';
 import {
   FilterSheet,
@@ -23,11 +25,11 @@ import {useDebouncedValue} from '@/shared/hooks/useDebouncedValue';
 import {colors} from '@theme/colors';
 import {formatDisplayDate} from '@utils/date';
 
-const SORT_LABEL: Record<string, string> = {
-  'date-desc': 'Newest first',
-  'date-asc': 'Oldest first',
-  'amount-desc': 'Amount ↓',
-  'amount-asc': 'Amount ↑',
+const SORT_LABEL: Record<string, TKey> = {
+  'date-desc': 'history.newestFirst',
+  'date-asc': 'history.oldestFirst',
+  'amount-desc': 'history.amountDown',
+  'amount-asc': 'history.amountUp',
 };
 
 /**
@@ -36,6 +38,7 @@ const SORT_LABEL: Record<string, string> = {
  * 100k+ records via server-side pagination + getItemLayout + windowing.
  */
 export function TransactionHistoryScreen(): React.JSX.Element {
+  const t = useT();
   const {
     filters,
     setSearch,
@@ -94,14 +97,14 @@ export function TransactionHistoryScreen(): React.JSX.Element {
     if (filters.type !== 'all') {
       chips.push({
         key: 'type',
-        label: filters.type === 'income' ? 'Income' : 'Expense',
+        label: t(filters.type === 'income' ? 'txn.typeIncome' : 'txn.typeExpense'),
         onRemove: () => setType('all'),
       });
     }
     filters.categories.forEach(category =>
       chips.push({
         key: `cat-${category}`,
-        label: category,
+        label: categoryLabel(t, category),
         onRemove: () => toggleCategory(category),
       }),
     );
@@ -115,7 +118,7 @@ export function TransactionHistoryScreen(): React.JSX.Element {
       });
     }
     return chips;
-  }, [filters, setType, toggleCategory, setDateRange]);
+  }, [filters, setType, toggleCategory, setDateRange, t]);
 
   const showSkeleton = isLoading && items.length === 0;
   const showError = isError && items.length === 0;
@@ -125,13 +128,13 @@ export function TransactionHistoryScreen(): React.JSX.Element {
   return (
     <Screen scroll={false} edges={['top']}>
       <View className="pb-3 pt-4">
-        <Text variant="title">Transaction History</Text>
+        <Text variant="title">{t('history.title')}</Text>
 
         <View className="mt-4">
           <SearchBar
             value={filters.search}
             onChangeText={setSearch}
-            placeholder="Search category, vendor or notes"
+            placeholder={t('history.searchPlaceholder')}
           />
         </View>
 
@@ -142,7 +145,7 @@ export function TransactionHistoryScreen(): React.JSX.Element {
             onPress={() => setSheetOpen(true)}
             className="flex-row items-center rounded-xl border border-border bg-white px-3 py-2">
             <Text className="text-sm font-semibold text-slate-800">
-              ⚙︎ Filters
+              {t('history.filters')}
             </Text>
             {activeCount > 0 ? (
               <View className="ml-2 h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5">
@@ -157,9 +160,9 @@ export function TransactionHistoryScreen(): React.JSX.Element {
             accessibilityRole="button"
             onPress={() => setSheetOpen(true)}
             className="flex-row items-center">
-            <Text variant="caption">Sort: </Text>
+            <Text variant="caption">{t('history.sortLabel')} </Text>
             <Text className="text-sm font-semibold text-primary">
-              {SORT_LABEL[sortKey] ?? 'Newest first'}
+              {t(SORT_LABEL[sortKey] ?? 'history.newestFirst')}
             </Text>
           </Pressable>
         </View>
@@ -182,7 +185,7 @@ export function TransactionHistoryScreen(): React.JSX.Element {
         {/* Results count */}
         {!showSkeleton && !showError ? (
           <Text variant="caption" className="mt-3">
-            {total.toLocaleString('en-IN')} result{total === 1 ? '' : 's'}
+            {total === 1 ? t('history.oneResult') : t('history.results', {count: total.toLocaleString('en-IN')})}
           </Text>
         ) : null}
       </View>
@@ -193,7 +196,7 @@ export function TransactionHistoryScreen(): React.JSX.Element {
       ) : showError ? (
         <View className="flex-1 justify-center">
           <ErrorState
-            message={error?.message ?? 'Check your connection and try again.'}
+            message={error?.message ?? t('history.loadError')}
             onRetry={refetch}
             retrying={isRefetching}
           />
@@ -202,13 +205,13 @@ export function TransactionHistoryScreen(): React.JSX.Element {
         <View className="flex-1 justify-center">
           <EmptyState
             icon="🔎"
-            title="No transactions found"
+            title={t('history.empty')}
             message={
               hasActiveQuery
-                ? 'Try adjusting your search or filters.'
-                : 'Record income or an expense to see it here.'
+                ? t('history.emptyFiltered')
+                : t('history.emptyNone')
             }
-            actionLabel={hasActiveQuery ? 'Clear filters' : undefined}
+            actionLabel={hasActiveQuery ? t('history.clearFilters') : undefined}
             onAction={hasActiveQuery ? clearFilters : undefined}
           />
         </View>
@@ -245,7 +248,7 @@ export function TransactionHistoryScreen(): React.JSX.Element {
               </View>
             ) : !hasNextPage && items.length > 0 ? (
               <Text variant="caption" className="py-4 text-center">
-                You've reached the end
+                {t('history.end')}
               </Text>
             ) : null
           }

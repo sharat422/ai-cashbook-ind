@@ -43,6 +43,31 @@ def run_startup_migrations(engine) -> None:
     _backfill_payment_utrs(engine)
     _backfill_beat_assignments(engine)
     _backfill_owner_memberships(engine, tables)
+    _add_import_undo_columns(engine, inspector, tables)
+
+
+def _add_import_undo_columns(engine, inspector, tables: set[str]) -> None:
+    """IM7: rows a khata import created carry its id, and the log records an undo.
+    Older imports' ledger rows get the id from their client id (imp_<import id>_<row>);
+    the retailers those imports created can't be told apart, so their undo keeps them."""
+    wanted = {"ledger_entries": {"import_id": "VARCHAR(40)"}, "customers": {"import_id": "VARCHAR(40)"},
+              "import_logs": {"undone_at": "VARCHAR(40)", "undone_by": "VARCHAR(60)"}}
+    try:
+        with engine.begin() as conn:
+            for table, cols in wanted.items():
+                if table not in tables:
+                    continue
+                have = {c["name"] for c in inspector.get_columns(table)}
+                for col, sql_type in cols.items():
+                    if col in have:
+                        continue
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {sql_type}"))
+                    if (table, col) == ("ledger_entries", "import_id"):
+                        conn.execute(text("UPDATE ledger_entries SET import_id = SUBSTR(client_id, 5, 32) "
+                                          "WHERE client_id LIKE 'imp\\_%' ESCAPE '\\'"))
+                    log.info("migration: added %s.%s", table, col)
+    except Exception:  # noqa: BLE001 — never let a migration crash boot
+        log.exception("migration: failed adding the import-undo columns")
 
 
 def _add_business_gstin(engine, inspector, tables: set[str]) -> None:
@@ -124,10 +149,26 @@ def _backfill_payment_utrs(engine) -> None:
 def _add_bank_soft_delete_columns(engine, inspector, tables: set[str]) -> None:
     wanted = {"bank_imports": {"deleted_at": "VARCHAR(40)", "deleted_by": "VARCHAR(40)"},
               "bank_lines": {"deleted_at": "VARCHAR(40)"},
-              "beats": {"deleted_at": "VARCHAR(40)"},
-              "business_members": {"display_name": "VARCHAR(60)"},
+              "beats": {"deleted_at": "VARCHAR(40)", "version": "INTEGER DEFAULT 1"},
+              "expenses": {"purchase_id": "VARCHAR(40)"},
+              "schemes": {"scope": "VARCHAR(12) DEFAULT 'single_sku'", "level": "VARCHAR(5) DEFAULT 'line'",
+                          "min_bill_value": "NUMERIC(12,2)", "retailer_id": "VARCHAR(40)",
+                          "amount_off": "NUMERIC(12,2)"},
+              "scheme_applications": {"group_note": "TEXT"},
+              "statement_events": {"message_id": "VARCHAR(100)"},
+              "statement_links": {"revoked_at": "VARCHAR(40)", "detailed": "BOOLEAN DEFAULT FALSE"},
+              "customers": {"statement_language": "VARCHAR(10)"},
+              "businesses": {"statement_language": "VARCHAR(10)"},
+              "bills": {"reverses_id": "VARCHAR(40)", "status": "VARCHAR(16)"},
+              "bill_lines": {"returned": "BOOLEAN DEFAULT FALSE", "rate_changed": "BOOLEAN DEFAULT FALSE"},
+              "business_members": {"display_name": "VARCHAR(60)", "last_opened_at": "VARCHAR(40)"},
+              "access_logs": {"seen_at": "VARCHAR(40)", "detail": "VARCHAR(500)"},
               "stock_moves": {"supplier": "VARCHAR(200)", "unit_price": "NUMERIC(12,2)",
-                              "bill_ref": "VARCHAR(40)"}}
+                              "bill_ref": "VARCHAR(40)", "supplier_gstin": "TEXT", "supplier_id": "VARCHAR(40)",
+                              "reverses_id": "VARCHAR(40)", "reversed_at": "VARCHAR(40)",
+                              "entered_unit": "VARCHAR(20)", "entered_qty": "NUMERIC(12,3)",
+                              "reversed_by": "VARCHAR(40)",
+                              "gst_rate": "NUMERIC(5,2)", "gst_amount": "NUMERIC(12,2)"}}
     try:
         with engine.begin() as conn:
             for table, cols in wanted.items():
@@ -355,6 +396,8 @@ def _add_customer_concurrency_columns(engine, inspector, tables: set[str]) -> No
 
 # Added after launch: salesman/beat (daily close) and the GST invoice fields.
 _LEDGER_COLUMNS = {
+    "gst_status": "VARCHAR(10)",
+    "paid_entry_id": "VARCHAR(40)",
     "salesman_id": "VARCHAR(40)",
     "beat_id": "VARCHAR(40)",
     "customer_gstin": "TEXT",

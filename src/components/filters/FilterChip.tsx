@@ -9,6 +9,7 @@ export interface FilterChipProps {
   /** Show a trailing ✕ to signal the chip clears a filter when tapped. */
   removable?: boolean;
   onPress: () => void;
+  testID?: string;
 }
 
 /** Reusable toggle/removable pill used across filter UIs. */
@@ -17,9 +18,11 @@ function FilterChipBase({
   selected,
   removable,
   onPress,
+  testID,
 }: FilterChipProps): React.JSX.Element {
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityState={{selected: !!selected}}
       onPress={onPress}

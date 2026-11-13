@@ -4,6 +4,7 @@ import {Alert, View} from 'react-native';
 
 import {listMyBusinesses, openBusiness, type BusinessChoice} from '@api/auth.api';
 import {Button, Text} from '@components/ui';
+import {useLastBusiness} from '@features/auth/store/lastBusiness.store';
 import {syncCountsNow} from '@features/sync/syncStatus';
 import {useT, type TKey} from '@/i18n';
 import {useAuthStore} from '@store/auth.store';
@@ -25,6 +26,7 @@ export function BusinessSwitcher(): React.JSX.Element | null {
     }
     try {
       setBusiness(await openBusiness(id));
+      useLastBusiness.getState().remember(useAuthStore.getState().user?.id ?? '', id); // AC3: this phone's last choice
     } catch (e) {
       Alert.alert(t('switch.failed'), e instanceof Error ? e.message : t('common.tryAgainMsg'));
     }

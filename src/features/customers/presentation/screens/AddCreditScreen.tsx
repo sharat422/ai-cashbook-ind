@@ -47,6 +47,9 @@ export function AddCreditScreen({
   const clearDraft = useCreditDraftStore(s => s.clearDraft);
 
   const [amount, setAmount] = useState<number>(NaN);
+  // 'item': filled from the GST item's price × quantity; 'typed': the owner's own
+  // figure, which an item or quantity change never overwrites.
+  const [amountSource, setAmountSource] = useState<'item' | 'typed' | null>(null);
   const [date, setDate] = useState<string>(todayIST());
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [notes, setNotes] = useState('');
@@ -65,6 +68,7 @@ export function AddCreditScreen({
     const draft = useCreditDraftStore.getState().drafts[customer.id];
     if (draft) {
       setAmount(draft.amount);
+      if (!Number.isNaN(draft.amount)) setAmountSource('typed');
       setDate(draft.date);
       setInvoiceNumber(draft.invoiceNumber);
       setNotes(draft.notes);
@@ -77,6 +81,7 @@ export function AddCreditScreen({
 
   const addQuick = (value: number) => {
     setAmount(prev => (Number.isNaN(prev) ? 0 : prev) + value);
+    setAmountSource('typed');
     if (error) setError(null);
   };
 
@@ -98,6 +103,7 @@ export function AddCreditScreen({
   const onDiscardDraft = () => {
     clearDraft(customer.id);
     setAmount(NaN);
+    setAmountSource(null);
     setDate(todayIST());
     setInvoiceNumber('');
     setNotes('');
@@ -106,7 +112,7 @@ export function AddCreditScreen({
     setRestored(false);
   };
 
-  const onSubmit = () => {
+  const onSubmit = (asDraft = false) => {
     if (Number.isNaN(amount) || amount <= 0) {
       setError(t('customers.amountError'));
       return;
@@ -121,6 +127,8 @@ export function AddCreditScreen({
           priceIncludesGst: gst.priceIncludesGst,
           customerGstin: gstin || undefined,
           placeOfSupply: gstin ? undefined : gst.placeOfSupply ?? undefined,
+          paidNow: gst.paidNow || undefined,
+          draft: asDraft || undefined,
         }
       : undefined;
     const problem = gstInput ? gstInputError(gstInput) : null;
@@ -210,6 +218,7 @@ export function AddCreditScreen({
               value={amount}
               onChange={value => {
                 setAmount(value);
+                setAmountSource('typed');
                 if (error) setError(null);
               }}
               error={error}
@@ -218,6 +227,9 @@ export function AddCreditScreen({
           </View>
           {error ? (
             <Text className="mt-2 text-xs text-red-300">{error}</Text>
+          ) : null}
+          {gst && amountSource === 'item' ? (
+            <Text testID="amount-from-item" className="mt-2 text-xs text-amber-300">{t('gst.amountFromItem')}</Text>
           ) : null}
 
           {/* Quick amount buttons */}
@@ -278,6 +290,12 @@ export function AddCreditScreen({
               value={gst}
               onChange={setGst}
               amount={amount}
+              onItemAmount={v => {
+                if (amountSource === 'typed') return; // never overwrite the owner's figure
+                setAmount(v);
+                setAmountSource('item');
+                if (error) setError(null);
+              }}
               online={online}
               errorField={gstError?.field}
               error={gstError?.message}
@@ -302,8 +320,18 @@ export function AddCreditScreen({
           title={t('customers.addCredit')}
           className="mt-8"
           loading={addCredit.isPending}
-          onPress={onSubmit}
+          onPress={() => onSubmit()}
         />
+        {gst && !gst.paidNow ? (
+          <Button
+            testID="gst-save-draft"
+            title={t('gst.saveAsDraft')}
+            variant="secondary"
+            className="mt-3"
+            disabled={addCredit.isPending}
+            onPress={() => onSubmit(true)}
+          />
+        ) : null}
         <Button
           title={t('customers.saveDraft')}
           variant="secondary"

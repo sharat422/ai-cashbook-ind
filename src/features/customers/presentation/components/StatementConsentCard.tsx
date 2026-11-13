@@ -2,9 +2,10 @@ import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import React from 'react';
 import {Alert, View} from 'react-native';
 
-import {Button, Text} from '@components/ui';
+import {Button, Select, Text} from '@components/ui';
 import {usePermissions} from '@features/auth/hooks';
 import {PERMISSIONS} from '@features/auth/rbac';
+import {APP_LANGUAGE_LABEL, SUPPORTED_APP_LANGUAGES, type AppLanguage} from '@features/auth/utils/languagePreference';
 import {statementsRemote, type StatementConsent} from '@features/customers/data/statements.remote';
 import type {Customer} from '@features/customers/domain/entities';
 import {useT} from '@/i18n';
@@ -28,9 +29,20 @@ export function StatementConsentCard({customer}: {customer: Customer}): React.JS
   });
   const set = useMutation({
     mutationFn: (status: 'opted_in' | 'opted_out') => statementsRemote.setConsent(customer.id, status),
+    onSuccess: () => {
+      qc.invalidateQueries({queryKey: consentKey(customer.id)});
+      qc.invalidateQueries({queryKey: ['statement-links', customer.id]});  // an opt-out revokes them
+    },
+    onError: (e: Error) => Alert.alert(t('form.couldNotSave'), e.message),
+  });
+
+  const setLanguage = useMutation({
+    mutationFn: (language: string | null) => statementsRemote.setLanguage(customer.id, language),
     onSuccess: () => qc.invalidateQueries({queryKey: consentKey(customer.id)}),
     onError: (e: Error) => Alert.alert(t('form.couldNotSave'), e.message),
   });
+  const DEFAULT = 'default';
+  const langLabel = (code: string) => APP_LANGUAGE_LABEL[code as AppLanguage] ?? code;
 
   const data: StatementConsent | undefined = consent.data;
   const status: StatementConsent['status'] = data?.status ?? 'none';
@@ -57,6 +69,20 @@ export function StatementConsentCard({customer}: {customer: Customer}): React.JS
         ) : (
           <Button title={t('statement.recordOptIn')} variant="secondary" loading={set.isPending} onPress={askOptIn} />
         )
+      ) : null}
+      {data && can(PERMISSIONS.ENTRY_EDIT) ? (
+        <View testID="statement-language" className="mt-2">
+          <Select
+            label={t('statement.language')}
+            value={data.language ?? DEFAULT}
+            options={[DEFAULT, ...SUPPORTED_APP_LANGUAGES]}
+            labelOf={code => (code === DEFAULT
+              ? t('statement.languageDefault', {language: langLabel(data.defaultLanguage ?? 'te')})
+              : langLabel(code))}
+            onSelect={code => setLanguage.mutate(code === DEFAULT ? null : code)}
+          />
+          <Text variant="caption" className="mt-1">{t('statement.languageHint')}</Text>
+        </View>
       ) : null}
     </View>
   );

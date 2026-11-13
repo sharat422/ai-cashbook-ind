@@ -2,19 +2,20 @@ import React from 'react';
 import {ActivityIndicator, View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT, type TKey} from '@/i18n';
 import type {ScanStage} from '@features/receipt-scanner/domain/entities';
 import {colors} from '@theme/colors';
 
 interface Step {
   key: Exclude<ScanStage, 'idle' | 'done' | 'error'>;
-  label: string;
+  label: TKey;
   icon: string;
 }
 
 const STEPS: Step[] = [
-  {key: 'uploading', label: 'Uploading receipt', icon: '⬆️'},
-  {key: 'processing', label: 'Reading text (OCR)', icon: '🔎'},
-  {key: 'categorizing', label: 'AI categorizing', icon: '🧠'},
+  {key: 'uploading', label: 'receipt.uploading', icon: '⬆️'},
+  {key: 'processing', label: 'receipt.reading', icon: '🔎'},
+  {key: 'categorizing', label: 'receipt.categorizing', icon: '🧠'},
 ];
 
 const ORDER: ScanStage[] = [
@@ -42,6 +43,7 @@ export function ScanProgress({
 }: {
   stage: ScanStage;
 }): React.JSX.Element {
+  const t = useT();
   return (
     <View style={{gap: 14}}>
       {STEPS.map(step => {
@@ -70,7 +72,7 @@ export function ScanProgress({
                   ? 'text-muted'
                   : 'font-semibold text-slate-900'
               }`}>
-              {step.label}
+              {t(step.label)}
             </Text>
           </View>
         );

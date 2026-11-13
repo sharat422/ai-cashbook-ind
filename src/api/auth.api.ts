@@ -65,6 +65,9 @@ export interface BusinessChoice {
   id: string;
   businessName: string;
   role: 'owner' | 'accountant' | 'staff';
+  /** AC3, for the picker after login. */
+  ownerName?: string;
+  lastOpenedAt?: string | null;
 }
 
 /** Every business this user is assigned to (a CA may serve several owners). */

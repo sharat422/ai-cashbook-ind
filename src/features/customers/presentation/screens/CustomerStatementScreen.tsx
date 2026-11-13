@@ -1,22 +1,20 @@
-import {useQueryClient} from '@tanstack/react-query';
+import {useQuery, useQueryClient} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
 import {ActivityIndicator, Alert, Pressable, View} from 'react-native';
 
 import {DateRangeField, FilterChip} from '@components/filters';
-import {ErrorState, Screen, Text} from '@components/ui';
+import {ErrorState, Screen, SegmentedControl, Text} from '@components/ui';
 import {buildStatement} from '@features/customers/domain/customerStatement';
 import {statementsRemote} from '@features/customers/data/statements.remote';
 import {StatementDocument} from '@features/customers/presentation/components';
+import {StatementConsentCard, consentKey} from '@features/customers/presentation/components/StatementConsentCard';
+import {PdfShareSheet} from '@features/customers/presentation/components/PdfShareSheet';
+import {StatementLinksCard, linksKey} from '@features/customers/presentation/components/StatementLinksCard';
 import {
-  StatementConsentCard,
-  consentKey,
-} from '@features/customers/presentation/components/StatementConsentCard';
-import {
-  exportStatement,
   shareStatementLinkBySms,
   shareStatementOnWhatsApp,
-  type ExportFormat,
 } from '@features/customers/presentation/exportStatement';
+import {sharePdf, type PdfChannel} from '@features/customers/presentation/sharePdf';
 import {useCustomerLedger} from '@features/customers/presentation/hooks';
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
@@ -53,7 +51,8 @@ const PRESETS: Array<{labelKey: TKey; value: Preset}> = [
   {labelKey: 'customers.presetAll', value: 'all'},
 ];
 
-type ShareAction = ExportFormat | 'whatsapp' | 'sms' | 'print';
+type FileAction = 'pdf' | 'excel' | 'print';
+type ShareAction = FileAction | 'whatsapp' | 'sms';
 
 const EXPORTS: Array<{labelKey: TKey; value: ShareAction}> = [
   {labelKey: 'statement.pdf', value: 'pdf'},
@@ -90,19 +89,40 @@ export function CustomerStatementScreen({
   const [busy, setBusy] = useState(false);
   // "All" starts at 2000-01-01 on screen; the server reads no start as "all".
   const start = preset === 'all' ? undefined : from;
+  const consent = useQuery({queryKey: consentKey(customer.id), queryFn: () => statementsRemote.consent(customer.id)});
+  // A file (statement PDF / CSV, printable ledger) goes where the owner picks —
+  // always through sharePdf: the consent check and the log come first.
+  const [fileAction, setFileAction] = useState<FileAction | null>(null);
+  // Bills on the server PDF (the link's and the printable ledger): lines printed, or numbers only (ST6).
+  const [detailed, setDetailed] = useState(false);
+  const shareFile = async (action: FileAction, channel: PdfChannel) => {
+    if (!statement) return;
+    setBusy(true);
+    try {
+      await sharePdf(action === 'print'
+        ? {kind: 'ledger', customer, from, to, detailed}
+        : {kind: 'statement', format: action === 'excel' ? 'csv' : 'pdf', customer, statement, businessName,
+          from: start, to}, channel);
+    } catch (e) {
+      if (!/cancel|did not share|dismiss/i.test(e instanceof Error ? e.message : String(e))) {
+        Alert.alert(t('statement.exportFailed'), e instanceof Error ? e.message : String(e));
+      }
+    } finally {
+      setBusy(false);
+      qc.invalidateQueries({queryKey: consentKey(customer.id)});
+    }
+  };
   const onAction = async (action: ShareAction) => {
     if (!statement) return;
-    if (action === 'pdf' || action === 'excel') {
-      exportStatement(action, customer, statement, businessName);
+    if (action === 'pdf' || action === 'excel' || action === 'print') {
+      setFileAction(action);
       return;
     }
     setBusy(true);
     try {
-      if (action === 'print') {
-        await statementsRemote.printLedger(customer.id, from, to);
-      } else if (action === 'sms') {
-        await shareStatementLinkBySms(customer, start);
-      } else if (!(await shareStatementOnWhatsApp(customer, start))) {
+      if (action === 'sms') {
+        await shareStatementLinkBySms(customer, start, detailed);
+      } else if (!(await shareStatementOnWhatsApp(customer, start, detailed))) {
         Alert.alert(t('statement.noConsentTitle'), t('statement.noConsentMsg', {name: customer.fullName}));
       }
     } catch (e) {
@@ -110,6 +130,7 @@ export function CustomerStatementScreen({
     } finally {
       setBusy(false);
       qc.invalidateQueries({queryKey: consentKey(customer.id)});
+      qc.invalidateQueries({queryKey: linksKey(customer.id)});
     }
   };
 
@@ -173,7 +194,22 @@ export function CustomerStatementScreen({
           ))}
         </View>
 
+        <View testID="statement-pdf-detail" className="mt-3">
+          <SegmentedControl
+            label={t('statement.pdfDetail')}
+            value={detailed}
+            options={[
+              {label: t('statement.pdfSummary'), value: false},
+              {label: t('statement.pdfDetailed'), value: true},
+            ]}
+            onChange={setDetailed}
+          />
+        </View>
         <StatementConsentCard customer={customer} />
+        <StatementLinksCard customer={customer} />
+        <PdfShareSheet visible={fileAction !== null} onClose={() => setFileAction(null)}
+          optedIn={consent.data ? consent.data.status === 'opted_in' : undefined}
+          onPick={channel => fileAction && shareFile(fileAction, channel)} />
 
         {/* Preview */}
         <Text variant="label" className="mt-6 mb-2">

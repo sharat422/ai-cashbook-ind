@@ -21,7 +21,7 @@ jest.mock('@features/team/presentation/hooks', () => ({useTeam: () => ({data: []
 jest.mock('@features/customers/presentation/hooks/useCustomers', () => ({useCustomers: () => ({data: []})}));
 
 const beat = (id: string, name: string): Beat => ({
-  id, name, weekdays: [0], assignedUserId: null, assignments: [], retailers: [],
+  id, name, version: 1, weekdays: [0], assignedUserId: null, assignments: [], retailers: [],
 });
 const mockRestore = jest.fn(async (id: string) => beat(id, 'Old Town'));
 jest.mock('@features/beats/data/beats.remote', () => ({

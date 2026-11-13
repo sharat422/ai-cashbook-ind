@@ -10,6 +10,7 @@ from ..rbac import DATA_VIEW, SETTINGS_MANAGE
 from ..models import Business, Expense, RecurringExpense, gen_id
 from ..recurring import FREQUENCIES, catch_up, next_occurrence
 from ..serializers import expense_dto, recurring_expense_dto
+from ..statements import inr, money
 from ..validation import validate_amount
 
 router = APIRouter(tags=["recurring"])
@@ -53,7 +54,8 @@ def _assert_name_unique(
 ) -> None:
     """A recurring template's name identifies it within a business. Reject a
     second template with the same name (case-insensitive, trimmed) so the user
-    can't accidentally add "Shop rent" twice."""
+    can't accidentally add "Shop rent" twice; the message names the one that
+    exists. Templates only: one-off expenses may share a name."""
     cleaned = name.strip()
     q = select(RecurringExpense).where(
         RecurringExpense.business_id == business.id,
@@ -61,10 +63,12 @@ def _assert_name_unique(
     )
     if exclude_id is not None:
         q = q.where(RecurringExpense.id != exclude_id)
-    if db.scalars(q).first() is not None:
+    existing = db.scalars(q).first()
+    if existing is not None:
+        every = existing.frequency if existing.interval == 1 else f"every {existing.interval} {existing.frequency}"
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="This expense name is already added.",
+            detail=f"Expense name already added: {existing.name}, {inr(money(existing.amount))}, {every}",
         )
 
 

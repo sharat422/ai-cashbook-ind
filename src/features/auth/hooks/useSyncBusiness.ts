@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react';
 
-import {getMyBusiness} from '@api/auth.api';
+import {getMyBusiness, listMyBusinesses, type BusinessChoice} from '@api/auth.api';
 import {useAuthStore} from '@store/auth.store';
 
 /**
@@ -17,6 +17,7 @@ export function useSyncBusiness(): void {
   const token = useAuthStore(state => state.token);
   const business = useAuthStore(state => state.business);
   const setBusiness = useAuthStore(state => state.setBusiness);
+  const setBusinessChoices = useAuthStore(state => state.setBusinessChoices);
   // Track which token we've fetched for, not just "have we tried once". A single
   // boolean guard would block the fetch after a log out → log in with a *new*
   // token in the same app session, stranding a returning user on onboarding.
@@ -28,9 +29,19 @@ export function useSyncBusiness(): void {
     attemptedToken.current = token;
 
     let active = true;
-    getMyBusiness()
-      .then(fetched => {
-        if (active) setBusiness(fetched);
+    // AC3: with more than one business (a CA serving several owners), let them
+    // pick; with one, go straight in, as before.
+    listMyBusinesses()
+      .catch(() => [] as BusinessChoice[])
+      .then(choices => {
+        if (!active) return undefined;
+        if (choices.length > 1) {
+          setBusinessChoices(choices);
+          return undefined;
+        }
+        return getMyBusiness().then(fetched => {
+          if (active) setBusiness(fetched);
+        });
       })
       .catch(() => {
         // 400 = user hasn't created a business yet → stay in onboarding.
@@ -39,5 +50,5 @@ export function useSyncBusiness(): void {
     return () => {
       active = false;
     };
-  }, [token, business, setBusiness]);
+  }, [token, business, setBusiness, setBusinessChoices]);
 }

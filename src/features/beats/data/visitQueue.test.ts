@@ -4,7 +4,12 @@ import {beatsRemote, type VisitInput} from './beats.remote';
 import {saveVisit, syncPendingVisits, useVisitQueue} from './visitQueue';
 
 jest.mock('./beats.remote', () => ({beatsRemote: {recordVisit: jest.fn()}}));
-jest.mock('@/services/network/connectivity', () => ({connectivity: {isOnline: jest.fn()}}));
+jest.mock('@/services/network/connectivity', () => {
+  const isOnline = jest.fn();
+  return {connectivity: {isOnline, beforeSave: async () => {
+    if (!(await isOnline())) throw new (require('@api/client').NetworkError)();
+  }}};
+});
 
 const record = beatsRemote.recordVisit as jest.Mock;
 const visit: VisitInput = {

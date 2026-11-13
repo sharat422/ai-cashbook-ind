@@ -14,7 +14,7 @@ Business-profile correction lives in auth.py (PATCH /businesses/me).
 import json
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -24,6 +24,7 @@ from .. import data_export
 from ..calc import today_iso
 from ..database import get_db
 from ..deps import require
+from ..doc_i18n import LANGUAGES, Tr, translator
 from ..gst_reports import XLSX
 from ..rbac import REPORTS_EXPORT
 from ..models import (
@@ -44,6 +45,8 @@ from ..models import (
     Feedback,
     Income,
     Item,
+    ItemUnit,
+    StockMonthLock,
     LedgerEntry,
     RecurringExpense,
     Scheme,
@@ -58,7 +61,10 @@ from ..models import (
     BankMatch,
     BeatAssignment,
     CashCount,
+    CaTestResult,
     CashDeposit,
+    CreditNote,
+    Supplier,
     GstInvoiceNumber,
     ImportLog,
     PaymentUtr,
@@ -143,22 +149,31 @@ def _download(data: bytes, media_type: str, name: str) -> Response:
                              "Cache-Control": "no-store"})
 
 
+def _owner_language(lang: str | None) -> Tr:
+    """The app sends the owner's language (TE5). Reviewed strings only, English
+    where none; an older app (no `lang`) or an unknown one gets English, as before."""
+    return translator(lang if lang in LANGUAGES else "en")
+
+
 @router.get("/account/export.xlsx")
 def export_workbook(
+    lang: str | None = Query(None, max_length=10),
     business: Business = Depends(require(REPORTS_EXPORT)),
     db: Session = Depends(get_db),
 ) -> Response:
     """Customers, ledger, income and expenses in one Excel file."""
-    return _download(data_export.workbook(db, business), XLSX, f"Bolcash_data_{today_iso()}.xlsx")
+    return _download(data_export.workbook(db, business, _owner_language(lang)), XLSX,
+                     f"Bolcash_data_{today_iso()}.xlsx")
 
 
 @router.get("/account/balances.pdf")
 def export_balances(
+    lang: str | None = Query(None, max_length=10),
     business: Business = Depends(require(REPORTS_EXPORT)),
     db: Session = Depends(get_db),
 ) -> Response:
     """Every customer's balance, printable."""
-    return _download(data_export.balances_pdf(db, business), "application/pdf",
+    return _download(data_export.balances_pdf(db, business, _owner_language(lang)), "application/pdf",
                      f"Bolcash_balances_{today_iso()}.pdf")
 
 
@@ -197,6 +212,12 @@ def delete_account(
             BankMatch.business_id.in_(biz_ids)).delete(synchronize_session=False)
         counts["cash_deposits"] += db.query(CashDeposit).filter(
             CashDeposit.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        counts["suppliers"] += db.query(Supplier).filter(
+            Supplier.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        counts["ca_test_results"] += db.query(CaTestResult).filter(
+            CaTestResult.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        counts["credit_notes"] += db.query(CreditNote).filter(
+            CreditNote.business_id.in_(biz_ids)).delete(synchronize_session=False)
         counts["bank_lines"] += db.query(BankLine).filter(
             BankLine.business_id.in_(biz_ids)).delete(synchronize_session=False)
         counts["bank_imports"] += db.query(BankImport).filter(
@@ -218,6 +239,11 @@ def delete_account(
             counts["ledger_entries"] += db.query(LedgerEntry).filter(
                 LedgerEntry.customer_id.in_(cust_ids)
             ).delete(synchronize_session=False)
+        item_ids = select(Item.id).where(Item.business_id.in_(biz_ids))
+        counts["stock_month_locks"] += db.query(StockMonthLock).filter(
+            StockMonthLock.business_id.in_(biz_ids)).delete(synchronize_session=False)
+        counts["item_units"] += db.query(ItemUnit).filter(
+            ItemUnit.item_id.in_(item_ids)).delete(synchronize_session=False)
         bill_ids = [b.id for b in db.scalars(select(Bill).where(Bill.business_id.in_(biz_ids))).all()]
         scheme_ids = [x.id for x in db.scalars(select(Scheme).where(Scheme.business_id.in_(biz_ids))).all()]
         if bill_ids:

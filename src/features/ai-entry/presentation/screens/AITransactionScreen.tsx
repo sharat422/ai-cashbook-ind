@@ -29,10 +29,10 @@ import type {Customer} from '@features/customers/domain/entities';
 import {
   isUtrMissing,
   PAYMENT_METHODS,
-  PAYMENT_METHOD_LABEL,
   type PaymentMethod,
 } from '@features/customers/domain/ledger';
 import {useT} from '@/i18n';
+import {paymentMethodLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
@@ -240,7 +240,7 @@ export function AITransactionScreen({
                 <Select
                   label={t('ai.voiceLanguage')}
                   value={voiceLanguageLabel(voiceLanguage)}
-                  options={VOICE_LANGUAGES.map(l => l.label)}
+                  options={VOICE_LANGUAGES.map(voiceLanguageLabel)}
                   onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
                 />
               </View>
@@ -361,7 +361,7 @@ export function AITransactionScreen({
                       {PAYMENT_METHODS.map(m => (
                         <FilterChip
                           key={m}
-                          label={PAYMENT_METHOD_LABEL[m]}
+                          label={paymentMethodLabel(t, m)}
                           selected={method === m}
                           onPress={() => setMethod(m)}
                         />

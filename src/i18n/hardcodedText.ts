@@ -8,14 +8,18 @@
  */
 import * as ts from 'typescript';
 
-/** Props whose string value is shown to the user. */
+/** Props whose string value is shown to the user (plus any `…Label` / `…Title` / `…Text` … prop). */
 const TEXT_PROPS = new Set([
   'title', 'label', 'placeholder', 'message', 'subtitle', 'description', 'hint',
   'emptyText', 'accessibilityLabel', 'helperText', 'error', 'confirmText', 'cancelText',
 ]);
+const isTextProp = (name: string) =>
+  TEXT_PROPS.has(name) || /[a-z](Label|Title|Text|Message|Hint|Placeholder)$/.test(name);
+/** `const SORT_LABEL = {…}`, `STATUS_TITLES`, `…_COPY`: every string value in it is shown. */
+const LABEL_TABLE = /(?:^|_)(?:LABELS?|TITLES?|COPY|TEXTS?|MESSAGES?)$/;
 
-/** Words that are the same in every language the app ships (brands, units, formats). */
-const ALLOWED = /^(?:₹|GST|GSTIN|UPI|UTR|PDF|Excel|CSV|SMS|WhatsApp|OTP|AI|ID|OK|Bolcash|Smart CashBook|Tally|CA|HSN|SKU|IST|English|Hinglish|తెలుగు)$/;
+/** Words that are the same in every language the app ships (brands, units, formats, tax names). */
+const ALLOWED = /^(?:₹|GST|GSTIN|CGST|SGST|IGST|HSN|SAC|UQC|UPI|UTR|PIN|PDF|OCR|GPT|MB|Excel|CSV|xlsx|csv|SMS|WhatsApp|Meta|OTP|AI|ID|OK|OS|HTTPS|Android|iOS|Keystore|Keychain|Bolcash|Smart CashBook|Tally|TallyPrime|CA|SKU|IST|SB|SBI|Swiggy|ITC|BOX|PCS|KGS|Dr|Cr|DD|MM|YYYY|US|English|Hinglish|తెలుగు)$/;
 
 export interface Finding {
   line: number;
@@ -27,8 +31,9 @@ const CLASS_LIST = /^\s*[a-z0-9:/[\]%.#-]+(?:\s+[a-z0-9:/[\]%.#-]+)*\s*$/;
 
 export function hasWords(text: string): boolean {
   if (CLASS_LIST.test(text) && /-/.test(text)) return false;
-  // Codes with digits (a GSTIN example like 29ABCDE1234F1Z5) aren't words.
-  const words = text.replace(/\S*\d\S*/g, ' ').match(/[A-Za-z][A-Za-z'’]+/g) ?? [];
+  if (/^[a-z]\w*(?:\.\w+)+$/.test(text.trim())) return false; // an i18n key ('gst.cgst'), shown via t()
+  // Codes with digits (a GSTIN example like 29ABCDE1234F1Z5) and UPI ids (shop@okhdfcbank) aren't words.
+  const words = text.replace(/\S*[\d@]\S*/g, ' ').match(/[A-Za-z][A-Za-z'’]+/g) ?? [];
   return words.some(w => !ALLOWED.test(w));
 }
 
@@ -59,13 +64,19 @@ export function findHardcodedText(source: string, fileName = 'x.tsx'): Finding[]
     return null;
   };
 
+  const inLabelTable = (p: ts.PropertyAssignment): boolean => {
+    let n: ts.Node = p.parent;
+    while (n.parent && !ts.isVariableDeclaration(n) && !ts.isSourceFile(n)) n = n.parent;
+    return ts.isVariableDeclaration(n) && LABEL_TABLE.test(n.name.getText());
+  };
+
   const visit = (node: ts.Node) => {
     if (ts.isJsxText(node)) {
       add(node, node.text);
     } else if (ts.isJsxExpression(node) && node.parent && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) {
       const text = literalText(node.expression);
       if (text) add(node, text);
-    } else if (ts.isJsxAttribute(node) && TEXT_PROPS.has(node.name.getText())) {
+    } else if (ts.isJsxAttribute(node) && isTextProp(node.name.getText())) {
       const init = node.initializer;
       if (init && ts.isStringLiteral(init)) add(node, init.text);
       else if (init && ts.isJsxExpression(init)) {
@@ -94,8 +105,14 @@ export function findHardcodedText(source: string, fileName = 'x.tsx'): Finding[]
       }
     } else if (
       ts.isPropertyAssignment(node) &&
-      TEXT_PROPS.has(node.name.getText().replace(/['"]/g, '')) &&
+      (isTextProp(node.name.getText().replace(/['"]/g, '')) || inLabelTable(node)) &&
       !ts.isCallExpression(node.parent.parent ?? node) // Alert buttons handled above
+    ) {
+      const text = literalText(node.initializer);
+      if (text) add(node, text);
+    } else if (
+      // a default prop: function X({placeholder = 'Search…'})
+      ts.isBindingElement(node) && node.initializer && isTextProp(node.name.getText())
     ) {
       const text = literalText(node.initializer);
       if (text) add(node, text);

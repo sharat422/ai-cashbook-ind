@@ -8,6 +8,7 @@ import {
   Select,
 } from '@components/ui';
 import {AuthShell} from '@features/auth/components/AuthShell';
+import {JoinInviteCard} from '@features/team/presentation/JoinInviteCard';
 import {
   BUSINESS_TYPES,
   INDIAN_STATES,
@@ -169,6 +170,8 @@ export function CreateBusinessScreen(): React.JSX.Element {
         loading={createBusiness.isPending}
         onPress={onSubmit}
       />
+      {/* AC2: a CA invited by email has no business of their own: join instead of creating one. */}
+      <JoinInviteCard />
     </AuthShell>
   );
 }

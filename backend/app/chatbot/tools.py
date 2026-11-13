@@ -26,7 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from ..calc import IST
-from ..models import Business, Customer, Expense, Income, LedgerEntry
+from ..models import Business, Customer, Expense, Income, LedgerEntry, in_books
 from ..monitoring import _mask as mask_mobile
 from . import help_search
 
@@ -116,7 +116,7 @@ def _payments(db: Session, merchant_id: str, frm: str, to: str) -> list[LedgerEn
         select(LedgerEntry)
         .join(Customer, LedgerEntry.customer_id == Customer.id)
         .where(Customer.business_id == merchant_id, LedgerEntry.type == "payment",
-               LedgerEntry.date >= frm, LedgerEntry.date <= to)
+               LedgerEntry.date >= frm, LedgerEntry.date <= to, in_books())
     ))
 
 
@@ -290,7 +290,8 @@ def list_recent_transactions(db: Session, merchant_id: str, limit: int | None = 
         for e, name in db.execute(
             select(LedgerEntry, Customer.full_name)
             .join(Customer, LedgerEntry.customer_id == Customer.id)
-            .where(Customer.business_id == merchant_id, LedgerEntry.date >= frm, LedgerEntry.date <= to))
+            .where(Customer.business_id == merchant_id, LedgerEntry.date >= frm, LedgerEntry.date <= to,
+                   in_books()))
     ]
     rows.sort(key=lambda r: (r["date"], r["_ts"]), reverse=True)
     for r in rows:

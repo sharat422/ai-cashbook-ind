@@ -1,6 +1,6 @@
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 
-import {beatsRemote, type Beat, type BeatDraft, type VisitInput} from '@features/beats/data/beats.remote';
+import {beatsRemote, isBeatChanged, type Beat, type BeatDraft, type VisitInput} from '@features/beats/data/beats.remote';
 import {saveVisit} from '@features/beats/data/visitQueue';
 import {ledgerUseCases} from '@features/customers/di';
 import type {LedgerEntryInput} from '@features/customers/domain/usecases/ledger';
@@ -27,18 +27,22 @@ export function useDayList(beatId?: string) {
 export function useBeatMutations() {
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({queryKey: [BEATS_KEY]});
+  /** Saved on another phone first (IM3): nothing saved here; fetch the current beat to show. */
+  const changedElsewhere = (e: Error) => isBeatChanged(e) && void invalidate();
   const create = useMutation({
     mutationFn: (draft: BeatDraft) => beatsRemote.create(draft),
     onSuccess: invalidate,
   });
   const setRetailers = useMutation({
-    mutationFn: ({beatId, customerIds}: {beatId: string; customerIds: string[]}) =>
-      beatsRemote.setRetailers(beatId, customerIds),
+    mutationFn: ({beatId, customerIds, baseVersion}: {beatId: string; customerIds: string[]; baseVersion?: number}) =>
+      beatsRemote.setRetailers(beatId, customerIds, baseVersion),
     onSuccess: invalidate,
+    onError: changedElsewhere,
   });
   const edit = useMutation({
-    mutationFn: ({beatId, draft}: {beatId: string; draft: Omit<BeatDraft, 'customerIds'>}) =>
-      beatsRemote.edit(beatId, draft),
+    mutationFn: ({beatId, draft, baseVersion}: {beatId: string; draft: Omit<BeatDraft, 'customerIds'>; baseVersion?: number}) =>
+      beatsRemote.edit(beatId, draft, baseVersion),
+    onError: changedElsewhere,
     onSuccess: invalidate,
   });
   const remove = useMutation({mutationFn: (beatId: string) => beatsRemote.remove(beatId), onSuccess: invalidate});

@@ -11,11 +11,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..calc import days_since, today_iso
+from ..calc import days_since, paid_at_sale, today_iso
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW
-from ..models import Business, Customer, LedgerEntry
+from ..models import Business, Customer, LedgerEntry, in_books
 
 router = APIRouter(tags=["customer-insights"])
 
@@ -27,13 +27,15 @@ def _business_ledger(db: Session, business: Business) -> list[LedgerEntry]:
     return db.scalars(
         select(LedgerEntry)
         .join(Customer, LedgerEntry.customer_id == Customer.id)
-        .where(Customer.business_id == business.id)
+        .where(Customer.business_id == business.id, in_books())
     ).all()
 
 
 def _customer_aging(entries: list[LedgerEntry]) -> dict:
     """FIFO-allocate payments against oldest credits, then bucket the unpaid
     remainder of each credit by its age."""
+    settled = paid_at_sale(entries)  # cash GST sales aren't debt
+    entries = [e for e in entries if e.id not in settled]
     credits = sorted((e for e in entries if e.type == "credit"), key=lambda e: e.date)
     pool = sum(e.amount for e in entries if e.type == "payment")
 

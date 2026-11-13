@@ -21,3 +21,4 @@ To restore later: open **Settings** (tap **⚙️** on the Dashboard) and tap **
 **Limits**
 - There is no backup file to download. To keep your own copy, export a PDF or Excel from **📊 Reports**.
 - Don't uninstall the app while items are pending sync: they are only on that phone until they sync.
+- **Changed on two phones:** that choice waits only on the phone where it appeared, and only the owner makes it. If that phone is lost, open the customer on the new phone (it shows the copy saved to your account) and enter your change again.

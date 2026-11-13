@@ -1,5 +1,6 @@
 import type {
   DuplicateReference,
+  GstStatus,
   LedgerEntry,
   LedgerEntryType,
   PaymentMethod,
@@ -13,6 +14,7 @@ export interface LedgerEntryDto {
   amount: number;
   date: string;
   invoice_number: string | null;
+  gst_status?: GstStatus | null;
   notes: string | null;
   payment_method: PaymentMethod | null;
   reference_number: string | null;
@@ -32,6 +34,7 @@ export function toLedgerEntry(dto: LedgerEntryDto): LedgerEntry {
     amount: Number(dto.amount ?? 0),
     date: dto.date,
     invoiceNumber: dto.invoice_number ?? undefined,
+    gstStatus: dto.gst_status ?? undefined,
     notes: dto.notes ?? undefined,
     paymentMethod: dto.payment_method ?? undefined,
     referenceNumber: dto.reference_number ?? undefined,

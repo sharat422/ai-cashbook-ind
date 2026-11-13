@@ -163,3 +163,12 @@ def user(make_user):
     need the un-consented state call `make_user(ai_consent=False)` directly.
     """
     return make_user(ai_consent=True)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_link_limits():
+    """The statement-link rate limits (ST8) are per process; every test starts
+    with empty windows, as one real minute would give."""
+    from app import link_limits
+    link_limits.reset()
+    yield

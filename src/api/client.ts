@@ -2,17 +2,24 @@ import {API_ROOT, ENV} from '@config/env';
 import {logError} from '@/services/diagnostics/errorLog.store';
 import {useAuthStore} from '@store/auth.store';
 import {tNow, translate, type TKey} from '@/i18n';
+import {translations} from '@/i18n/translations';
 
 /** Normalized error thrown by the API client so the UI can show `.message`. */
 export class ApiError extends Error {
   status: number;
   /** The server's own (English) wording — for logs and support, not the screen. */
   detail: string;
-  constructor(status: number, message: string, detail: string = message) {
+  /** The server's stable error code (TE3), and the values its sentence names. */
+  code?: string;
+  params?: Record<string, string>;
+  constructor(status: number, message: string, detail: string = message, code?: string,
+    params?: Record<string, string>) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.detail = detail;
+    this.code = code;
+    this.params = params;
   }
 }
 
@@ -31,18 +38,49 @@ const STATUS_KEY: Record<number, TKey> = {
  * for the status instead — never English-only text. English keeps the
  * server's more specific wording.
  */
-/** Server messages important enough to have their own translated sentence. */
-const DETAIL_KEY: [RegExp, TKey][] = [
-  [/^This UTR is already on a UPI payment/, 'errors.utrDuplicate'],
-  [/^The credit limit was changed on another device/, 'errors.limitChanged'],
-];
+/** Codes for an error's KIND (the server's errors.KIND): the generic sentence. */
+const KIND_KEY: Record<string, TKey> = {
+  not_signed_in: 'errors.sessionExpired',
+  not_allowed: 'errors.notAllowed',
+  not_found: 'errors.notFound',
+  conflict: 'errors.conflict',
+  too_large: 'errors.tooLarge',
+  too_many_requests: 'errors.tooMany',
+  check_details: 'errors.checkInput',
+  bad_request: 'errors.checkInput',
+  gone: 'errors.notFound',
+  server_error: 'errors.server',
+  upstream_error: 'errors.server',
+  unavailable: 'errors.server',
+};
 
-export function apiErrorMessage(status: number, detail: string): string {
+const untranslated = new Set<string>();
+
+/**
+ * What the user reads for a failed request (TE3). English keeps the server's
+ * own sentence. In any other language: a SPECIFIC code (duplicate_utr,
+ * invoice_locked, stock_short_van…) shows its reviewed translation with the
+ * same values the English names (the number, the amount); a KIND code
+ * (not_found, conflict…) shows the sentence for its kind; a code this app has
+ * no translation for falls back to the English reason — more useful than a
+ * vague sentence — and is logged once so it can be translated. A response
+ * with no code at all (a host's error page) gets the sentence for its status.
+ */
+export function apiErrorMessage(status: number, detail: string, code?: string,
+  params?: Record<string, string>): string {
   const lang = useAuthStore.getState().preferredLanguage;
   if (lang === 'en') return detail;
-  const key = DETAIL_KEY.find(([re]) => re.test(detail))?.[1] ??
-    STATUS_KEY[status] ?? (status >= 500 ? 'errors.server' : 'errors.checkInput');
-  return translate(lang, key);
+  if (code) {
+    if (KIND_KEY[code]) return translate(lang, KIND_KEY[code]);
+    const key = `errors.code.${code}` as TKey;
+    if (translations[lang]?.[key]) return translate(lang, key, params);
+    if (!untranslated.has(`${lang}:${code}`)) {
+      untranslated.add(`${lang}:${code}`);
+      logError('i18n', new Error(`No ${lang} translation for error code "${code}"`), detail);
+    }
+    return detail;
+  }
+  return translate(lang, STATUS_KEY[status] ?? (status >= 500 ? 'errors.server' : 'errors.checkInput'));
 }
 
 /** Thrown when a request exceeds ENV.apiTimeoutMs or the device is offline. */
@@ -50,6 +88,15 @@ export class NetworkError extends Error {
   constructor(message = tNow('errors.network')) {
     super(message);
     this.name = 'NetworkError';
+  }
+}
+
+/** IM2: signal bars, but the server didn't answer a 2-second check before a
+ *  save. The entry is queued at once (and shown as "queued — weak signal"). */
+export class WeakSignalError extends NetworkError {
+  constructor() {
+    super();
+    this.name = 'WeakSignalError';
   }
 }
 
@@ -171,10 +218,14 @@ export async function apiRequest<T>(
       // FastAPI returns {"detail": ...} on errors (a string for ours, an array
       // for default validation 422) — normalize either into one human sentence.
       const detail = humanizeApiError(data, text);
+      const code = typeof data?.code === 'string' ? data.code : undefined;
+      const params = data?.params && typeof data.params === 'object' ? data.params : undefined;
       const apiError = new ApiError(
         response.status,
-        apiErrorMessage(response.status, detail),
+        apiErrorMessage(response.status, detail, code, params),
         detail,
+        code,
+        params,
       );
       // Log server-side failures (5xx); 4xx are expected and handled by callers.
       if (response.status >= 500) {

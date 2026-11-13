@@ -1,4 +1,7 @@
-import {apiRequest} from '@api/client';
+import {ApiError, apiRequest} from '@api/client';
+
+/** IM3: the save was refused because the beat was saved on another phone first. */
+export const isBeatChanged = (e: unknown): boolean => e instanceof ApiError && e.code === 'beat_changed';
 
 /**
  * Beat plan API. The SERVER decides which beats a caller may see: staff only
@@ -54,6 +57,8 @@ export interface BeatAssignment {
 export interface Beat {
   id: string;
   name: string;
+  /** The server's save counter: an edit started from an older one is refused (IM3). */
+  version: number;
   assignments: BeatAssignment[];
   /** 0 = Monday … 6 = Sunday. */
   weekdays: number[];
@@ -110,6 +115,8 @@ interface VisitDto {
 interface BeatDto {
   id: string;
   name: string;
+  /** Bumped on every save; an edit sends the one it started from (IM3). */
+  version?: number;
   weekdays: number[];
   assigned_user_id: string | null;
   assignments?: Array<{
@@ -142,6 +149,7 @@ const toVisit = (d: VisitDto): Visit => ({
 
 const toBeat = (d: BeatDto): Beat => ({
   id: d.id,
+  version: d.version ?? 0,
   assignments: (d.assignments ?? []).map(a => ({
     userId: a.user_id, role: a.role, name: a.name, mobile: a.mobile, validFrom: a.valid_from, validTo: a.valid_to,
   })),
@@ -174,8 +182,9 @@ export const beatsRemote = {
   async create(draft: BeatDraft): Promise<Beat> {
     return toBeat(await apiRequest<BeatDto>('/beats', {method: 'POST', body: draft}));
   },
-  async edit(beatId: string, draft: Omit<BeatDraft, 'customerIds'>): Promise<Beat> {
-    return toBeat(await apiRequest<BeatDto>(`/beats/${beatId}`, {method: 'PUT', body: draft}));
+  /** `baseVersion`: the beat version the edit started from; changed on another phone since → 409 beat_changed. */
+  async edit(beatId: string, draft: Omit<BeatDraft, 'customerIds'>, baseVersion?: number): Promise<Beat> {
+    return toBeat(await apiRequest<BeatDto>(`/beats/${beatId}`, {method: 'PUT', body: {...draft, baseVersion}}));
   },
   /** Add a helper (secondary) from validFrom (default today) to an optional last day. Owner only. */
   async addHelper(beatId: string, userId: string, validFrom?: string, validTo?: string | null): Promise<Beat> {
@@ -205,11 +214,11 @@ export const beatsRemote = {
     return rows.map(r => ({...toVisit(r), customerName: r.customer_name, beatName: r.beat_name,
       userId: r.user_id, userMobile: r.user_mobile, userName: r.user_name}));
   },
-  async setRetailers(beatId: string, customerIds: string[]): Promise<Beat> {
+  async setRetailers(beatId: string, customerIds: string[], baseVersion?: number): Promise<Beat> {
     return toBeat(
       await apiRequest<BeatDto>(`/beats/${beatId}/retailers/order`, {
         method: 'PUT',
-        body: {customerIds},
+        body: {customerIds, baseVersion},
       }),
     );
   },

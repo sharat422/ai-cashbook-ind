@@ -207,6 +207,7 @@ describe('2. a Telugu-only user: first entry, reminder, daily close', () => {
 
 describe('3. free export from Your data', () => {
   it('downloads Excel and PDF with no plan, and shows the wording as a blocked draft', async () => {
+    useAuthStore.setState({preferredLanguage: 'te'});
     let r!: ReactTestRenderer;
     await act(async () => { r = create(<YourDataScreen />); });
     expect(r.root.findAllByProps({testID: 'draft-banner'}).length).toBeGreaterThan(0);
@@ -215,7 +216,9 @@ describe('3. free export from Your data', () => {
     expect(seen).toContain(translate('en', 'yourData.draft.keep')); // …and English
     await act(async () => { await r.root.findByProps({testID: 'export-excel'}).props.onPress(); });
     await act(async () => { await r.root.findByProps({testID: 'export-pdf'}).props.onPress(); });
-    expect(mockDownload.mock.calls.map(c => c[0])).toEqual(['/account/export.xlsx', '/account/balances.pdf']);
+    // TE5: the server builds them in the user's language (reviewed strings only, English where none).
+    expect(mockDownload.mock.calls.map(c => c[0])).toEqual(
+      ['/account/export.xlsx?lang=te', '/account/balances.pdf?lang=te']);
   });
 });
 

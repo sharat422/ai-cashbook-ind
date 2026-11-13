@@ -11,7 +11,10 @@ export function describeScheme(s: Scheme, itemName: (id: string) => string): str
     case 'free_goods':
       return `Every ${n(s.minQty)} bought: ${n(s.freeQty)} ${itemName(s.freeItemId ?? '')} free`;
     case 'percent':
+      if (s.level === 'bill') return `${n(s.percent)}% off bills of ₹${n(s.minBillValue ?? '0')} or more`;
       return `${n(s.percent)}% off${s.minQty && Number(s.minQty) > 0 ? ` from ${n(s.minQty)} units` : ''}`;
+    case 'amount_off':
+      return `₹${n(s.amountOff)} off bills of ₹${n(s.minBillValue ?? '0')} or more`;
     case 'slab':
       return (s.slabs ?? []).map(([q, p]) => `${n(q)}+ → ${n(p)}% off`).join(', ');
   }

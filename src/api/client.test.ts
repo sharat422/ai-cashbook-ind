@@ -64,17 +64,51 @@ describe('retryDelayMs', () => {
   });
 });
 
-describe('apiErrorMessage', () => {
+describe('apiErrorMessage (TE3: the reason, by code, in the user language)', () => {
   const {useAuthStore} = require('@store/auth.store');
   const {translate} = require('@/i18n/useT');
+  const {useErrorLogStore} = require('@/services/diagnostics/errorLog.store');
   const utr = 'This UTR is already on a UPI payment of ₹500.00 from Ramesh on 05-11-2026. Each UPI payment has its own UTR — check for a typo.';
+  const params = {amount: '₹500.00', customer: 'Ramesh', date: '05-11-2026'};
+  afterEach(() => useAuthStore.setState({preferredLanguage: 'en'}));
 
-  it('keeps the server wording in English and gives the duplicate-UTR warning its own sentence elsewhere', () => {
+  it('English keeps the server sentence; Telugu gets the translated reason naming the same values', () => {
     useAuthStore.setState({preferredLanguage: 'en'});
-    expect(apiErrorMessage(409, utr)).toBe(utr);
+    expect(apiErrorMessage(409, utr, 'duplicate_utr', params)).toBe(utr);
     useAuthStore.setState({preferredLanguage: 'te'});
-    expect(apiErrorMessage(409, utr)).toBe(translate('te', 'errors.utrDuplicate'));
-    expect(apiErrorMessage(409, 'Some other clash')).toBe(translate('te', 'errors.conflict'));
-    useAuthStore.setState({preferredLanguage: 'en'});
+    const te = apiErrorMessage(409, utr, 'duplicate_utr', params);
+    expect(te).toBe(translate('te', 'errors.code.duplicate_utr' as never, params));
+    expect(te).toContain('₹500.00');
+    expect(te).toContain('Ramesh');
+    expect(te).not.toBe(translate('te', 'errors.checkInput'));
+  });
+
+  it('a locked invoice names its number in Telugu, not just "check the details"', () => {
+    useAuthStore.setState({preferredLanguage: 'te'});
+    const msg = apiErrorMessage(422, 'Invoice 26-27/00007 is issued and locked.', 'invoice_locked', {number: '26-27/00007'});
+    expect(msg).toContain('26-27/00007');
+    expect(msg).not.toBe(translate('te', 'errors.checkInput'));
+  });
+
+  it('a kind code gets the sentence for its kind', () => {
+    useAuthStore.setState({preferredLanguage: 'te'});
+    expect(apiErrorMessage(404, 'Bill not found', 'not_found')).toBe(translate('te', 'errors.notFound'));
+  });
+
+  it('a code with no translation falls back to the English reason and is logged once', () => {
+    useAuthStore.setState({preferredLanguage: 'te'});
+    useErrorLogStore.setState({entries: []});
+    const detail = 'Something specific the app has never seen.';
+    expect(apiErrorMessage(422, detail, 'brand_new_code', {})).toBe(detail);
+    apiErrorMessage(422, detail, 'brand_new_code', {});
+    const logged = useErrorLogStore.getState().entries.filter(
+      (e: {message: string}) => e.message.includes('brand_new_code'));
+    expect(logged).toHaveLength(1);
+    expect(logged[0].message).toContain('No te translation for error code "brand_new_code"');
+  });
+
+  it('a response with no code (a host error page) gets the sentence for its status', () => {
+    useAuthStore.setState({preferredLanguage: 'te'});
+    expect(apiErrorMessage(502, 'Bad gateway')).toBe(translate('te', 'errors.server'));
   });
 });

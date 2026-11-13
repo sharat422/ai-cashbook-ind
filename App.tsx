@@ -14,6 +14,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {ErrorBoundary} from '@components/ui';
 import {QueryProvider} from '@/providers/QueryProvider';
 import {VisitSyncManager} from '@features/beats/presentation/VisitSyncManager';
+import {StockSyncManager} from '@features/stock/presentation/StockSyncManager';
 import {CreditSyncManager} from '@features/customers/presentation/CreditSyncManager';
 import {DailySummaryManager} from '@features/daily-summary/presentation/DailySummaryManager';
 import {ExpenseSyncManager} from '@features/expense/presentation/ExpenseSyncManager';
@@ -31,6 +32,7 @@ function App(): React.JSX.Element {
         <ExpenseSyncManager />
         <CreditSyncManager />
         <VisitSyncManager />
+        <StockSyncManager />
         {/* Dispatches the daily summary notification when due. */}
         <DailySummaryManager />
         <ErrorBoundary>

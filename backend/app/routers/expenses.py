@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..discards import refuse_if_discarded
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW, ENTRY_CREATE
@@ -49,6 +50,7 @@ def create_expense(
     existing = db.scalars(find).first()
     if existing is not None:
         return expense_dto(existing)
+    refuse_if_discarded(db, business.id, client_id)  # IM5: discarded by the owner on the phone
 
     row = Expense(
         business_id=business.id,

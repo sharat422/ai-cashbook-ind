@@ -1,16 +1,18 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..chatbot.audit_line import ask_line
 from ..chatbot.guardrails import question_limit_reached
 from ..chatbot.loop import ChatbotUnavailable, ask, delete_history, message, record_feedback
 from ..config import settings
 from ..consent import PURPOSE_AI_HISTORY
 from ..database import get_db
 from ..deps import consent_granted, get_current_business, require, require_ai_consent
-from ..models import Business, User
+from ..models import Business, Customer, User
 from ..rbac import DATA_VIEW
 from ..security import get_current_user
 
@@ -33,6 +35,7 @@ class AskBody(BaseModel):
 
 @router.post("/chatbot/ask")
 def chatbot_ask(
+    request: Request,
     body: AskBody,
     business: Business = Depends(require(DATA_VIEW)),
     user: User = Depends(get_current_user),
@@ -47,12 +50,19 @@ def chatbot_ask(
             message("limit_questions", body.language_hint).format(limit=settings.chatbot_questions_per_hour),
         )
     try:
-        return ask(
+        result = ask(
             db, business.id, body.transcript_text, body.language_hint, body.selected_customer_id,
             user_id=user.id,
             store_text=consent_granted(db, user.id, PURPOSE_AI_HISTORY),
             input_mode=body.input_mode,
         )
+        # AC7: an accountant's question goes in the owner's audit log with the
+        # figures the answer cited (never the answer text). Others: nothing extra.
+        audit = getattr(request.state, "audit", None)
+        if audit is not None:
+            names = list(db.scalars(select(Customer.full_name).where(Customer.business_id == business.id)))
+            audit["detail"] = ask_line(body.transcript_text, result.get("answer_text") or "", names)
+        return result
     except ChatbotUnavailable:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, message("unavailable", body.language_hint))
 

@@ -1,0 +1,31 @@
+name: Monthly statement schedules
+
+# Runs the owners' monthly bulk statement sends (ST7) that are due. The backend
+# decides what is due (day, hour, once a month, 9 a.m.–8 p.m. IST) and is safe
+# to call any time, so a late or repeated run sends nothing twice.
+#
+# Needs repository secrets CRON_SECRET_STAGING / CRON_SECRET_PROD equal to the
+# backend's CRON_SECRET on each service. Without them the step is skipped.
+on:
+  schedule:
+    - cron: '37 3-13 * * *'   # hourly, 9:07 a.m. to 7:07 p.m. IST
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Staging
+        env:
+          SECRET: ${{ secrets.CRON_SECRET_STAGING }}
+        if: env.SECRET != ''
+        run: |
+          curl -fsS --max-time 120 -X POST -H "X-Cron-Secret: $SECRET" \
+            https://smart-cashbook-api.onrender.com/api/v1/cron/statement-schedules
+      - name: Production
+        env:
+          SECRET: ${{ secrets.CRON_SECRET_PROD }}
+        if: env.SECRET != ''
+        run: |
+          curl -fsS --max-time 120 -X POST -H "X-Cron-Secret: $SECRET" \
+            https://ai-cashbook-ind.onrender.com/api/v1/cron/statement-schedules

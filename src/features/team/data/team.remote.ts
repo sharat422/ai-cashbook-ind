@@ -45,7 +45,25 @@ export interface AccessEntry {
   area: 'ledger' | 'ageing' | 'customers' | 'dailyClose' | 'gst' | 'reports' | 'dashboard' | 'export' | 'assistant' | 'other';
   customer: string | null;
   path: string;
+  /** AC7, Ask AI: "Asked: … Used: …" (the figures the answer cited, never its text). */
+  detail?: string | null;
 }
+
+/** AC4: an accountant's export the owner hasn't opened yet (a notice on the home screen). */
+export interface ExportAlert {
+  id: string;
+  at: string;
+  name: string | null;
+  mobile: string;
+  what: 'tally' | 'gstr1' | 'gstr3b' | 'itc' | 'data' | 'balances' | 'statement' | 'report' | 'other';
+}
+
+/** `from`/`to`: IST days (AC4), both included; none = the latest 300. */
+export const activityQuery = (userId?: string, from?: string, to?: string): string => {
+  const q = [userId ? `user_id=${encodeURIComponent(userId)}` : '', from ? `from=${from}` : '', to ? `to=${to}` : '']
+    .filter(Boolean).join('&');
+  return q ? `?${q}` : '';
+};
 
 /** Team management — owner-only endpoints (server-enforced). */
 export const teamRemote = {
@@ -70,6 +88,8 @@ export const teamRemote = {
   async remove(userId: string): Promise<void> {
     await apiRequest<null>(`/team/${userId}`, {method: 'DELETE'});
   },
-  activity: (userId?: string) =>
-    apiRequest<AccessEntry[]>(`/team/activity${userId ? `?user_id=${encodeURIComponent(userId)}` : ''}`, {method: 'GET'}),
+  activity: (userId?: string, from?: string, to?: string) =>
+    apiRequest<AccessEntry[]>(`/team/activity${activityQuery(userId, from, to)}`, {method: 'GET'}),
+  exportAlerts: () => apiRequest<ExportAlert[]>('/team/export-alerts', {method: 'GET'}),
+  exportAlertsSeen: () => apiRequest<{cleared: number}>('/team/export-alerts/seen', {method: 'POST'}),
 };

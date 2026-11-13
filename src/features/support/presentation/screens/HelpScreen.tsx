@@ -18,6 +18,7 @@ const FAQS: Faq[] = [
   {q: 'help.q3', a: 'help.a3'},
   {q: 'help.q4', a: 'help.a4'},
   {q: 'help.q5', a: 'help.a5'},
+  {q: 'help.q6', a: 'help.a6'}, // IM4: a conflict lives on the phone where it appeared
 ];
 
 export function HelpScreen({

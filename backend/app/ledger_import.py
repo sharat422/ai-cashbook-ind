@@ -20,14 +20,15 @@ import re
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from . import data_export
 from .bank_statement import MAX_ROWS, StatementError, parse_amount, parse_date
 from .bank_statement import _rows as read_rows
 from .calc import recompute_customer, today_iso
-from .models import Business, Customer, ImportLog, LedgerEntry, User
+from .database import Base
+from .models import AccessLog, Business, Customer, ImportLog, LedgerEntry, User, now_iso
 
 FIELDS = ("date", "retailer", "billRef", "amount", "type", "opening")
 REQUIRED = ("retailer", "amount")
@@ -323,7 +324,7 @@ def run(db: Session, business: Business, user: User, role: str, data: bytes, fil
     for r in p.rows:
         k = _key(r.retailer)
         if k not in customers:
-            customers[k] = Customer(business_id=business.id, full_name=r.retailer, mobile="")
+            customers[k] = Customer(business_id=business.id, full_name=r.retailer, mobile="", import_id=log.id)
             db.add(customers[k])
     db.flush()
     # Opening balances first, so a statement's running balance starts from them.
@@ -332,7 +333,7 @@ def run(db: Session, business: Business, user: User, role: str, data: bytes, fil
             customer_id=customers[_key(r.retailer)].id, type=r.type, amount=float(r.amount),
             date=r.date, invoice_number=r.bill_ref or None,
             notes="Opening balance (imported)" if r.opening else None,
-            client_id=f"imp_{log.id}_{r.row}", salesman_id=user.id))
+            client_id=f"imp_{log.id}_{r.row}", salesman_id=user.id, import_id=log.id))
     db.flush()
     for c in {id(c): c for c in customers.values()}.values():
         recompute_customer(db, c)
@@ -341,7 +342,88 @@ def run(db: Session, business: Business, user: User, role: str, data: bytes, fil
     return log
 
 
-def log_dto(log: ImportLog) -> dict:
+def log_dto(log: ImportLog, blockers: list[dict] | None = None) -> dict:
+    """`blockers`: why it can't be undone (IM7); empty and not undone = can be."""
     return {"id": log.id, "createdAt": log.created_at, "fileName": log.file_name,
             "rowsImported": log.rows_imported, "rowsSkipped": log.rows_skipped,
-            "newRetailers": log.new_retailers, "importedBy": log.imported_by}
+            "newRetailers": log.new_retailers, "importedBy": log.imported_by,
+            "undoneAt": log.undone_at, "canUndo": not log.undone_at and not blockers,
+            "blockers": blockers or []}
+
+
+# ------------------------------------------------------------------ undo (IM7)
+
+def _refs(target: str) -> list:
+    """Every column with a foreign key to `target` ("customers.id", "ledger_entries.id"):
+    where later work that rests on an imported row would point. Found from the
+    models, so a table added later is covered without touching this."""
+    return [(t, c) for t in Base.metadata.sorted_tables for c in t.columns
+            if any(fk.target_fullname == target for fk in c.foreign_keys)]
+
+
+def _row_of(entry: LedgerEntry) -> int | None:
+    tail = (entry.client_id or "").rsplit("_", 1)[-1]
+    return int(tail) if tail.isdigit() else None
+
+
+def undo_blockers(db: Session, log: ImportLog) -> list[dict]:
+    """Work done since that rests on this import, so undoing it would delete or
+    change it. Undo refuses while any is left (never deletes later work):
+    - a newer import (it may have skipped rows as duplicates of this one's);
+    - an imported entry something now points at (e.g. matched to a bank line);
+    - a retailer this import created that was edited since (details, credit limit)
+      or used since (new entries, a beat, a bill, a statement, a visit)."""
+    if log.undone_at:
+        return []
+    out: list[dict] = []
+    newer = db.scalars(select(ImportLog).where(
+        ImportLog.business_id == log.business_id, ImportLog.created_at > log.created_at,
+        ImportLog.undone_at.is_(None)).order_by(ImportLog.created_at)).first()
+    if newer is not None:
+        out.append({"reason": "later_import", "file": newer.file_name})
+    entries = {e.id: e for e in db.scalars(select(LedgerEntry).where(LedgerEntry.import_id == log.id))}
+    if entries:
+        names = dict(db.execute(select(Customer.id, Customer.full_name).where(
+            Customer.id.in_({e.customer_id for e in entries.values()}))).all())
+        for _table, col in _refs("ledger_entries.id"):
+            for (entry_id,) in db.execute(select(col).where(col.in_(list(entries))).distinct()):
+                e = entries[entry_id]
+                out.append({"reason": "entry_used", "row": _row_of(e), "retailer": names.get(e.customer_id, ""),
+                            "amount": e.amount, "date": e.date})
+    created = db.scalars(select(Customer).where(Customer.import_id == log.id).order_by(Customer.full_name)).all()
+    if created:
+        ids = [c.id for c in created]
+        used: set[str] = set()
+        for table, col in _refs("customers.id"):
+            q = select(col).where(col.in_(ids))
+            if table.name == "ledger_entries":  # its own rows don't count
+                q = q.where(or_(table.c.import_id.is_(None), table.c.import_id != log.id))
+            used |= {cid for (cid,) in db.execute(q.distinct())}
+        for c in created:
+            if (c.version or 1) > 1 or (c.credit_limit_version or 0) > 0:
+                out.append({"reason": "retailer_edited", "retailer": c.full_name})
+            elif c.id in used:
+                out.append({"reason": "retailer_used", "retailer": c.full_name})
+    return out
+
+
+def undo(db: Session, log: ImportLog, user: User, role: str) -> tuple[int, int]:
+    """Remove exactly what the import added: its ledger rows and the retailers it
+    created, then recompute the balances of the retailers that were already there.
+    That puts the books back as in the backup taken before it, for everything the
+    import touched; work done since is untouched (undo_blockers is checked first).
+    One audit row. Returns (entries removed, retailers removed)."""
+    touched = set(db.scalars(select(LedgerEntry.customer_id).where(LedgerEntry.import_id == log.id)))
+    entries = db.execute(delete(LedgerEntry).where(LedgerEntry.import_id == log.id)).rowcount
+    created = set(db.scalars(select(Customer.id).where(Customer.import_id == log.id)))
+    if created:
+        db.execute(delete(Customer).where(Customer.id.in_(created)))
+    for c in db.scalars(select(Customer).where(Customer.id.in_(touched - created))):
+        recompute_customer(db, c)
+    log.undone_at = now_iso()
+    log.undone_by = f"{role} · {user.mobile}"[:60]
+    db.add(AccessLog(business_id=log.business_id, user_id=user.id, mobile=user.mobile, action="undo", method="POST",
+                     path=f"Undid khata import {log.file_name}: {entries} entries and "
+                          f"{len(created)} new retailers removed ({log.id})"[:300]))
+    db.commit()
+    return entries, len(created)

@@ -37,6 +37,7 @@ def expense_dto(m: Expense) -> dict:
         "date": m.date,
         "notes": m.notes,
         "attachment_url": m.attachment_url,
+        "purchase_id": m.purchase_id,  # set when the expense is a stock purchase
         "created_at": m.created_at,
     }
 
@@ -77,6 +78,9 @@ def ledger_dto(m: LedgerEntry) -> dict:
         "cheque_bank": m.cheque_bank,
         "cheque_account": m.cheque_account,
         "ref_duplicate_of": m.ref_duplicate_of,
+        "paid_entry_id": m.paid_entry_id,
+        # GST invoices: draft | issued | cancelled (None for other entries).
+        "gst_status": (m.gst_status or "issued") if m.gst_rate is not None else None,
         "attachment_url": m.attachment_url,
         "salesman_id": m.salesman_id,
         "beat_id": m.beat_id,

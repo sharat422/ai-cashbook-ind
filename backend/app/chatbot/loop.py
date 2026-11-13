@@ -55,7 +55,8 @@ _NOT_COVERED = re.compile(
 )
 LANGUAGE_HINTS = ("hinglish", "hi", "en", "te", "ta", "ml")
 _LANGUAGE_TEXT = {
-    "hinglish": "Hinglish",
+    "hinglish": ("Hinglish: everyday Hindi written in Roman (Latin) letters, mixed with the English words "
+                 "shopkeepers use, e.g. \"Aapka total outstanding ₹12,500 hai\". Never Devanagari"),
     "hi": "Hindi (Devanagari script)",
     "en": "English",
     "te": "Telugu (Telugu script)",
@@ -328,9 +329,9 @@ def ask(db: Session, merchant_id: str, question: str, language_hint: str | None 
             # Nothing in the help guide: fixed reply, no chance to improvise.
             model_answer, outcome = "", "not_in_help"
         else:
-            if language_hint in _LANGUAGE_TEXT and language_hint not in (None, "hinglish"):
+            if language_hint in _LANGUAGE_TEXT and language_hint is not None:
                 # Tool results and help docs are in English, which pulls the model
-                # back to Hinglish; restate the language right before it answers.
+                # towards English (or Hinglish); restate the language right before it answers.
                 messages.append({"role": "system", "content":
                                  f"Write the final answer in {_LANGUAGE_TEXT[language_hint]}."})
             second = _complete(client, messages, "none", model)

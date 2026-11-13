@@ -10,7 +10,7 @@ from ..calc import days_since, parse_date, today_iso
 from ..database import get_db
 from ..deps import ai_consent_granted, require
 from ..rbac import DATA_VIEW
-from ..models import Business, Customer, LedgerEntry, User
+from ..models import Business, Customer, LedgerEntry, User, in_books
 from ..security import get_current_user
 
 router = APIRouter(tags=["khata"])
@@ -26,7 +26,7 @@ def _business_ledger(db: Session, business: Business) -> list[LedgerEntry]:
     return db.scalars(
         select(LedgerEntry)
         .join(Customer, LedgerEntry.customer_id == Customer.id)
-        .where(Customer.business_id == business.id)
+        .where(Customer.business_id == business.id, in_books())
     ).all()
 
 

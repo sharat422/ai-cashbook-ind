@@ -3,6 +3,8 @@ import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import * as XLSX from 'xlsx';
 
+import {tNow} from '@/i18n';
+
 import type {ReportSummary, ReportTxn} from './entities';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
@@ -200,7 +202,7 @@ export async function exportReportPdf(
     fileName: fileStem(summary),
     directory: 'Documents',
   });
-  if (!filePath) throw new Error('Could not generate the PDF.');
+  if (!filePath) throw new Error(tNow('reports.pdfFailed'));
   await Share.open({
     url: `file://${filePath}`,
     type: 'application/pdf',

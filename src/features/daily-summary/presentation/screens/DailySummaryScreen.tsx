@@ -119,7 +119,7 @@ export function DailySummaryScreen({
           ) : null}
         </View>
 
-        <Button title="Summarize my day" className="mt-5"
+        <Button title={t('daily.summarize')} className="mt-5"
           loading={generating} onPress={generateInsight} />
         {insight ? <Text className="mt-3">{insight}</Text> : null}
 

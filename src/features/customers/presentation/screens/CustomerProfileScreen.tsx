@@ -393,7 +393,8 @@ export function CustomerProfileScreen({
         data={entries}
         keyExtractor={item => item.id}
         renderItem={({item, index}) => (
-          <TimelineItem entry={item} isLast={index === entries.length - 1} />
+          <TimelineItem entry={item} isLast={index === entries.length - 1} customerId={customer.id}
+            onOpenBill={billId => navigation.navigate('BillDetail', {billId})} />
         )}
         ListHeaderComponent={ListHeader}
         showsVerticalScrollIndicator={false}

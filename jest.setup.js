@@ -95,6 +95,10 @@ jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(() => () => {}),
 }));
 
+// IM2: the 2-second server check before a save. Default "the server answers";
+// weak-signal tests override it.
+jest.mock('@/services/network/probe', () => ({probeServer: jest.fn(() => Promise.resolve(true))}));
+
 // The app opens in Telugu, but most tests assert English copy. Tests start in
 // English; Telugu tests switch with useAuthStore.setState({preferredLanguage: 'te'}).
 jest.mock('@features/auth/utils/languagePreference', () => ({

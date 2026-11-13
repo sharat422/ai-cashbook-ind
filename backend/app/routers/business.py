@@ -13,7 +13,7 @@ from ..calc import IST, days_since
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW
-from ..models import Business, Customer, Expense, Income, LedgerEntry
+from ..models import Business, Customer, Expense, Income, LedgerEntry, in_books
 
 router = APIRouter(tags=["business"])
 
@@ -53,7 +53,7 @@ def business_summary(
     ledger = db.scalars(
         select(LedgerEntry)
         .join(Customer, LedgerEntry.customer_id == Customer.id)
-        .where(Customer.business_id == business.id)
+        .where(Customer.business_id == business.id, in_books())
     ).all()
 
     today = _today()

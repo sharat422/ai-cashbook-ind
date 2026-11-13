@@ -3,6 +3,7 @@ import {View, type LayoutChangeEvent} from 'react-native';
 import Svg, {Circle, Line, Path} from 'react-native-svg';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import type {TrendPoint} from '@features/khata/domain/entities';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
@@ -16,12 +17,13 @@ const shortDate = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7
 
 /** Reusable payment-trend line chart (collected vs billed) on react-native-svg. */
 export function TrendChart({data}: {data: TrendPoint[]}): React.JSX.Element {
+  const t = useT();
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) =>
     setWidth(e.nativeEvent.layout.width);
 
   if (data.length === 0) {
-    return <Text variant="caption">No trend data for this period.</Text>;
+    return <Text variant="caption">{t('khata.noTrend')}</Text>;
   }
 
   const max = Math.max(
@@ -48,7 +50,7 @@ export function TrendChart({data}: {data: TrendPoint[]}): React.JSX.Element {
   return (
     <View>
       <Text variant="caption" className="mb-1">
-        Peak {formatINR(max)}
+        {t('khata.peak', {amount: formatINR(max)})}
       </Text>
       <View onLayout={onLayout} style={{height: HEIGHT}}>
         {width > 0 ? (
@@ -99,8 +101,8 @@ export function TrendChart({data}: {data: TrendPoint[]}): React.JSX.Element {
 
       {/* Legend */}
       <View className="mt-2 flex-row" style={{gap: 16}}>
-        <Legend color={COLLECTED} label="Collected" />
-        <Legend color={BILLED} label="Billed" />
+        <Legend color={COLLECTED} label={t('khata.collected')} />
+        <Legend color={BILLED} label={t('khata.billed')} />
       </View>
     </View>
   );

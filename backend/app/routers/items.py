@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import gst, stock
@@ -57,23 +57,30 @@ def _owned_item(db: Session, business: Business, item_id: str) -> Item:
 
 @router.get("/items")
 def list_items(
-    limit: int = Query(20, ge=1, le=100),
-    cursor: str | None = None,
-    search: str | None = None,
+    limit: int = Query(20, ge=1, le=100),  # a page, never the whole catalogue
+    offset: int = Query(0, ge=0),
+    q: str | None = Query(None, max_length=100),
+    type: str | None = Query(None, pattern="^(product|service)$"),
+    cursor: str | None = None,  # older clients: the offset as a string
+    search: str | None = None,  # older clients: same as q
     business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
+    """A page of the catalogue, by name. `q` searches the name (in whatever
+    script it was typed) and the HSN/SAC code, ignoring case."""
     base = select(Item).where(Item.business_id == business.id)
-    if search:
-        like = f"%{search}%"
-        base = base.where(
-            or_(Item.name.ilike(like), Item.hsn_sac.ilike(like))
-        )
+    term = (q or search or "").strip()
+    if term:
+        like = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        base = base.where(or_(Item.name.ilike(like, escape="\\"), Item.hsn_sac.ilike(like, escape="\\")))
+    if type:
+        base = base.where(Item.type == type)
 
-    total = len(db.scalars(base).all())
-    offset = int(cursor) if (cursor and cursor.isdigit()) else 0
+    total = db.scalar(select(func.count()).select_from(base.subquery()))
+    if cursor and cursor.isdigit():
+        offset = int(cursor)
     rows = db.scalars(
-        base.order_by(Item.name.asc()).offset(offset).limit(limit + 1)
+        base.order_by(Item.name.asc(), Item.id.asc()).offset(offset).limit(limit + 1)
     ).all()
 
     has_more = len(rows) > limit
@@ -121,6 +128,9 @@ def update_item(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    # Last write wins, by decision (IM3): items are settings the owner changes rarely,
+    # from one phone; a version check would only add conflicts. Beats differ (two
+    # owners reorder one beat's shops at once) and carry a version. Don't "fix" this.
     item = _owned_item(db, business, item_id)
     values = _validated(body)
     values.pop("stock_qty")  # stock is the move ledger's; see app/stock.py

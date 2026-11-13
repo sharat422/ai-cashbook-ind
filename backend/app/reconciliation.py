@@ -22,8 +22,9 @@ from sqlalchemy.orm import Session
 
 from .bank_statement import parse_statement, preview_statement
 from .beats import assert_beat_access
+from .calc import NOT_MONEY, paid_at_sale
 from .models import (BankImport, BankLine, BankMatch, Business, BusinessMember, CashCount, CashDeposit, Customer,
-                     LedgerEntry, User, gen_id, now_iso)
+                     LedgerEntry, User, gen_id, in_books, now_iso)
 from .rbac import DATA_VIEW, role_can
 
 MATCH_DAYS = 3  # UPI/NEFT can land a day or two after it was recorded
@@ -110,8 +111,9 @@ def _active(business: Business):
 
 
 def _is_collection(e: LedgerEntry) -> bool:
-    """A payment that should show up in the bank: anything but cash."""
-    return e.type == "payment" and (e.payment_method or "").lower() != "cash"
+    """A payment that should show up in the bank: anything but cash (and a
+    credit note, which is a correction, not money received)."""
+    return e.type == "payment" and (e.payment_method or "").lower() not in ("cash", *NOT_MONEY)
 
 
 def _collections(db: Session, business: Business, lo: str | None = None, hi: str | None = None
@@ -590,7 +592,7 @@ def daily_close(db: Session, business: Business, user: User, role: str,
     is exactly 0.00 once every rupee is in the bank or recorded as kept back.
     """
     query = (select(LedgerEntry, Customer).join(Customer, LedgerEntry.customer_id == Customer.id)
-             .where(Customer.business_id == business.id, LedgerEntry.date == day)
+             .where(Customer.business_id == business.id, LedgerEntry.date == day, in_books())
              .order_by(LedgerEntry.created_at))
     if beat_id:
         assert_beat_access(db, business, user, role, beat_id, allow_deleted=True)
@@ -598,6 +600,11 @@ def daily_close(db: Session, business: Business, user: User, role: str,
     elif not role_can(role, DATA_VIEW):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Pick your beat to see its daily close.")
     rows = db.execute(query).all()
+    # A cash GST sale (invoice + its payment at once) is a sale paid on the
+    # spot, not credit given or a collection.
+    settled = paid_at_sale([e for e, _ in rows])
+    # A credit note lowers what's owed; it isn't money collected.
+    rows = [(e, c) for e, c in rows if e.id not in settled and e.payment_method not in NOT_MONEY]
     ids = [e.id for e, _ in rows]
     verified = set(db.scalars(select(BankMatch.entry_id).where(
         *_active(business), BankMatch.entry_id.in_(ids)))) if ids else set()

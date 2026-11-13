@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .calc import IST, today_iso
-from .models import (Beat, BeatAssignment, BeatRetailer, Business, BusinessMember, Customer,
+from .models import (Beat, BeatAssignment, BeatRetailer, Business, BusinessMember, Customer, in_books,
                      LedgerEntry, User, Visit)
 from .rbac import DATA_VIEW, role_can
 from .routers.customer_insights import _customer_aging
@@ -184,7 +184,7 @@ def day_list(db: Session, beat: Beat) -> list[dict]:
     ).all()
     ids = [c.id for _, c in rows]
     ledger: dict[str, list[LedgerEntry]] = defaultdict(list)
-    for e in db.scalars(select(LedgerEntry).where(LedgerEntry.customer_id.in_(ids))).all():
+    for e in db.scalars(select(LedgerEntry).where(LedgerEntry.customer_id.in_(ids), in_books())).all():
         ledger[e.customer_id].append(e)
     visits = db.scalars(
         select(Visit).where(Visit.customer_id.in_(ids)).order_by(Visit.visited_at)
@@ -222,6 +222,7 @@ def beat_dto(beat: Beat) -> dict:
         "weekdays": [int(d) for d in beat.weekdays.split(",") if d],
         "assigned_user_id": beat.assigned_user_id,
         "deleted": bool(beat.deleted_at),
+        "version": beat.version or 1,
     }
 
 

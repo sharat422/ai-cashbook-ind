@@ -2,6 +2,7 @@ import React from 'react';
 import {View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import type {CustomerStatus} from '@features/customers/domain/entities';
 import {STATUS_STYLE} from './statusStyle';
 
@@ -11,13 +12,14 @@ function StatusBadgeBase({
 }: {
   status: CustomerStatus;
 }): React.JSX.Element {
+  const t = useT();
   const s = STATUS_STYLE[status];
   return (
     <View
       className={`flex-row items-center rounded-full px-2.5 py-1 ${s.chipBg}`}>
       <View className={`mr-1.5 h-1.5 w-1.5 rounded-full ${s.dot}`} />
       <Text className={`text-[11px] font-semibold ${s.chipText}`}>
-        {s.label}
+        {t(s.label)}
       </Text>
     </View>
   );

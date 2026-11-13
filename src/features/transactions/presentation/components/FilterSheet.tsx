@@ -3,6 +3,8 @@ import {ScrollView, View} from 'react-native';
 
 import {DateRangeField, FilterChip, RadioList} from '@components/filters';
 import {BottomSheet, Button, Text} from '@components/ui';
+import {useT, type TKey} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import {
   ALL_CATEGORIES,
   type SortField,
@@ -21,19 +23,19 @@ export interface FilterSheetProps {
   onClear: () => void;
 }
 
-const TYPE_OPTIONS: Array<{label: string; value: TransactionType | 'all'}> = [
-  {label: 'All', value: 'all'},
-  {label: 'Income', value: 'income'},
-  {label: 'Expense', value: 'expense'},
+const TYPE_OPTIONS: Array<{label: TKey; value: TransactionType | 'all'}> = [
+  {label: 'filters.all', value: 'all'},
+  {label: 'txn.typeIncome', value: 'income'},
+  {label: 'txn.typeExpense', value: 'expense'},
 ];
 
 type SortKey = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
-const SORT_OPTIONS: Array<{key: SortKey; label: string; icon: string}> = [
-  {key: 'date-desc', label: 'Date: Newest first', icon: '📅'},
-  {key: 'date-asc', label: 'Date: Oldest first', icon: '📅'},
-  {key: 'amount-desc', label: 'Amount: High to Low', icon: '💵'},
-  {key: 'amount-asc', label: 'Amount: Low to High', icon: '💵'},
+const SORT_OPTIONS: Array<{key: SortKey; label: TKey; icon: string}> = [
+  {key: 'date-desc', label: 'filters.dateNewest', icon: '📅'},
+  {key: 'date-asc', label: 'filters.dateOldest', icon: '📅'},
+  {key: 'amount-desc', label: 'filters.amountHigh', icon: '💵'},
+  {key: 'amount-asc', label: 'filters.amountLow', icon: '💵'},
 ];
 
 /** Bottom-sheet that composes the reusable filter controls for the history list. */
@@ -47,23 +49,24 @@ export function FilterSheet({
   onSetSort,
   onClear,
 }: FilterSheetProps): React.JSX.Element {
+  const t = useT();
   const sortKey: SortKey = `${filters.sort.field}-${filters.sort.direction}` as SortKey;
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Filters & sort">
+    <BottomSheet visible={visible} onClose={onClose} title={t('filters.title')}>
       <ScrollView
         className="px-5"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 16}}>
         {/* Type */}
         <Text variant="label" className="mb-2 mt-1">
-          Type
+          {t('filters.type')}
         </Text>
         <View className="flex-row" style={{gap: 8}}>
           {TYPE_OPTIONS.map(option => (
             <FilterChip
               key={option.value}
-              label={option.label}
+              label={t(option.label)}
               selected={filters.type === option.value}
               onPress={() => onSetType(option.value)}
             />
@@ -72,13 +75,13 @@ export function FilterSheet({
 
         {/* Categories */}
         <Text variant="label" className="mb-2 mt-5">
-          Categories
+          {t('filters.categories')}
         </Text>
         <View className="flex-row flex-wrap" style={{gap: 8}}>
           {ALL_CATEGORIES.map(category => (
             <FilterChip
               key={category}
-              label={category}
+              label={categoryLabel(t, category)}
               selected={filters.categories.includes(category)}
               onPress={() => onToggleCategory(category)}
             />
@@ -87,7 +90,7 @@ export function FilterSheet({
 
         {/* Date range */}
         <Text variant="label" className="mb-2 mt-5">
-          Date range
+          {t('filters.dateRange')}
         </Text>
         <DateRangeField
           from={filters.dateFrom}
@@ -97,10 +100,10 @@ export function FilterSheet({
 
         {/* Sort */}
         <Text variant="label" className="mb-1 mt-5">
-          Sort by
+          {t('filters.sortBy')}
         </Text>
         <RadioList
-          options={SORT_OPTIONS}
+          options={SORT_OPTIONS.map(o => ({...o, label: t(o.label)}))}
           value={sortKey}
           onSelect={key => {
             const [field, direction] = key.split('-') as [
@@ -117,14 +120,14 @@ export function FilterSheet({
         className="flex-row border-t border-border px-5 py-3"
         style={{gap: 12}}>
         <Button
-          title="Clear all"
+          title={t('filters.clearAll')}
           variant="secondary"
           className="flex-1"
           fullWidth={false}
           onPress={onClear}
         />
         <Button
-          title="Done"
+          title={t('common.done')}
           className="flex-1"
           fullWidth={false}
           onPress={onClose}

@@ -6,6 +6,10 @@ import {createJSONStorage, persist} from 'zustand/middleware';
 export interface CaTestResult {
   imported?: number;
   retyped?: number;
+  caName?: string;
+  tallyVersion?: string;
+  offlineErrors?: number;
+  note?: string;
 }
 
 interface CaTestState {

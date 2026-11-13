@@ -49,6 +49,8 @@ export const ledgerRemote = {
       form.append('price_includes_gst', String(draft.gst.priceIncludesGst));
       if (draft.gst.customerGstin) form.append('customer_gstin', draft.gst.customerGstin);
       if (draft.gst.placeOfSupply) form.append('place_of_supply', draft.gst.placeOfSupply);
+      if (draft.gst.paidNow) form.append('paid_now', 'true');
+      if (draft.gst.draft) form.append('draft', 'true');
     }
     if (draft.attachment) {
       form.append('attachment', {
@@ -63,5 +65,20 @@ export const ledgerRemote = {
       {method: 'POST', body: form},
     );
     return toLedgerEntry(dto);
+  },
+
+  /** Give a draft GST invoice its number and lock it. */
+  async issue(customerId: string, entryId: string): Promise<LedgerEntry> {
+    return toLedgerEntry(await apiRequest<LedgerEntryDto>(
+      `/customers/${customerId}/ledger/${entryId}/issue`, {method: 'POST'}));
+  },
+  /** Cancel an issued GST invoice; its number stays, as cancelled. */
+  async cancel(customerId: string, entryId: string): Promise<LedgerEntry> {
+    return toLedgerEntry(await apiRequest<LedgerEntryDto>(
+      `/customers/${customerId}/ledger/${entryId}/cancel`, {method: 'POST'}));
+  },
+  /** Delete a draft (it never had a number). */
+  async deleteDraft(customerId: string, entryId: string): Promise<void> {
+    await apiRequest<void>(`/customers/${customerId}/ledger/${entryId}`, {method: 'DELETE'});
   },
 };

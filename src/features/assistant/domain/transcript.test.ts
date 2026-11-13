@@ -53,6 +53,7 @@ describe('chatLanguageHint', () => {
     ['ml', 'ml'],
     ['hi', 'hi'],
     ['en', 'en'],
+    ['hinglish', 'hinglish'], // TE6: was no hint, so a voice question in English got English
     ['kn', undefined], // no fixed replies yet: let the model match the question
     ['bn', undefined],
   ])('%p -> %p', (app, hint) => {

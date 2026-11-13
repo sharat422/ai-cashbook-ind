@@ -1,3 +1,4 @@
+import {tNow} from '@/i18n';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {AppState} from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
@@ -54,7 +55,7 @@ export function useLiveVoice(callbacks: {
         return;
       }
       if (!allowed) {
-        throw new Error('Microphone permission is required.');
+        throw new Error(tNow('voice.micPermission'));
       }
       session.current = createLiveVoice({
         language: latest.current.language,

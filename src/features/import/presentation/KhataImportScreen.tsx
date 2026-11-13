@@ -19,6 +19,7 @@ import {
   type ImportPreview,
   type Mapping,
   type PickedFile,
+  type UndoBlocker,
 } from '../import.remote';
 
 const HISTORY_KEY = ['imports'];
@@ -115,6 +116,28 @@ export function KhataImportScreen(_: AppScreenProps<'KhataImport'>): React.JSX.E
       ],
     );
 
+  /** IM7, owner only: one tap puts the books back as before this import. */
+  const confirmUndo = (h: ImportLogEntry) =>
+    Alert.alert(t('import.undoTitle'), t('import.undoMsg', {count: h.rowsImported, retailers: h.newRetailers}), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('import.undoYes'), style: 'destructive', onPress: async () => {
+        try {
+          await importRemote.undo(h.id);
+          Alert.alert(t('import.undoneTitle'));
+        } catch (err) {
+          fail(err);
+        } finally {
+          await queryClient.invalidateQueries(); // balances, customers and the log all changed (or show why not)
+        }
+      }},
+    ]);
+  const blockerText = (b: UndoBlocker) =>
+    b.reason === 'later_import' ? t('import.blocked.later_import', {file: b.file})
+      : b.reason === 'entry_used'
+        ? t('import.blocked.entry_used', {row: b.row ?? '—', retailer: b.retailer, amount: formatINR(b.amount),
+          date: formatDisplayDate(b.date)})
+        : t(`import.blocked.${b.reason}`, {retailer: b.retailer});
+
   const backup = (id: string, day: string) =>
     downloadAndShare(`/imports/${id}/backup.xlsx`, `before_import_${day}.xlsx`,
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').catch(fail);
@@ -132,6 +155,7 @@ export function KhataImportScreen(_: AppScreenProps<'KhataImport'>): React.JSX.E
         <Button testID="import-pick" title={file ? t('import.pickAnother') : t('import.pick')}
           variant={file ? 'secondary' : 'primary'} className="mt-6"
           loading={busy === 'preview' && !preview} disabled={busy !== null} onPress={onPick} />
+        <Text variant="caption" className="mt-2">{t('import.limits')}</Text>
         {file ? <Text variant="caption" className="mt-2">{file.name}</Text> : null}
 
         {preview ? (
@@ -202,6 +226,22 @@ export function KhataImportScreen(_: AppScreenProps<'KhataImport'>): React.JSX.E
               </Text>
               <Button title={t('import.downloadBackup')} variant="ghost" className="mt-1"
                 onPress={() => backup(h.id, h.createdAt.slice(0, 10))} />
+              {h.undoneAt ? (
+                <Text testID={`import-undone-${h.id}`} variant="caption" className="mt-1">
+                  {t('import.undoneOn', {date: formatTimestamp(h.undoneAt)})}
+                </Text>
+              ) : h.canUndo && can(PERMISSIONS.ENTRY_DELETE) ? (
+                <Button testID={`import-undo-${h.id}`} title={t('import.undo')} variant="secondary" className="mt-1"
+                  onPress={() => confirmUndo(h)} />
+              ) : h.blockers?.length ? (
+                <View testID={`import-blocked-${h.id}`} className="mt-1">
+                  <Text variant="caption" className="font-semibold">{t('import.cantUndo')}</Text>
+                  {h.blockers.slice(0, 3).map((b, i) => <Text key={i} variant="caption">• {blockerText(b)}</Text>)}
+                  {h.blockers.length > 3 ? (
+                    <Text variant="caption">{t('import.andMore', {count: h.blockers.length - 3})}</Text>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
           ))
         )}

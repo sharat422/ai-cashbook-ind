@@ -1,12 +1,9 @@
-import {useQuery} from '@tanstack/react-query';
 import React from 'react';
 import {FlatList, Pressable, RefreshControl, View} from 'react-native';
 
 import {Button, EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import {usePermissions} from '@features/auth/hooks';
 import {PERMISSIONS} from '@features/auth/rbac';
-import {itemRemote} from '@features/items/data/item.remote';
-import type {Item} from '@features/items/domain/entities';
 import type {Scheme} from '@features/schemes/data/schemes.remote';
 import {describeScheme, schemeStatus} from '@features/schemes/domain/schemeText';
 import {useSchemes} from '@features/schemes/presentation/hooks';
@@ -27,9 +24,6 @@ export function SchemesScreen({navigation}: AppScreenProps<'Schemes'>): React.JS
   const {can} = usePermissions();
   const canEdit = can(PERMISSIONS.SETTINGS_MANAGE);
   const schemes = useSchemes();
-  const catalog = useQuery({queryKey: ['items', 'schemes'], queryFn: () => itemRemote.list('', 100)});
-  const items: Item[] = catalog.data?.items ?? [];
-  const itemName = (id: string) => items.find(i => i.id === id)?.name ?? '—';
   const today = todayIST();
   const list: Scheme[] = schemes.data ?? [];
 
@@ -83,9 +77,9 @@ export function SchemesScreen({navigation}: AppScreenProps<'Schemes'>): React.JS
                   {t(`schemes.status.${status}`)}
                 </Text>
               </View>
-              <Text className="mt-1 text-sm text-slate-900">{describeScheme(s, itemName)}</Text>
+              <Text className="mt-1 text-sm text-slate-900">{describeScheme(s, () => s.freeItemName || '—')}</Text>
               <Text variant="caption" className="mt-1">
-                {s.itemIds.map(itemName).join(', ')} · {formatDisplayDate(s.validFrom)} – {formatDisplayDate(s.validTo)}
+                {(s.itemNames ?? []).map(n => n || '—').join(', ')} · {formatDisplayDate(s.validFrom)} – {formatDisplayDate(s.validTo)}
               </Text>
             </Pressable>
           );

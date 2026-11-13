@@ -56,6 +56,13 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!-- AC2: an email invite's page opens bolcash://invite/<token> -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="bolcash" android:host="invite" />
+        </intent-filter>
       </activity>
     </application>
 </manifest>

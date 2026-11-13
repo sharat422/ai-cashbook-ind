@@ -7,6 +7,7 @@ import {expenseUseCases} from '@features/expense/di';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {incomeUseCases} from '@features/income/di';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
+import {syncPendingStock, useStockQueue} from '@features/stock/data/stockQueue';
 import type {TranslateFn} from '@/i18n';
 import {syncCustomerEdits, useCustomerEdits} from './customerEdits';
 
@@ -34,8 +35,9 @@ export function syncCountsNow(): SyncCounts {
       usePendingLedgerStore.getState().entries,
       useVisitQueue.getState().pending,
       useCustomerEdits.getState().pending,
+      useStockQueue.getState().pending,
     ],
-    useCustomerEdits.getState().conflicts.length,
+    useCustomerEdits.getState().conflicts.length + useStockQueue.getState().conflicts.length,
   );
 }
 
@@ -45,8 +47,9 @@ export function useSyncCounts(): SyncCounts {
   const ledger = usePendingLedgerStore(s => s.entries);
   const visits = useVisitQueue(s => s.pending);
   const edits = useCustomerEdits(s => s.pending);
-  const conflicts = useCustomerEdits(s => s.conflicts.length);
-  return tally([income, expense, ledger, visits, edits], conflicts);
+  const stock = useStockQueue(s => s.pending);
+  const conflicts = useCustomerEdits(s => s.conflicts.length) + useStockQueue(s => s.conflicts.length);
+  return tally([income, expense, ledger, visits, edits, stock], conflicts);
 }
 
 export function syncState(c: SyncCounts): SyncState {
@@ -63,6 +66,7 @@ export async function syncEverything(): Promise<void> {
   await syncPendingLedger();
   await syncPendingVisits();
   await syncCustomerEdits();
+  await syncPendingStock();
 }
 
 /** Logging out wipes this phone's queues, so say plainly what would be lost. */

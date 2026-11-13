@@ -1,3 +1,4 @@
+import {tNow} from '@/i18n';
 import {apiRequest} from '@api/client';
 import {ENV} from '@config/env';
 import type {
@@ -33,9 +34,7 @@ export const receiptRemote = {
       !result.vendorName.value.trim() &&
       !Number.isFinite(result.amount.value)
     ) {
-      throw new Error(
-        'No receipt details could be read. Try a clearer photo or enter the expense manually.',
-      );
+      throw new Error(tNow('receipt.nothingRead'));
     }
     return result;
   },

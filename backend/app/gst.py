@@ -99,6 +99,23 @@ UQC = {
 }
 
 
+# A catalogue unit ("bag", "kg", "pcs") as a UQC. Same table as uqcForUnit in
+# src/features/gst/domain/gst.ts; change both together.
+_UNIT_UQC = {
+    "box": "BOX", "boxes": "BOX", "bag": "BAG", "bags": "BAG", "bottle": "BTL", "btl": "BTL", "can": "CAN",
+    "carton": "CTN", "ctn": "CTN", "dozen": "DOZ", "doz": "DOZ", "kg": "KGS", "kgs": "KGS", "kilo": "KGS",
+    "g": "GMS", "gm": "GMS", "gram": "GMS", "l": "LTR", "ltr": "LTR", "litre": "LTR", "liter": "LTR",
+    "ml": "MLT", "m": "MTR", "mtr": "MTR", "metre": "MTR", "nos": "NOS", "no": "NOS", "pc": "PCS", "pcs": "PCS",
+    "piece": "PCS", "pieces": "PCS", "pack": "PAC", "packet": "PAC", "pkt": "PAC", "pair": "PRS", "set": "SET",
+    "roll": "ROL", "ton": "TON", "tonne": "TON", "quintal": "QTL", "unit": "UNT", "units": "UNT", "tube": "TUB",
+}
+
+
+def uqc_for_unit(unit: str | None) -> str | None:
+    u = (unit or "").strip().lower().rstrip(".")
+    return _UNIT_UQC.get(u) or (u.upper() if u.upper() in UQC else None)
+
+
 def clean_line(quantity, uqc: str | None) -> tuple[Decimal, str]:
     """Quantity and unit of a GST invoice line — both required (Rule 46)."""
     code = (uqc or "").strip().upper()

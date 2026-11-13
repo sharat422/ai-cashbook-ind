@@ -2,6 +2,7 @@ import React from 'react';
 import {TextInput, View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import {colors} from '@theme/colors';
 
 export interface NotesInputProps {
@@ -18,8 +19,9 @@ export function NotesInput({
   onChange,
   error,
   maxLength = 280,
-  placeholder = 'Add a note (optional)',
+  placeholder,
 }: NotesInputProps): React.JSX.Element {
+  const t = useT();
   return (
     <View>
       <View
@@ -30,7 +32,7 @@ export function NotesInput({
           className="min-h-[72px] p-0 text-base text-slate-900"
           value={value}
           onChangeText={onChange}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('txn.notePlaceholder')}
           placeholderTextColor={colors.muted}
           multiline
           textAlignVertical="top"

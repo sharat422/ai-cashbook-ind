@@ -41,8 +41,3 @@ export function roleCan(role: Role | undefined | null, permission: Permission): 
   return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
 }
 
-export const ROLE_LABEL: Record<Role, string> = {
-  owner: 'Owner',
-  accountant: 'Accountant',
-  staff: 'Staff',
-};

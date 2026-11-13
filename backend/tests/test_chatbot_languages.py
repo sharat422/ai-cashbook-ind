@@ -88,9 +88,13 @@ def test_language_is_restated_before_the_answer_is_written(merchant, client, llm
     _ask(client, user, "రమేష్ బ్యాలెన్స్?", language_hint="te")
     last = fake.calls[1]["messages"][-1]
     assert last == {"role": "system", "content": "Write the final answer in Telugu (Telugu script)."}
-    # Hinglish (the default) gets no extra instruction.
+    # Hinglish too (TE6): English tool results pulled a Hinglish user's answer into English.
     fake = llm(_resp(tool_calls=[_tool_call("get_business_summary", {})]), _resp("Theek hai."))
     _ask(client, user, "total?", language_hint="hinglish")
+    assert fake.calls[1]["messages"][-1]["content"].startswith("Write the final answer in Hinglish: everyday Hindi")
+    # No hint: nothing extra (the model matches the question).
+    fake = llm(_resp(tool_calls=[_tool_call("get_business_summary", {})]), _resp("Theek hai."))
+    _ask(client, user, "total?")
     assert fake.calls[1]["messages"][-1]["role"] == "tool"
 
 

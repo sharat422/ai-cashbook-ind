@@ -56,7 +56,8 @@ def test_ten_plus_one_on_twenty_adds_two_free_as_a_separate_line(make_user, clie
     assert r.status_code == 200, r.text
     bill = r.json()
     assert bill["lines"] == [{"itemId": soap, "name": "Soap", "unit": "pcs", "quantity": "20.000",
-                              "rate": "25.00", "amount": "500.00"}]
+                              "rate": "25.00", "amount": "500.00", "returned": False,
+                              "rateChanged": False}]
     [line] = bill["schemes"]
     assert (line["schemeName"], line["status"], line["freeItemName"], line["freeQty"]) == (
         "Soap 10+1", "applied", "Soap", "2.000")

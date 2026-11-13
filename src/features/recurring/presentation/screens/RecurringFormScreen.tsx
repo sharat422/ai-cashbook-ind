@@ -17,6 +17,7 @@ import {
 } from '@features/recurring/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
+import {formatINR} from '@utils/currency';
 import {todayIST} from '@utils/date';
 
 const FREQUENCY_OPTIONS = RECURRING_FREQUENCIES.map(f => ({
@@ -74,13 +75,17 @@ export function RecurringFormScreen({
       setErrorField('name');
       return;
     }
-    const isDuplicate = (existing?.items ?? []).some(
+    const duplicate = (existing?.items ?? []).find(
       (r: RecurringExpense) =>
         r.id !== editing?.id &&
         r.name.trim().toLowerCase() === trimmedName.toLowerCase(),
     );
-    if (isDuplicate) {
-      setError(t('recurring.errDuplicateName'));
+    if (duplicate) {
+      setError(t('recurring.errDuplicateNameOf', {
+        name: duplicate.name,
+        amount: formatINR(duplicate.amount),
+        frequency: frequencyLabel(duplicate.frequency, duplicate.interval),
+      }));
       setErrorField('name');
       return;
     }

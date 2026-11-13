@@ -36,13 +36,15 @@ export interface GstSummary {
 }
 
 /** The four CA files. Working files for the CA — not a GST return filing. */
-export type GstReport = 'gstr1.xlsx' | 'gstr3b-summary.xlsx' | 'tally-export.xlsx' | 'tally-export.csv';
+export type GstReport =
+  | 'gstr1.xlsx' | 'gstr3b-summary.xlsx' | 'tally-export.xlsx' | 'tally-export.csv' | 'itc-review.xlsx';
 
 const MIME: Record<GstReport, string> = {
   'gstr1.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'gstr3b-summary.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'tally-export.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'tally-export.csv': 'text/csv',
+  'itc-review.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 };
 
 const FILE_STEM: Record<GstReport, string> = {
@@ -50,9 +52,30 @@ const FILE_STEM: Record<GstReport, string> = {
   'gstr3b-summary.xlsx': 'GSTR3B_summary',
   'tally-export.xlsx': 'Tally_sales',
   'tally-export.csv': 'Tally_sales',
+  'itc-review.xlsx': 'ITC_review',
 };
 
+/** A saved CA + Tally test result (a record; it changes no export). */
+export interface CaTestRecord {
+  id: string;
+  testedMonth: string;
+  caName: string;
+  tallyVersion: string | null;
+  offlineToolVersion: string | null;
+  recordsExported: number | null;
+  recordsImported: number | null;
+  fieldsRetyped: number;
+  offlineToolErrors: number;
+  discrepancyNote: string | null;
+  /** IST timestamp of when it was saved. */
+  testedAt: string;
+}
+
+export type CaTestInput = Omit<CaTestRecord, 'id' | 'testedAt'>;
+
 export const gstRemote = {
+  caTests: () => apiRequest<CaTestRecord[]>('/gst/ca-tests', {method: 'GET'}),
+  saveCaTest: (body: CaTestInput) => apiRequest<CaTestRecord>('/gst/ca-tests', {method: 'POST', body}),
   async preview(input: GstPreviewInput): Promise<GstPreview> {
     const r = await apiRequest<{
       place_of_supply: string;

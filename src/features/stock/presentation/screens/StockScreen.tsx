@@ -84,7 +84,7 @@ export function StockScreen({navigation}: AppScreenProps<'Stock'>): React.JSX.El
               ) : null}
             </View>
             <Text className="mt-1 text-sm font-semibold text-slate-900">
-              {t('stock.total', {qty: formatQty(item.total, item.unit)})}
+              {t('stock.total', {qty: item.units?.length && item.display ? item.display : formatQty(item.total, item.unit)})}
               {item.lowStockThreshold ? ` · ${t('stock.alertBelow', {qty: formatQty(item.lowStockThreshold)})}` : ''}
             </Text>
             <Text variant="caption" className="mt-1">

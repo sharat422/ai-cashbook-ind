@@ -2,6 +2,8 @@ import React from 'react';
 import {View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import type {CategoryTotal} from '@features/daily-summary/domain/entities';
 import {formatINR} from '@utils/currency';
 
@@ -11,8 +13,9 @@ export function TopCategoriesList({
 }: {
   categories: CategoryTotal[];
 }): React.JSX.Element {
+  const t = useT();
   if (categories.length === 0) {
-    return <Text variant="caption">No expenses recorded today.</Text>;
+    return <Text variant="caption">{t('daily.noExpenses')}</Text>;
   }
   return (
     <View style={{gap: 12}}>
@@ -22,7 +25,7 @@ export function TopCategoriesList({
           <View key={cat.category}>
             <View className="flex-row items-center justify-between">
               <Text className="text-sm font-medium text-slate-800">
-                {cat.category}
+                {categoryLabel(t, cat.category)}
               </Text>
               <Text className="text-sm font-semibold text-slate-900">
                 {formatINR(cat.amount)}

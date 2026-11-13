@@ -24,6 +24,7 @@ export function pendingToEntry(pending: PendingLedgerEntry): LedgerEntry {
     amount: invoiceTotal(draft),
     date: draft.date,
     invoiceNumber: draft.invoiceNumber,
+    gstStatus: draft.gst?.draft ? 'draft' : undefined,
     notes: draft.notes,
     paymentMethod: draft.paymentMethod,
     referenceNumber: draft.referenceNumber,
@@ -35,13 +36,14 @@ export function pendingToEntry(pending: PendingLedgerEntry): LedgerEntry {
 
 /** Local data source wrapping the persisted pending-ledger queue. */
 export const ledgerLocal = {
-  enqueue(customerId: string, localId: string, draft: LedgerEntryDraft): void {
+  enqueue(customerId: string, localId: string, draft: LedgerEntryDraft, weakSignal = false): void {
     usePendingLedgerStore.getState().enqueue({
       localId,
       customerId,
       draft,
       createdAt: new Date().toISOString(),
       retryCount: 0,
+      ...(weakSignal ? {weakSignal} : {}),
     });
   },
 

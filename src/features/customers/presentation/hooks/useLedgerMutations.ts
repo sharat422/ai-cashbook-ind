@@ -1,6 +1,7 @@
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {Alert} from 'react-native';
 
+import {ledgerRemote} from '@features/customers/data/ledger.remote';
 import {ledgerUseCases} from '@features/customers/di';
 import type {LedgerEntry} from '@features/customers/domain/ledger';
 import type {LedgerEntryInput} from '@features/customers/domain/usecases/ledger';
@@ -45,5 +46,15 @@ export function useLedgerMutations(customerId: string) {
     },
   });
 
-  return {addCredit, receivePayment};
+  const issueInvoice = useMutation<LedgerEntry, Error, string>({
+    mutationFn: entryId => ledgerRemote.issue(customerId, entryId), onSuccess: invalidate,
+  });
+  const cancelInvoice = useMutation<LedgerEntry, Error, string>({
+    mutationFn: entryId => ledgerRemote.cancel(customerId, entryId), onSuccess: invalidate,
+  });
+  const deleteDraft = useMutation<void, Error, string>({
+    mutationFn: entryId => ledgerRemote.deleteDraft(customerId, entryId), onSuccess: invalidate,
+  });
+
+  return {addCredit, receivePayment, issueInvoice, cancelInvoice, deleteDraft};
 }

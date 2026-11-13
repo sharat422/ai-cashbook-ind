@@ -38,7 +38,17 @@ export interface ImportLogEntry {
   rowsSkipped: number;
   newRetailers: number;
   importedBy: string;
+  /** IM7: when it was undone (it can't be undone twice). */
+  undoneAt?: string | null;
+  canUndo?: boolean;
+  /** Why it can't be undone: work done since rests on it. */
+  blockers?: UndoBlocker[];
 }
+
+export type UndoBlocker =
+  | {reason: 'later_import'; file: string}
+  | {reason: 'entry_used'; row: number | null; retailer: string; amount: number; date: string}
+  | {reason: 'retailer_edited' | 'retailer_used'; retailer: string};
 
 function form(file: PickedFile, mapping?: Mapping): FormData {
   const f = new FormData();
@@ -54,4 +64,6 @@ export const importRemote = {
   run: (file: PickedFile, mapping: Mapping) =>
     apiRequest<ImportLogEntry>('/imports', {method: 'POST', body: form(file, mapping), timeoutMs: 120_000}),
   history: () => apiRequest<ImportLogEntry[]>('/imports', {method: 'GET'}),
+  /** Owner only (IM7): removes exactly what that import added. */
+  undo: (id: string) => apiRequest<ImportLogEntry>(`/imports/${id}/undo`, {method: 'POST', timeoutMs: 60_000}),
 };

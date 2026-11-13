@@ -33,6 +33,7 @@ export const UQC_CODES = ['BAG', 'BAL', 'BDL', 'BKL', 'BOU', 'BOX', 'BTL', 'BUN'
   'THD', 'TON', 'TUB', 'UGS', 'UNT', 'YDS'] as const;
 
 /** Best guess of the UQC for an item's free-text unit ("box", "kg", "pcs"…). */
+/** Same table as uqc_for_unit in backend/app/gst.py; change both together. */
 export function uqcForUnit(unit?: string | null): string | null {
   const u = (unit ?? '').trim().toLowerCase().replace(/\.$/, '');
   const map: Record<string, string> = {

@@ -34,9 +34,11 @@ import {BeatDayListScreen} from '@features/beats/presentation/screens/BeatDayLis
 import {VisitHistoryScreen} from '@features/beats/presentation/screens/VisitHistoryScreen';
 import {BeatPlanScreen} from '@features/beats/presentation/screens/BeatPlanScreen';
 import {BillScreen} from '@features/schemes/presentation/screens/BillScreen';
+import {BillDetailScreen} from '@features/schemes/presentation/screens/BillDetailScreen';
 import {SchemeFormScreen} from '@features/schemes/presentation/screens/SchemeFormScreen';
 import {SchemeReportScreen} from '@features/schemes/presentation/screens/SchemeReportScreen';
 import {SchemesScreen} from '@features/schemes/presentation/screens/SchemesScreen';
+import {BulkStatementsScreen} from '@features/customers/presentation/screens/BulkStatementsScreen';
 import {StockCountScreen} from '@features/stock/presentation/screens/StockCountScreen';
 import {StockHistoryScreen} from '@features/stock/presentation/screens/StockHistoryScreen';
 import {StockScreen} from '@features/stock/presentation/screens/StockScreen';
@@ -59,6 +61,7 @@ import {DeleteAccountScreen} from '@features/account/presentation/screens/Delete
 import {YourDataScreen} from '@features/account/presentation/screens/YourDataScreen';
 import {KhataImportScreen} from '@features/import/presentation/KhataImportScreen';
 import {SyncConflictScreen} from '@features/sync/presentation/SyncConflictScreen';
+import {StockConflictScreen} from '@features/sync/presentation/StockConflictScreen';
 import {SyncStatusScreen} from '@features/sync/presentation/SyncStatusScreen';
 import {LegalDocScreen} from '@features/legal/presentation/screens/LegalDocScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
@@ -107,6 +110,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="YourData" component={YourDataScreen} />
       <Stack.Screen name="SyncStatus" component={SyncStatusScreen} />
       <Stack.Screen name="SyncConflict" component={SyncConflictScreen} />
+      <Stack.Screen name="StockConflict" component={StockConflictScreen} />
       <Stack.Screen name="KhataImport" component={Guarded.KhataImportScreen} />
       <Stack.Screen name="BankImport" component={Guarded.BankImportScreen} />
       <Stack.Screen name="VisitHistory" component={VisitHistoryScreen} />
@@ -146,7 +150,9 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="StockHistory" component={StockHistoryScreen} />
       <Stack.Screen name="VanStock" component={VanStockScreen} />
       <Stack.Screen name="Bill" component={Guarded.BillScreen} />
+      <Stack.Screen name="BillDetail" component={BillDetailScreen} />
       <Stack.Screen name="Schemes" component={SchemesScreen} />
+      <Stack.Screen name="BulkStatements" component={BulkStatementsScreen} />
       <Stack.Screen name="SchemeForm" component={Guarded.SchemeFormScreen} />
       <Stack.Screen name="SchemeReport" component={SchemeReportScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />

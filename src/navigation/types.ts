@@ -40,6 +40,7 @@ export type AppStackParamList = {
   YourData: undefined;
   SyncStatus: undefined;
   SyncConflict: {customerId: string};
+  StockConflict: {clientId: string};
   KhataImport: undefined;
   BankImport: undefined;
   VisitHistory: {customerId?: string; userId?: string; beatId?: string; title?: string} | undefined;
@@ -68,7 +69,9 @@ export type AppStackParamList = {
   StockHistory: {itemId?: string; name?: string};
   VanStock: undefined;
   Bill: {customer: {id: string; fullName: string}; beatId?: string};
+  BillDetail: {billId: string};
   Schemes: undefined;
+  BulkStatements: undefined;
   SchemeForm: {scheme?: Scheme};
   SchemeReport: {customerId?: string; customerName?: string};
   Diagnostics: undefined;

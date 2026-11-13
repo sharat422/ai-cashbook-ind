@@ -46,6 +46,8 @@ SELF_SERVICE_WRITES = {
     ("DELETE", "/api/v1/chatbot/history"),
     ("POST", "/api/v1/chatbot/ask"),
     ("POST", "/api/v1/chatbot/feedback"),
+    # Checks purchases against an uploaded GSTR-2B and returns a sheet; saves nothing.
+    ("POST", "/api/v1/reports/itc-review.xlsx"),
 }
 
 ROLE_PERMISSIONS: dict[str, set[str]] = {

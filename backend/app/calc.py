@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import Customer, LedgerEntry
+from .models import Customer, LedgerEntry, in_books
 
 OVERDUE_DAYS = 30
 
@@ -35,10 +35,23 @@ def days_since(value: str | None) -> int:
     return (datetime.now(IST).date() - d).days
 
 
+# Payment-type entries that lower what a customer owes without money changing
+# hands: a GST credit note, and an item bill returned or cancelled. Never a
+# collection (reconciliation, the daily close).
+NOT_MONEY = ("credit_note", "bill_return")
+
+
+def paid_at_sale(entries) -> set[str]:
+    """Ids of cash GST sales: each invoice and the payment that settled it at
+    once. One sale, never debt: left out of ageing and the daily close."""
+    pays = {e.id: e.paid_entry_id for e in entries if getattr(e, "paid_entry_id", None)}
+    return set(pays) | set(pays.values())
+
+
 def recompute_customer(db: Session, customer: Customer) -> None:
     """Recalculate outstanding / last-transaction / overdue from the ledger."""
     entries = db.scalars(
-        select(LedgerEntry).where(LedgerEntry.customer_id == customer.id)
+        select(LedgerEntry).where(LedgerEntry.customer_id == customer.id, in_books())
     ).all()
 
     credits = sum(e.amount for e in entries if e.type == "credit")

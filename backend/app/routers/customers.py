@@ -7,14 +7,16 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..discards import refuse_if_discarded
 from .. import gst
 from ..calc import recompute_customer
 from ..crypto import blind_index
 from ..database import get_db
+from ..errors import AppError
 from ..beats import assert_beat_access
 from ..deps import get_current_membership, require
 from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
-from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, Customer, GstInvoiceNumber, LedgerEntry, PaymentUtr, User, Visit, now_iso
+from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, CreditNote, Customer, GstInvoiceNumber, LedgerEntry, PaymentUtr, User, Visit, now_iso
 from ..security import get_current_user
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
@@ -64,9 +66,10 @@ def _refuse_duplicate_utr(db: Session, business: Business, utr_hash: str) -> Non
     if earlier is not None:
         entry, who = earlier
         d = entry.date
-        raise HTTPException(409, (
+        raise AppError(409, "duplicate_utr", (
             f"This UTR is already on a UPI payment of ₹{entry.amount:,.2f} from {who.full_name} "
-            f"on {d[8:10]}-{d[5:7]}-{d[:4]}. Each UPI payment has its own UTR — check for a typo."))
+            f"on {d[8:10]}-{d[5:7]}-{d[:4]}. Each UPI payment has its own UTR — check for a typo."),
+            amount=f"₹{entry.amount:,.2f}", customer=who.full_name, date=f"{d[8:10]}-{d[5:7]}-{d[:4]}")
 
 
 def _ref_key(method: str | None, reference: str | None, bank: str | None, account: str | None) -> str | None:
@@ -301,8 +304,9 @@ def set_credit_limit(
     current = customer.credit_limit_version or 0
     if body.expected_version is not None and body.expected_version != current:
         now = "no limit" if customer.credit_limit is None else f"₹{customer.credit_limit:,.0f}"
-        raise HTTPException(status.HTTP_409_CONFLICT,
-                            f"The credit limit was changed on another device to {now}. Yours wasn't saved.")
+        raise AppError(status.HTTP_409_CONFLICT, "credit_limit_changed",
+                       f"The credit limit was changed on another device to {now}. Yours wasn't saved.",
+                       limit="—" if customer.credit_limit is None else f"₹{customer.credit_limit:,.0f}")
     customer.credit_limit = (
         None if body.credit_limit is None else validate_amount(body.credit_limit)
     )
@@ -378,6 +382,11 @@ def add_ledger_entry(
     customer_gstin: str | None = Form(None),
     price_includes_gst: bool = Form(False),
     place_of_supply: str | None = Form(None),
+    # A cash GST sale: the invoice is paid in full at once, in cash.
+    paid_now: bool = Form(False),
+    # A GST invoice saved as a draft: no number, editable, not in the books
+    # until issued (POST .../ledger/{id}/issue).
+    draft: bool = Form(False),
     attachment: UploadFile | None = File(None),
     # Sent by app versions that enforce the UTR rule. Older apps don't send it;
     # their UTR-less UPI payments (queued offline before the update) are kept.
@@ -410,12 +419,17 @@ def add_ledger_entry(
                           place_of_supply=place_of_supply, day=date)
         tax["gst_quantity"], tax["gst_uqc"] = gst.clean_line(quantity, uqc)
         amount = float(tax["total"])
+    if paid_now and not tax:
+        raise HTTPException(422, "Only a GST invoice can be marked paid now (a cash GST sale).")
+    if draft and (not tax or paid_now):
+        raise HTTPException(422, "Only a GST invoice on credit can be saved as a draft.")
 
     find = select(LedgerEntry).where(
         LedgerEntry.customer_id == customer_id, LedgerEntry.client_id == client_id)
     existing = db.scalars(find).first()
     if existing is not None:
         return ledger_dto(existing)
+    refuse_if_discarded(db, business.id, client_id)  # IM5: discarded by the owner on the phone
 
     if beat_id:
         # Staff may only tag their own beat, and only a shop that is on it.
@@ -433,9 +447,11 @@ def add_ledger_entry(
                                    for v in (cheque_bank, cheque_account))
     ref_hash = _ref_key(payment_method, reference_number, cheque_bank, cheque_account) if type == "payment" else None
     repeat = _duplicate_ref(db, business, ref_hash) if ref_hash else None
-    issued = _issue_invoice_number(db, business, date) if tax else None
+    issued = _issue_invoice_number(db, business, date) if tax and not draft else None
     if issued is not None:
         invoice_number = issued.number  # never the app's own number for a GST invoice
+    elif tax:
+        invoice_number = None  # a draft gets its number when it's issued
     row = LedgerEntry(
         customer_id=customer_id,
         type=type,
@@ -455,6 +471,7 @@ def add_ledger_entry(
         beat_id=beat_id or None,
         attachment_url=save_upload(attachment),
         **{k: tax[k] for k in _GST_COLUMNS if tax},
+        gst_status="draft" if draft else None,
     )
     db.add(row)
     try:
@@ -467,6 +484,11 @@ def add_ledger_entry(
         return ledger_dto(existing)
     if issued is not None:
         issued.ledger_entry_id = row.id
+    if paid_now:  # the same sale, paid on the spot: one payment for the invoice total
+        db.add(LedgerEntry(customer_id=customer_id, type="payment", amount=row.amount, date=date,
+                           payment_method="cash", client_id=f"{client_id}:paid"[:80], salesman_id=user.id,
+                           beat_id=beat_id or None, paid_entry_id=row.id))
+        db.flush()
     if utr_hash:
         db.add(PaymentUtr(business_id=business.id, utr_hash=utr_hash, ledger_entry_id=row.id))
         try:
@@ -482,6 +504,134 @@ def add_ledger_entry(
         return ledger_dto(row)
     log.info("duplicate %s reference: entry %s repeats %s", payment_method, row.id, repeat[0].id)
     return {**ledger_dto(row), "warning": _ref_warning(payment_method, *repeat)}
+
+
+# --- GST invoice drafts: editable until issued; issued ones are locked ---------
+
+def _gst_entry(db: Session, business: Business, customer_id: str, entry_id: str) -> tuple[LedgerEntry, Customer]:
+    customer = _owned_customer(db, business, customer_id)
+    entry = db.get(LedgerEntry, entry_id)
+    if entry is None or entry.customer_id != customer.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Entry not found")
+    return entry, customer
+
+
+def _locked(entry: LedgerEntry) -> HTTPException:
+    if entry.gst_rate is None:
+        return HTTPException(422, "Entries can't be edited. Add a correcting entry instead.")
+    if entry.gst_status == "cancelled":
+        return HTTPException(422, "This invoice is cancelled.")
+    return AppError(422, "invoice_locked", f"Invoice {entry.invoice_number} is issued and locked. Correct it "
+                                           f"with a credit note, or cancel it and issue a new one.",
+                    number=entry.invoice_number)
+
+
+@router.put("/customers/{customer_id}/ledger/{entry_id}")
+def edit_draft(
+    customer_id: str,
+    entry_id: str,
+    amount: float = Form(...),
+    date: str = Form(...),
+    gst_rate: str = Form(...),
+    hsn_code: str = Form(""),
+    quantity: str | None = Form(None),
+    uqc: str | None = Form(None),
+    customer_gstin: str | None = Form(None),
+    price_includes_gst: bool = Form(False),
+    place_of_supply: str | None = Form(None),
+    notes: str | None = Form(None),
+    business: Business = Depends(require(ENTRY_CREATE)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Change a draft GST invoice freely. An issued one is locked (422)."""
+    entry, _customer = _gst_entry(db, business, customer_id, entry_id)
+    if entry.gst_status != "draft":
+        raise _locked(entry)
+    amount, date = validate_amount(amount), validate_date(date)
+    if notes is not None and len(notes) > 5000:
+        raise HTTPException(422, "Notes must not exceed 5000 characters.")
+    tax = gst.invoice(business, amount=amount, rate=gst_rate, inclusive=price_includes_gst, hsn=hsn_code,
+                      customer_gstin=customer_gstin, place_of_supply=place_of_supply, day=date)
+    tax["gst_quantity"], tax["gst_uqc"] = gst.clean_line(quantity, uqc)
+    for k in _GST_COLUMNS:
+        setattr(entry, k, tax[k])
+    entry.amount, entry.date, entry.notes = float(tax["total"]), date, notes
+    db.commit()
+    db.refresh(entry)
+    return ledger_dto(entry)
+
+
+@router.delete("/customers/{customer_id}/ledger/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_draft(
+    customer_id: str,
+    entry_id: str,
+    business: Business = Depends(require(ENTRY_CREATE)),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete a draft: it never had a number, so it leaves no trace in Table 13.
+    An issued invoice is never deleted (cancel it instead)."""
+    entry, _customer = _gst_entry(db, business, customer_id, entry_id)
+    if entry.gst_status != "draft":
+        raise _locked(entry)
+    db.delete(entry)
+    db.commit()
+
+
+@router.post("/customers/{customer_id}/ledger/{entry_id}/issue")
+def issue_draft(
+    customer_id: str,
+    entry_id: str,
+    business: Business = Depends(require(ENTRY_CREATE)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Give a draft the next consecutive invoice number (the same allocation as
+    a sale entered directly) and lock it. Issuing twice changes nothing."""
+    entry, customer = _gst_entry(db, business, customer_id, entry_id)
+    if entry.gst_status != "draft":
+        if entry.gst_status is None and entry.gst_rate is not None:
+            return ledger_dto(entry)  # already issued
+        raise _locked(entry)
+    issued = _issue_invoice_number(db, business, entry.date)  # locks the business row
+    db.refresh(entry)  # another request may have issued it while we waited
+    if entry.gst_status != "draft":
+        db.rollback()
+        return ledger_dto(db.get(LedgerEntry, entry_id))
+    issued.ledger_entry_id = entry.id
+    entry.invoice_number, entry.gst_status = issued.number, None
+    db.flush()  # the recompute below reads the new status
+    recompute_customer(db, customer)
+    db.commit()
+    db.refresh(entry)
+    return ledger_dto(entry)
+
+
+@router.post("/customers/{customer_id}/ledger/{entry_id}/cancel")
+def cancel_invoice(
+    customer_id: str,
+    entry_id: str,
+    business: Business = Depends(require(ENTRY_EDIT)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Cancel an issued GST invoice: it leaves the books and the exports, its
+    number stays in Table 13 as cancelled and is never reused. A cash sale's
+    payment goes with it. Refused once it has credit notes."""
+    entry, customer = _gst_entry(db, business, customer_id, entry_id)
+    if entry.gst_rate is None or entry.gst_status == "draft":
+        raise HTTPException(422, "Only an issued GST invoice can be cancelled; delete a draft instead.")
+    if entry.gst_status == "cancelled":
+        return ledger_dto(entry)
+    if db.scalars(select(CreditNote.id).where(CreditNote.invoice_entry_id == entry.id)).first():
+        raise HTTPException(422, "This invoice has credit notes, so it can't be cancelled.")
+    entry.gst_status = "cancelled"
+    for paid in db.scalars(select(LedgerEntry).where(LedgerEntry.paid_entry_id == entry.id)):
+        paid.gst_status = "cancelled"
+    db.query(GstInvoiceNumber).filter(GstInvoiceNumber.ledger_entry_id == entry.id).update(
+        {GstInvoiceNumber.ledger_entry_id: None}, synchronize_session=False)  # Table 13: cancelled
+    db.flush()  # the recompute below reads the new status
+    recompute_customer(db, customer)
+    db.commit()
+    db.refresh(entry)
+    return ledger_dto(entry)
 
 
 class UtrBody(BaseModel):

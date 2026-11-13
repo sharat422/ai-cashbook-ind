@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 
-import {ApiError, NetworkError} from '@api/client';
+import {ApiError, NetworkError, WeakSignalError} from '@api/client';
+import {connectivity} from '@/services/network/connectivity';
 import {customerUseCases} from '@features/customers/di';
 import type {Customer, CustomerDraft} from '@features/customers/domain/entities';
 import {singleFlight} from '@utils/singleFlight';
@@ -14,6 +15,8 @@ export interface PendingCustomerEdit {
   expectedVersion?: number;
   queuedAt: string;
   lastError?: string;
+  /** Queued because the server didn't answer a quick check (IM2). */
+  weakSignal?: boolean;
 }
 
 /** This phone's edit vs. what another device saved first. Waits for a person to choose. */
@@ -45,7 +48,7 @@ const same = (a: CustomerDraft, b: CustomerDraft | Customer) =>
 const set = useCustomerEdits.setState;
 const without = <T extends {customerId: string}>(list: T[], id: string) => list.filter(x => x.customerId !== id);
 
-function queue(customerId: string, draft: CustomerDraft, expectedVersion?: number) {
+function queue(customerId: string, draft: CustomerDraft, expectedVersion?: number, weakSignal = false) {
   set(s => {
     // A second offline edit replaces the first but keeps the version it started from.
     const earlier = s.pending.find(p => p.customerId === customerId);
@@ -53,7 +56,7 @@ function queue(customerId: string, draft: CustomerDraft, expectedVersion?: numbe
       pending: [
         ...without(s.pending, customerId),
         {customerId, draft, expectedVersion: earlier ? earlier.expectedVersion : expectedVersion,
-          queuedAt: new Date().toISOString()},
+          queuedAt: new Date().toISOString(), ...(weakSignal ? {weakSignal} : {})},
       ],
     };
   });
@@ -87,11 +90,12 @@ export async function saveCustomerEdit(
     return 'queued';
   }
   try {
+    await connectivity.beforeSave(); // offline or weak signal: queue now (IM2)
     await customerUseCases.update(customerId, draft, expectedVersion);
     return 'saved';
   } catch (err) {
     if (err instanceof NetworkError) {
-      queue(customerId, draft, expectedVersion);
+      queue(customerId, draft, expectedVersion, err instanceof WeakSignalError);
       return 'queued';
     }
     if (!isConflict(err)) throw err;

@@ -25,6 +25,7 @@ import {
   SUPPORTED_APP_LANGUAGES,
 } from '@features/auth/utils/languagePreference';
 import {BusinessSwitcher} from '@features/auth/components/BusinessSwitcher';
+import {JoinInviteCard} from '@features/team/presentation/JoinInviteCard';
 import {usePermissions} from '@features/auth/hooks';
 import {PERMISSIONS} from '@features/auth/rbac';
 import {
@@ -33,6 +34,8 @@ import {
   useAppLockStore,
 } from '@features/security/store/appLock.store';
 import {useRestoreStore} from '@features/restore/store/restore.store';
+import {BillPrefixCard} from '@features/schemes/presentation/BillPrefixCard';
+import {StatementLanguageSetting} from '@features/customers/presentation/components/StatementLanguageSetting';
 import {useT} from '@/i18n';
 import {confirmLogout} from '@features/sync/syncStatus';
 import type {AppScreenProps} from '@navigation/types';
@@ -184,6 +187,8 @@ export function SettingsScreen({
       <View className="py-8">
         <BusinessSwitcher />
         <Text variant="title">{t('settings.title')}</Text>
+        {/* AC2: join another business from an email invite (a CA serving several owners) */}
+        <JoinInviteCard />
 
         {/* Security */}
         <Text variant="label" className="mt-8 mb-3">
@@ -307,7 +312,7 @@ export function SettingsScreen({
             </Text>
             <Select
               value={voiceLanguageLabel(voiceLanguage)}
-              options={VOICE_LANGUAGES.map(l => l.label)}
+              options={VOICE_LANGUAGES.map(voiceLanguageLabel)}
               onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
             />
           </View>
@@ -343,6 +348,12 @@ export function SettingsScreen({
               </View>
               <Button title={t('settings.upiSave')} variant="secondary" onPress={onSaveUpi} />
             </View>
+
+            <Text variant="label" className="mt-8 mb-3">
+              {t('settings.billNumbers')}
+            </Text>
+            <BillPrefixCard />
+            <StatementLanguageSetting />
           </>
         ) : null}
 
@@ -404,6 +415,14 @@ export function SettingsScreen({
             variant="secondary"
             className="mb-3"
             onPress={() => navigation.navigate('GstReports')}
+          />
+        ) : null}
+        {canManageSettings ? (
+          <Button
+            title={t('bulk.settingsButton')}
+            variant="secondary"
+            className="mb-3"
+            onPress={() => navigation.navigate('BulkStatements')}
           />
         ) : null}
         {canManageSettings ? (

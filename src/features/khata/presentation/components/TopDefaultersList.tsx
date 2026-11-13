@@ -2,6 +2,7 @@ import React from 'react';
 import {View} from 'react-native';
 
 import {Avatar, Text} from '@components/ui';
+import {useT} from '@/i18n';
 import type {KhataDefaulter} from '@features/khata/domain/entities';
 import {formatINR} from '@utils/currency';
 
@@ -11,8 +12,9 @@ export function TopDefaultersList({
 }: {
   defaulters: KhataDefaulter[];
 }): React.JSX.Element {
+  const t = useT();
   if (defaulters.length === 0) {
-    return <Text variant="caption">No overdue customers 🎉</Text>;
+    return <Text variant="caption">{t('khata.noOverdue')}</Text>;
   }
   return (
     <View style={{gap: 8}}>
@@ -25,7 +27,7 @@ export function TopDefaultersList({
               {d.name}
             </Text>
             <Text className="text-[11px] text-danger">
-              {d.daysOverdue}d overdue
+              {t('khata.daysOverdue', {n: d.daysOverdue})}
             </Text>
           </View>
           <Text className="text-sm font-bold text-slate-900">

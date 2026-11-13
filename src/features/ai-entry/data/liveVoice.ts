@@ -1,6 +1,7 @@
 import {NativeEventEmitter, NativeModules} from 'react-native';
 import {API_ROOT} from '@config/env';
 import {ApiError} from '@api/client';
+import {tNow} from '@/i18n';
 import {useAuthStore} from '@store/auth.store';
 
 export type LiveVoiceState = 'idle' | 'connecting' | 'recording' | 'finishing';
@@ -67,7 +68,7 @@ export function createLiveVoice(callbacks: Callbacks) {
   const armTimeout = (ms: number) => {
     clearTimeout(watchdog);
     watchdog = setTimeout(() => {
-      finish(new Error('Live transcription timed out. Please try again.'));
+      finish(new Error(tNow('voice.timeout')));
     }, ms);
   };
   const stop = async () => {
@@ -129,7 +130,7 @@ export function createLiveVoice(callbacks: Callbacks) {
             (audio.length * 3) / 4 -
             (audio.endsWith('==') ? 2 : audio.endsWith('=') ? 1 : 0);
           if (sentBytes - acceptedBytes > 240_000) {
-            finish(new Error('Connection is too slow for live audio.'));
+            finish(new Error(tNow('voice.tooSlow')));
             return;
           }
           try {
@@ -180,7 +181,7 @@ export function createLiveVoice(callbacks: Callbacks) {
     }
   };
   socket.onerror = () => {
-    finish(new Error('Could not connect to live transcription.'));
+    finish(new Error(tNow('voice.connectFailed')));
   };
   socket.onclose = () => {
     // Once the final transcript has arrived the session is complete, however
@@ -188,7 +189,7 @@ export function createLiveVoice(callbacks: Callbacks) {
     finish(
       finalText !== undefined
         ? undefined
-        : new Error('Live transcription disconnected before completion.'),
+        : new Error(tNow('voice.disconnected')),
     );
   };
   return {stop, cancel: () => finish(undefined, true)};

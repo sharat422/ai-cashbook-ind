@@ -16,10 +16,13 @@ API = "/api/v1"
 SELF_SERVICE = {
     ("POST", "/api/v1/auth/otp/request"), ("POST", "/api/v1/auth/otp/verify"),
     ("POST", "/api/v1/businesses"),  # starting their OWN business
+    ("POST", "/api/v1/team/invites/accept"),  # joining ANOTHER business from an email invite (AC2)
     ("POST", "/api/v1/feedback"), ("PUT", "/api/v1/consents"),
     ("DELETE", "/api/v1/account"), ("DELETE", "/api/v1/chatbot/history"),
     # Ask AI only reads (all its tools are get_/search_); it logs the user's own question.
     ("POST", "/api/v1/chatbot/ask"), ("POST", "/api/v1/chatbot/feedback"),
+    # Checking purchases against an uploaded GSTR-2B returns a sheet and saves nothing.
+    ("POST", "/api/v1/reports/itc-review.xlsx"),
 }
 
 
@@ -64,6 +67,21 @@ def test_accountant_cannot_write_anything_via_the_api(make_user, client):
     # The books are exactly as the owner left them.
     ledger = client.get(f"{API}/customers/{cid}/ledger", headers=owner.headers).json()
     assert [(e["id"], e["amount"]) for e in ledger] == [(entry_id, 1500)]
+
+
+def test_a_refused_accountant_write_names_the_change_not_a_bare_403(make_user, client):
+    """AC1: accountants could add entries before this release. The refusal says
+    what changed and what to do, with a code the app shows in the user's language."""
+    owner = make_user()
+    cid, _ = _books(client, owner)
+    _invite(client, owner, "7311000009")
+    acc = _login(client, "7311000009")
+    r = client.post(f"{API}/customers/{cid}/ledger", headers=acc, data={
+        "type": "payment", "amount": "100", "date": today_iso(), "client_id": "from-before-the-update",
+        "payment_method": "cash"})
+    body = r.json()
+    assert r.status_code == 403 and body["code"] == "accountant_read_only"
+    assert body["detail"] == "Accountants are read-only now — ask the owner to change your role."
 
 
 def test_accountant_reads_ledgers_ageing_daily_close_gst_and_tally(make_user, client):

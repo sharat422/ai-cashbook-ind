@@ -105,6 +105,7 @@ export function SchemeReportScreen({route}: AppScreenProps<'SchemeReport'>): Rea
                 <Text variant="caption">
                   {a.billNumber} · {formatDisplayDate(a.date)} · {t('schemes.qty', {qty: formatQty(a.quantity)})}
                   {Number(a.freeQty) > 0 ? ` · ${t('bill.freeGoods', {qty: formatQty(a.freeQty), item: a.freeItemName ?? ''})}` : ''}
+                  {a.groupNote ? ` · ${a.groupNote}` : ''}
                   {Number(a.discount) > 0 ? ` · ${t('bill.discount', {amount: formatMoney(a.discount)})}` : ''}
                 </Text>
                 {a.reason ? <Text variant="caption">{a.reason}</Text> : null}

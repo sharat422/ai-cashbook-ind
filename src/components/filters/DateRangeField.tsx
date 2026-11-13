@@ -3,6 +3,7 @@ import {Pressable, View} from 'react-native';
 
 import {DateField} from '@components/form';
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 
 export interface DateRangeFieldProps {
   from: string | null;
@@ -16,13 +17,14 @@ export function DateRangeField({
   to,
   onChange,
 }: DateRangeFieldProps): React.JSX.Element {
+  const t = useT();
   const hasValue = !!from || !!to;
   return (
     <View>
       <View className="flex-row" style={{gap: 12}}>
         <View className="flex-1">
           <Text variant="caption" className="mb-1">
-            From
+            {t('common.from')}
           </Text>
           <DateField
             value={from ?? ''}
@@ -31,7 +33,7 @@ export function DateRangeField({
         </View>
         <View className="flex-1">
           <Text variant="caption" className="mb-1">
-            To
+            {t('common.to')}
           </Text>
           <DateField
             value={to ?? ''}
@@ -44,7 +46,7 @@ export function DateRangeField({
           className="mt-2 self-start"
           onPress={() => onChange({from: null, to: null})}>
           <Text className="text-sm font-semibold text-primary">
-            Clear dates
+            {t('common.clearDates')}
           </Text>
         </Pressable>
       ) : null}

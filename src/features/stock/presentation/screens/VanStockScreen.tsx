@@ -6,16 +6,16 @@ import {FilterChip} from '@components/filters';
 import type {VanItem} from '@features/stock/data/stock.remote';
 import {formatQty} from '@features/stock/domain/qty';
 import {useVanStock} from '@features/stock/presentation/hooks';
-import {StockMoveSheet} from '@features/stock/presentation/StockMoveSheet';
+import {StockMoveSheet, type StockAction} from '@features/stock/presentation/StockMoveSheet';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
-/** Staff: what's in my van, and record a sale from it. The server only ever
- *  returns the caller's own van. */
+/** Staff: what's in my van; record a sale from it, or move it back to the
+ *  godown. The server only ever returns the caller's own van. */
 export function VanStockScreen(_: AppScreenProps<'VanStock'>): React.JSX.Element {
   const t = useT();
   const van = useVanStock();
-  const [selling, setSelling] = useState<VanItem | null>(null);
+  const [sheet, setSheet] = useState<{action: StockAction; item: VanItem} | null>(null);
 
   if (van.isLoading) {
     return (
@@ -46,12 +46,16 @@ export function VanStockScreen(_: AppScreenProps<'VanStock'>): React.JSX.Element
               <Text className="text-base font-bold text-slate-900">{item.name}</Text>
               <Text variant="caption">{formatQty(item.quantity, item.unit)}</Text>
             </View>
-            <FilterChip label={t('stock.action.sale')} selected={false} onPress={() => setSelling(item)} />
+            <View className="flex-row" style={{gap: 8}}>
+              <FilterChip label={t('stock.action.sale')} selected={false} onPress={() => setSheet({action: 'sale', item})} />
+              <FilterChip label={t('stock.action.move')} selected={false}
+                onPress={() => setSheet({action: 'transfer', item})} />
+            </View>
           </View>
         )}
       />
-      <StockMoveSheet action={selling ? 'sale' : null} item={selling} vans={[]} ownVanOnly
-        onClose={() => setSelling(null)} />
+      <StockMoveSheet action={sheet?.action ?? null} item={sheet?.item ?? null} vans={[]} ownVanOnly
+        onClose={() => setSheet(null)} />
     </Screen>
   );
 }

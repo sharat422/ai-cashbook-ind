@@ -1,4 +1,4 @@
-import {NetworkError} from '@api/client';
+import {NetworkError, WeakSignalError} from '@api/client';
 import {singleFlight} from '@utils/singleFlight';
 import {connectivity} from '@/services/network/connectivity';
 import type {Income, IncomeDraft} from '@features/income/domain/entities';
@@ -34,20 +34,19 @@ export const incomeRepository: IncomeRepository = {
   async create(draft: IncomeDraft): Promise<Income> {
     const localId = makeLocalId();
     const createdAt = new Date().toISOString();
-    const online = await connectivity.isOnline();
-
-    if (online) {
-      try {
-        const income = await incomeRemote.create(draft, localId);
-        incomeLocal.addEntry(income);
-        return income;
-      } catch {
-        // Network blipped mid-request — fall through to the offline path so the
-        // entry is never lost.
-      }
+    let weakSignal = false;
+    try {
+      await connectivity.beforeSave();
+      const income = await incomeRemote.create(draft, localId);
+      incomeLocal.addEntry(income);
+      return income;
+    } catch (err) {
+      // Offline, weak signal, or the network blipped mid-request: fall through
+      // to the offline path so the entry is never lost.
+      weakSignal = err instanceof WeakSignalError;
     }
 
-    const pending: PendingIncome = {localId, draft, createdAt, retryCount: 0};
+    const pending: PendingIncome = {localId, draft, createdAt, retryCount: 0, ...(weakSignal ? {weakSignal} : {})};
     incomeLocal.enqueue(pending);
     const optimistic = pendingToEntry(pending);
     incomeLocal.addEntry(optimistic);

@@ -5,7 +5,7 @@ import {Alert, Pressable, View} from 'react-native';
 import {FilterChip} from '@components/filters';
 import {DateField, FormField, TextField} from '@components/form';
 import {Button, EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
-import type {Beat, BeatAssignment} from '@features/beats/data/beats.remote';
+import {isBeatChanged, type Beat, type BeatAssignment} from '@features/beats/data/beats.remote';
 import {useBeatMutations, useBeats, useDeletedBeats} from '@features/beats/presentation/hooks';
 import {useCustomers} from '@features/customers/presentation/hooks/useCustomers';
 import type {TeamMember} from '@features/team/data/team.remote';
@@ -40,6 +40,8 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
   const [assignee, setAssignee] = useState<string | null>(null);
   const [picked, setPicked] = useState<Picked>([]);
   const [helperFrom, setHelperFrom] = useState(todayIST());
+  /** The version of the beat when its edit was opened: sent with the save (IM3). */
+  const [baseVersion, setBaseVersion] = useState<number | undefined>();
   const [helperTo, setHelperTo] = useState('');
 
   /** Helpers still on the beat after today, or starting later (one removed today is off). */
@@ -74,6 +76,7 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
     setHelperFrom(todayIST());
     setHelperTo('');
     setEditing(null);
+    setBaseVersion(beat.version);
     setForm(beat.id);
   };
   const confirmDelete = (beat: Beat) =>
@@ -89,9 +92,18 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
   const startEdit = (beat: Beat) => {
     setPicked(beat.retailers.map(r => ({id: r.customerId, name: r.fullName})));
     setForm(null);
+    setBaseVersion(beat.version);
     setEditing(beat.id);
   };
   const onError = (err: Error) => Alert.alert(t('form.couldNotSave'), err.message);
+  /** Changed on another phone first (IM3): nothing was saved. Close the editor so the
+   *  list shows the current beat (refetched), with the notice; open it again to redo the edit. */
+  const onEditError = (err: Error) => {
+    if (!isBeatChanged(err)) return onError(err);
+    setForm(null);
+    setEditing(null);
+    Alert.alert(err.message);
+  };
 
   const saveNew = () => {
     if (!name.trim() || days.length === 0) {
@@ -100,8 +112,8 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
     }
     if (form !== 'new' && form !== null) {
       edit.mutate(
-        {beatId: form, draft: {name: name.trim(), weekdays: days, assignedUserId: assignee}},
-        {onSuccess: () => setForm(null), onError},
+        {beatId: form, draft: {name: name.trim(), weekdays: days, assignedUserId: assignee}, baseVersion},
+        {onSuccess: () => setForm(null), onError: onEditError},
       );
       return;
     }
@@ -112,8 +124,8 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
   };
   const saveOrder = (beatId: string) =>
     setRetailers.mutate(
-      {beatId, customerIds: picked.map(p => p.id)},
-      {onSuccess: () => setEditing(null), onError},
+      {beatId, customerIds: picked.map(p => p.id), baseVersion},
+      {onSuccess: () => setEditing(null), onError: onEditError},
     );
 
   if (beats.isLoading) {

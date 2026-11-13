@@ -18,16 +18,6 @@ export type PaymentMethod =
   | 'credit'
   | 'other';
 
-export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: 'Cash',
-  upi: 'UPI',
-  bank: 'Bank Transfer',
-  card: 'Card',
-  cheque: 'Cheque',
-  credit: 'Credit',
-  other: 'Other',
-};
-
 /** Display order for method selectors. */
 export const PAYMENT_METHODS: PaymentMethod[] = [
   'cash',
@@ -60,6 +50,9 @@ export interface LedgerEntry {
   /** ISO date (YYYY-MM-DD). */
   date: string;
   invoiceNumber?: string;
+  /** GST invoices only: a draft has no number and doesn't count yet; a
+   *  cancelled one no longer counts; an issued one is locked. */
+  gstStatus?: GstStatus;
   notes?: string;
   /** Payment-only: how it was received and any reference (UPI ref / cheque no). */
   paymentMethod?: PaymentMethod;
@@ -76,6 +69,8 @@ export interface LedgerEntry {
   createdAt: string;
   /** Defaults to 'synced'; 'pending' for entries queued offline. */
   syncStatus?: LedgerSyncStatus;
+  /** An item bill waiting in the offline queue (its line count): no amount yet. */
+  queuedBillLines?: number;
 }
 
 export interface DuplicateReference {
@@ -129,10 +124,21 @@ export interface GstInvoiceInput {
   customerGstin?: string;
   /** Customer's state when they have no GSTIN; defaults to the seller's. */
   placeOfSupply?: string;
+  /** A cash GST sale: the invoice is paid in full at once, in cash. */
+  paidNow?: boolean;
+  /** Save as a draft: no number yet, not in the books until issued. */
+  draft?: boolean;
 }
+
+export type GstStatus = 'draft' | 'issued' | 'cancelled';
+
+/** Whether an entry counts in the balance (drafts and cancelled invoices don't). */
+export const countsInBooks = (e: Pick<LedgerEntry, 'gstStatus'>): boolean =>
+  e.gstStatus !== 'draft' && e.gstStatus !== 'cancelled';
 
 /** Chronological signed delta of an entry on the outstanding balance. */
 function signedAmount(entry: LedgerEntry): number {
+  if (!countsInBooks(entry)) return 0;
   return entry.type === 'credit' ? entry.amount : -entry.amount;
 }
 

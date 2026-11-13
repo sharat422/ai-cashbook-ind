@@ -18,6 +18,8 @@ import {tNow, useT} from '@/i18n';
 import {PERMISSIONS} from '@features/auth/rbac';
 import {confirmLogout} from '@features/sync/syncStatus';
 import {SyncStatusBar} from '@features/sync/presentation/SyncStatusBar';
+import {MonthEndCard} from '@features/stock/presentation/MonthEndCard';
+import {ExportAlertBanner} from '@features/team/presentation/ExportAlertBanner';
 import {categoryLabel} from '@/i18n/labels';
 import type {SyncStatus} from '@/shared/types/attachment';
 import type {AppScreenProps} from '@navigation/types';
@@ -151,6 +153,9 @@ export function DashboardScreen({
           </View>
         </View>
         <SyncStatusBar />
+        {/* AC4: an accountant exported something: the owner is told (the export already happened). */}
+        <ExportAlertBanner onOpen={() => navigation.navigate('AccountantActivity', {})} />
+        {can(PERMISSIONS.ENTRY_EDIT) ? <MonthEndCard onPress={() => navigation.navigate('StockCount')} /> : null}
 
         {/* Non-blocking warning if the device looks rooted/jailbroken */}
         <DeviceIntegrityBanner />

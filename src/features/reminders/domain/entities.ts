@@ -5,12 +5,6 @@
 
 export type ReminderChannel = 'whatsapp' | 'sms' | 'push';
 
-export const CHANNEL_LABEL: Record<ReminderChannel, string> = {
-  whatsapp: 'WhatsApp',
-  sms: 'SMS',
-  push: 'Push',
-};
-
 export const CHANNEL_ICON: Record<ReminderChannel, string> = {
   whatsapp: '🟢',
   sms: '💬',

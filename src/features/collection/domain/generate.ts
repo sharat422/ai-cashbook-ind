@@ -6,7 +6,7 @@ import {
   type CollectionMessage,
   type Language,
 } from './entities';
-import {TEMPLATES} from './templates';
+import {templateFor} from './templates';
 
 function render(template: string, input: CollectionInput): string {
   return template
@@ -26,7 +26,7 @@ export function generateMessages(
   const recommended = recommendTone(input);
   return TONE_ORDER.map(tone => ({
     tone,
-    text: render(TEMPLATES[language][tone], input),
+    text: render(templateFor(language, tone), input),
     recommended: tone === recommended,
   }));
 }

@@ -13,6 +13,8 @@ export interface PendingLedgerEntry {
   createdAt: string;
   retryCount: number;
   lastError?: string;
+  /** Queued because the server didn't answer a quick check (IM2). */
+  weakSignal?: boolean;
 }
 
 interface PendingLedgerState {

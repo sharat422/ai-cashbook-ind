@@ -194,7 +194,8 @@ def test_exports_hold_the_saved_figures(make_user, client):
     assert [c.value for c in tally[2]][4:8] == [1000, 0, 0, 180]
 
     book = load_workbook(io.BytesIO(_book(client, owner.headers, "gstr1.xlsx").content))
-    assert book.sheetnames == ["b2b", "b2cl", "b2cs", "hsn(b2b)", "hsn(b2c)", "rate changes"]
+    assert book.sheetnames == ["b2b", "b2cl", "b2cs", "cdnr", "cdnur", "hsn(b2b)", "hsn(b2c)", "docs",
+                               "docs (cancelled)", "rate changes"]
     b2b = [c.value for c in book["b2b"][2]]
     assert b2b[:3] == [MH, "Ravi Stores", A1] and b2b[4] == 1180 and b2b[5] == "27-Maharashtra"
     assert [c.value for c in book["b2cs"][2]][:5] == ["OE", "29-Karnataka", None, 5, 500.48]

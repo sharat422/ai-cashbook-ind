@@ -40,7 +40,7 @@ export function highlightKeyFacts(answer: string): AnswerSegment[] {
   return segments;
 }
 
-const CHAT_LANGUAGES = ['en', 'hi', 'te', 'ta', 'ml'] as const;
+const CHAT_LANGUAGES = ['en', 'hinglish', 'hi', 'te', 'ta', 'ml'] as const;
 
 /**
  * Ask AI language hint from the app's language setting. Languages Ask AI has

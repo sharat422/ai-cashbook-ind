@@ -13,7 +13,7 @@ from .. import reconciliation as svc
 from ..bank_statement import StatementError
 from ..calc import today_iso
 from ..database import get_db
-from ..deps import get_current_membership, require
+from ..deps import accountant_read_only, get_current_membership, require
 from ..models import AccessLog, Business, User
 from ..rbac import DATA_VIEW, ENTRY_EDIT
 from ..security import get_current_user
@@ -319,7 +319,7 @@ def cash_count(
     """Record the cash physically counted; returns the daily close with over/short."""
     business, role = membership
     if role == "accountant":
-        raise HTTPException(403, "Your role is read-only.")
+        raise accountant_read_only()
     return svc.record_count(db, business, user, role, day=validate_date(body.date),
                             beat_id=body.beat_id or None, counted=body.counted, note=body.note,
                             user_id=body.user_id or None)

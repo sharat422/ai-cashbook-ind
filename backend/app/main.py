@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .errors import install_error_handlers
+from .errors import error_body, install_error_handlers
 from .migrations import run_startup_migrations
 from .monitoring import (
     check_rate_limit,
@@ -20,6 +20,7 @@ from .monitoring import (
 )
 from .routers import (
     account,
+    sync_queue,
     ai_routes,
     voice_live,
     auth,
@@ -27,6 +28,8 @@ from .routers import (
     business,
     chatbot,
     consent,
+    ca_tests,
+    credit_notes,
     customers,
     daily_summary,
     summary_insights,
@@ -92,7 +95,7 @@ async def _rate_limit(request, call_next):
     if reason:
         return JSONResponse(
             status_code=429,
-            content={"detail": "Too many requests. Please slow down and retry."},
+            content=error_body(429, "Too many requests. Please slow down and retry."),
             headers={"Retry-After": str(settings.rate_limit_window_s)},
         )
     return await call_next(request)
@@ -138,6 +141,8 @@ API_PREFIX = "/api/v1"
 for module in (
     auth,
     incomes,
+    credit_notes,
+    ca_tests,
     expenses,
     customers,
     transactions,
@@ -165,10 +170,13 @@ for module in (
     statements,
     stock,
     imports,
+    sync_queue,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 # Retailer statement links (/s/<token>): opened in a browser without the app.
 app.include_router(statements.public_router)
+# The page an email invite's link opens (AC2).
+app.include_router(team.public_router)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

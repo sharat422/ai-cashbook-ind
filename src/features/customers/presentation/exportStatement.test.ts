@@ -28,7 +28,7 @@ test('with opt-in, WhatsApp opens with the server’s message and link', async (
     status: 'ready', url: 'https://x/s/tok', message: 'Statement: https://x/s/tok', mobile: '9876543210',
   });
   await expect(shareStatementOnWhatsApp(customer, '2026-11-01')).resolves.toBe(true);
-  expect(statementsRemote.whatsapp).toHaveBeenCalledWith('c1', '2026-11-01', 'phone');
+  expect(statementsRemote.whatsapp).toHaveBeenCalledWith('c1', '2026-11-01', 'phone', false);
   expect(open).toHaveBeenCalledWith(
     `whatsapp://send?phone=919876543210&text=${encodeURIComponent('Statement: https://x/s/tok')}`,
   );

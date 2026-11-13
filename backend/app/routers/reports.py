@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -108,7 +108,9 @@ def gstr1(
 ) -> StreamingResponse:
     start, end = _period(from_, to)
     data = gr.gstr1_xlsx(gr.invoices(db, business, start, end),
-                         gr.rate_changes(db, business, start, end))
+                         gr.rate_changes(db, business, start, end),
+                         gr.credit_notes(db, business, start, end),
+                         gr.documents(db, business, start, end))
     return _file(data, gr.XLSX, f"GSTR1_ready_{start}_{end}.xlsx")
 
 
@@ -120,8 +122,46 @@ def gstr3b(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     start, end = _period(from_, to)
-    data = gr.gstr3b_xlsx(gr.invoices(db, business, start, end), start, end)
+    data = gr.gstr3b_xlsx(gr.invoices(db, business, start, end), start, end,
+                          gr.credit_notes(db, business, start, end),
+                          gr.itc_rows(gr.purchases_with_gst(db, business, start, end), business, None))
     return _file(data, gr.XLSX, f"GSTR3B_summary_{start}_{end}.xlsx")
+
+
+@router.get("/reports/itc-review.xlsx")
+def itc_review(
+    from_: str = Query(..., alias="from"),
+    to: str = Query(...),
+    business: Business = Depends(require(REPORTS_VIEW)),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Purchases with GST in the period, for the CA (review only, never a claim)."""
+    start, end = _period(from_, to)
+    rows = gr.itc_rows(gr.purchases_with_gst(db, business, start, end), business, None)
+    return _file(gr.itc_review_xlsx(rows, start, end, False), gr.XLSX, f"ITC_review_{start}_{end}.xlsx")
+
+
+@router.post("/reports/itc-review.xlsx")
+async def itc_review_against_2b(
+    from_: str = Query(..., alias="from"),
+    to: str = Query(...),
+    gstr2b: UploadFile = File(...),
+    business: Business = Depends(require(REPORTS_VIEW)),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """The same sheet, each purchase marked matched / not in 2B against the
+    GSTR-2B file uploaded (supplier GSTIN + bill number). A report only:
+    nothing is claimed or saved."""
+    start, end = _period(from_, to)
+    data = await gstr2b.read(5 * 1024 * 1024 + 1)
+    if len(data) > 5 * 1024 * 1024:
+        raise HTTPException(413, "The file is larger than 5 MB.")
+    try:
+        in_2b = gr.gstr2b_bills(data, gstr2b.filename or "")
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from None
+    rows = gr.itc_rows(gr.purchases_with_gst(db, business, start, end), business, in_2b)
+    return _file(gr.itc_review_xlsx(rows, start, end, True), gr.XLSX, f"ITC_review_{start}_{end}.xlsx")
 
 
 @router.get("/reports/tally-export.xlsx")

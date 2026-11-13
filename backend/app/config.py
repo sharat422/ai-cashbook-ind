@@ -64,6 +64,26 @@ class Settings(BaseSettings):
     whatsapp_api_version: str = "v21.0"
     # Country code prepended to bare 10-digit recipients (India by default).
     whatsapp_default_country_code: str = "91"
+    # Server-sent statements (ST1): only Meta's approved UTILITY template, by
+    # name. Blank, or not APPROVED in the WhatsApp Business account = server
+    # sends stay off and the app opens WhatsApp on the owner's phone instead.
+    whatsapp_business_account_id: str = ""
+    whatsapp_statement_template: str = ""
+    whatsapp_template_language: str = "en"
+    # Delivery statuses come back on the webhook: Meta signs them with the
+    # app secret; the verify token answers Meta's subscribe check.
+    whatsapp_app_secret: str = ""
+    whatsapp_verify_token: str = ""
+    # The hourly job that runs monthly statement schedules (ST7) sends this.
+    cron_secret: str = ""
+
+    # Email (AC2: accountant invites by email). Without a host and a From
+    # address, email invites are refused (503) instead of half-made.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    mail_from: str = ""
 
     cors_origins: str = "*"
 

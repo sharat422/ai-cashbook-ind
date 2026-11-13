@@ -14,7 +14,7 @@ from ..config import settings
 from ..database import get_db
 from ..monitoring import record_failed_login
 from ..deps import get_current_membership, require
-from ..models import Business, BusinessMember, User
+from ..models import Business, BusinessMember, User, now_iso
 from ..rbac import SETTINGS_MANAGE
 from ..security import create_access_token, get_current_user
 from ..serializers import business_dto
@@ -145,8 +145,16 @@ def create_business(
 @router.get("/businesses/me")
 def my_business(
     membership: tuple[Business, str] = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
     business, role = membership
+    # Opening a business: remember when, for the CA's business picker (AC3).
+    member = db.scalars(select(BusinessMember).where(
+        BusinessMember.business_id == business.id, BusinessMember.user_id == user.id)).first()
+    if member is not None:
+        member.last_opened_at = now_iso()
+        db.commit()
     # The caller's role drives client-side UI gating (server still enforces).
     return {**business_dto(business), "role": role}
 
@@ -156,15 +164,18 @@ def my_businesses(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    """Every business this user may open (a CA can be assigned to several by
-    their owners). The app sends the chosen one as X-Business-Id."""
+    """Every business this user may open: only active memberships, so a revoked
+    one is gone at once and a business that never assigned them never shows.
+    The app sends the chosen one as X-Business-Id. With more than one, the app
+    shows a picker after login (AC3): business, owner, when they last opened it."""
     rows = db.execute(
-        select(Business, BusinessMember.role)
+        select(Business, BusinessMember.role, BusinessMember.last_opened_at)
         .join(BusinessMember, BusinessMember.business_id == Business.id)
         .where(BusinessMember.user_id == user.id, BusinessMember.status == "active")
         .order_by(BusinessMember.created_at.asc())
     ).all()
-    return [{"id": b.id, "businessName": b.business_name, "role": role} for b, role in rows]
+    return [{"id": b.id, "businessName": b.business_name, "ownerName": b.owner_name, "role": role,
+             "lastOpenedAt": opened} for b, role, opened in rows]
 
 
 class UpdateBusinessInput(BaseModel):

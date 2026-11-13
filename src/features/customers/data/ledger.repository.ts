@@ -1,4 +1,4 @@
-import {NetworkError} from '@api/client';
+import {NetworkError, WeakSignalError} from '@api/client';
 import {
   buildLedger,
   type CustomerLedger,
@@ -6,6 +6,7 @@ import {
   type LedgerEntryDraft,
 } from '@features/customers/domain/ledger';
 import type {LedgerRepository} from '@features/customers/domain/ledgerRepository';
+import {queuedBillsFor, useStockQueue} from '@features/stock/data/stockQueue';
 import {connectivity} from '@/services/network/connectivity';
 import {ledgerLocal, pendingToEntry} from './ledger.local';
 import {ledgerRemote} from './ledger.remote';
@@ -38,7 +39,13 @@ export const ledgerRepository: LedgerRepository = {
     }
     const acknowledged = new Set(server.map(e => e.clientId).filter(Boolean));
     const pending = ledgerLocal.entriesForCustomer(customerId).filter(e => !acknowledged.has(e.id));
-    return buildLedger([...server, ...pending]);
+    // An item bill made offline: shown as waiting, with no amount — its total
+    // (schemes, number) only exists once the server accepts it.
+    const bills: LedgerEntry[] = queuedBillsFor(useStockQueue.getState().pending, customerId).map(b => ({
+      id: b.input.clientId, type: 'credit', amount: 0, date: b.input.date, createdAt: b.input.date,
+      syncStatus: 'pending', queuedBillLines: b.input.lines.length,
+    }));
+    return buildLedger([...server, ...pending, ...bills]);
   },
 
   async addEntry(
@@ -47,16 +54,16 @@ export const ledgerRepository: LedgerRepository = {
   ): Promise<LedgerEntry> {
     const localId = makeLocalId();
     try {
-      // Known offline (e.g. Wi-Fi with no internet): queue now instead of
-      // waiting out the request timeout — the entry must save in ~instantly.
-      if (!(await connectivity.isOnline())) throw new NetworkError();
+      // Offline or weak signal: queue now instead of waiting out the request
+      // timeout — the entry must save in ~instantly (IM2).
+      await connectivity.beforeSave();
       const entry = await ledgerRemote.add(customerId, draft, localId);
       const store = usePendingLedgerStore.getState();
       store.cache(customerId, [...(store.cached[customerId] ?? []).filter(e => e.id !== entry.id), entry]);
       return entry;
     } catch (err) {
       if (!(err instanceof NetworkError)) throw err; // surface real errors
-      ledgerLocal.enqueue(customerId, localId, draft);
+      ledgerLocal.enqueue(customerId, localId, draft, err instanceof WeakSignalError);
       return pendingToEntry({
         localId,
         customerId,

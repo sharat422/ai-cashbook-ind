@@ -1,16 +1,18 @@
 import {personLabel} from '@utils/personLabel';
+import {useQuery, useQueryClient} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
 import {Alert, ScrollView, View} from 'react-native';
 
 import {FilterChip} from '@components/filters';
 import {DateField, TextField} from '@components/form';
 import {Button, ErrorState, Screen, Skeleton, Text} from '@components/ui';
-import type {CountResult, StockItem, Van} from '@features/stock/data/stock.remote';
+import {stockRemote, type CountResult, type StockItem, type Van} from '@features/stock/data/stock.remote';
 import {difference, formatQty, isQty, toMilli} from '@features/stock/domain/qty';
+import {useConnectivity} from '@features/income/presentation/hooks/useConnectivity';
 import {makeStockClientId, useStockLevels, useStockMutations} from '@features/stock/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
-import {todayIST} from '@utils/date';
+import {formatTimestamp, todayIST} from '@utils/date';
 
 /**
  * Monthly stock count for one place (godown or a van): system stock next to
@@ -21,8 +23,29 @@ export function StockCountScreen(_: AppScreenProps<'StockCount'>): React.JSX.Ele
   const t = useT();
   const levels = useStockLevels();
   const {count} = useStockMutations();
-  const [where, setWhere] = useState<string>('godown'); // 'godown' or a van user id
+  const online = useConnectivity();
   const [date, setDate] = useState(todayIST());
+  // The month of the count's date: confirm (lock) it, or reopen it.
+  const queryClient = useQueryClient();
+  const monthKey = ['stock', 'month-status', date.slice(0, 7)];
+  const month = useQuery({queryKey: monthKey, queryFn: () => stockRemote.monthStatus(date)});
+  const [locking, setLocking] = useState(false);
+  const changeLock = (lock: boolean) =>
+    Alert.alert(lock ? t('stock.lockTitle') : t('stock.unlockTitle'), lock ? t('stock.lockMsg') : t('stock.unlockMsg'), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: lock ? t('stock.lockMonth') : t('stock.unlockMonth'), style: lock ? 'default' : 'destructive', onPress: async () => {
+        setLocking(true);
+        try {
+          await (lock ? stockRemote.lockMonth : stockRemote.unlockMonth)(date.slice(0, 7));
+          await queryClient.invalidateQueries({queryKey: ['stock']});
+        } catch (e) {
+          Alert.alert(t('form.couldNotSave'), e instanceof Error ? e.message : String(e));
+        } finally {
+          setLocking(false);
+        }
+      }},
+    ]);
+  const [where, setWhere] = useState<string>('godown'); // 'godown' or a van user id
   const [counted, setCounted] = useState<Record<string, string>>({});
   const [result, setResult] = useState<CountResult | null>(null);
   const [clientId, setClientId] = useState(makeStockClientId);
@@ -86,6 +109,10 @@ export function StockCountScreen(_: AppScreenProps<'StockCount'>): React.JSX.Ele
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingVertical: 24, paddingBottom: 40}}>
         <Text variant="title">{t('stock.countTitle')}</Text>
         <Text variant="caption" className="mt-1">{t('stock.countHint')}</Text>
+        {/* A count is the stock at one moment, so it's never saved offline to post later. */}
+        <Text testID="count-online-only" variant="caption" className={`mt-1 ${online ? '' : 'font-semibold text-red-700'}`}>
+          {online ? t('stock.countOnlineOnly') : t('stock.countNeedsConnection')}
+        </Text>
         <View className="mt-4 flex-row flex-wrap" style={{gap: 8}}>
           <FilterChip label={`🏬 ${t('stock.godown')}`} selected={where === 'godown'} onPress={() => pick('godown')} />
           {vans.map(v => (
@@ -96,6 +123,24 @@ export function StockCountScreen(_: AppScreenProps<'StockCount'>): React.JSX.Ele
         <View className="mt-3">
           <DateField value={date} onChange={setDate} />
         </View>
+        {month.data ? (
+          <View testID="month-lock" className={`mt-3 rounded-xl p-3 ${month.data.locked ? 'bg-slate-100' : 'bg-white'}`} style={{gap: 6}}>
+            <Text className="text-sm font-semibold">
+              {month.data.locked ? `🔒 ${t('stock.monthLocked', {month: month.data.month})}` : t('stock.monthOpen', {month: month.data.month})}
+            </Text>
+            {month.data.unlockedAt ? (
+              <Text variant="caption">{t('stock.unlockedBy', {
+                who: month.data.unlockedBy?.name ?? t('stock.theOwner'), when: formatTimestamp(month.data.unlockedAt)})}</Text>
+            ) : null}
+            {month.data.locked ? (
+              <Button testID="unlock-month" title={t('stock.unlockMonth')} variant="ghost" disabled={locking}
+                onPress={() => changeLock(false)} />
+            ) : month.data.counted ? (
+              <Button testID="lock-month" title={t('stock.lockMonth')} variant="secondary" disabled={locking || !online}
+                onPress={() => changeLock(true)} />
+            ) : null}
+          </View>
+        ) : null}
 
         {result ? (
           <View testID="count-result" className="mt-5 rounded-2xl border border-border bg-white p-4" style={{gap: 10}}>
@@ -149,7 +194,7 @@ export function StockCountScreen(_: AppScreenProps<'StockCount'>): React.JSX.Ele
         </View>
 
         <Button title={t('stock.saveCount', {count: entered.length})} className="mt-6"
-          disabled={entered.length === 0 || invalid} loading={count.isPending} onPress={save} />
+          disabled={entered.length === 0 || invalid || !online} loading={count.isPending} onPress={save} />
       </ScrollView>
     </Screen>
   );

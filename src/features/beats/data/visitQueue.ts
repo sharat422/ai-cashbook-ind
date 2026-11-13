@@ -2,17 +2,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 
-import {NetworkError} from '@api/client';
+import {NetworkError, WeakSignalError} from '@api/client';
 import {connectivity} from '@/services/network/connectivity';
 import {beatsRemote, type VisitInput} from './beats.remote';
 
 interface PendingVisit extends VisitInput {
   lastError?: string;
+  /** Queued because the server didn't answer a quick check (IM2). */
+  weakSignal?: boolean;
 }
 
 interface VisitQueueState {
   pending: PendingVisit[];
-  enqueue: (visit: VisitInput) => void;
+  enqueue: (visit: PendingVisit) => void;
   remove: (clientId: string) => void;
   markFailed: (clientId: string, error: string) => void;
 }
@@ -41,12 +43,12 @@ export function makeVisitClientId(): string {
  *  server errors (validation, 403) are thrown so the sheet can show them. */
 export async function saveVisit(visit: VisitInput): Promise<boolean> {
   try {
-    if (!(await connectivity.isOnline())) throw new NetworkError(); // queue now, don't wait for a timeout
+    await connectivity.beforeSave(); // offline or weak signal: queue now, don't wait for a timeout
     await beatsRemote.recordVisit(visit);
     return true;
   } catch (err) {
     if (!(err instanceof NetworkError)) throw err;
-    useVisitQueue.getState().enqueue(visit);
+    useVisitQueue.getState().enqueue(err instanceof WeakSignalError ? {...visit, weakSignal: true} : visit);
     return false;
   }
 }

@@ -21,6 +21,7 @@ def test_ok_keeps_corrections_apply_and_check_lists_what_is_left(tmp_path, monke
     (locales / "en.json").write_text(json.dumps(en), encoding="utf-8")
     (locales / "te.json").write_text(json.dumps(te, ensure_ascii=False), encoding="utf-8")
     monkeypatch.setattr(sheets, "LOCALES", locales)
+    monkeypatch.setattr(sheets, "SERVER_DOCS", tmp_path / "server")
 
     sheets.build(tmp_path / "review")
     file = tmp_path / "review" / "te.xlsx"
@@ -51,3 +52,52 @@ def test_ok_keeps_corrections_apply_and_check_lists_what_is_left(tmp_path, monke
     del en["recon.unmatched"]
     (locales / "en.json").write_text(json.dumps(en), encoding="utf-8")
     assert sheets.unreviewed(str(file)) == 0
+
+
+def test_apply_hands_the_server_only_reviewed_document_strings(tmp_path, monkeypatch):
+    """ST5: the server renders retailer statements only from reviewed lines."""
+    locales, server = tmp_path / "locales", tmp_path / "server"
+    locales.mkdir()
+    server.mkdir()
+    en = {"doc.openingBalance": "Opening balance", "doc.currentBalance": "Current balance", "doc.pageTotal": "Page total"}
+    te = {"doc.openingBalance": "ఓపెనింగ్", "doc.currentBalance": "ప్రస్తుత బాకీ", "doc.pageTotal": "పేజీ మొత్తం"}
+    (locales / "en.json").write_text(json.dumps(en), encoding="utf-8")
+    (locales / "te.json").write_text(json.dumps(te, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(sheets, "LOCALES", locales)
+    monkeypatch.setattr(sheets, "SERVER_DOCS", server)
+    sheets.build(tmp_path / "review")
+    file = tmp_path / "review" / "te.xlsx"
+    wb = load_workbook(file)
+    ws = wb["6 Statements & documents"]
+    rows = {ws.cell(r, 1).value: r for r in range(2, ws.max_row + 1)}
+    ws.cell(rows["doc.openingBalance"], 4).value = "ప్రారంభ బాకీ"   # corrected
+    ws.cell(rows["doc.currentBalance"], 4).value = "OK"              # passed as is
+    wb.save(file)                                                     # doc.pageTotal: not reviewed
+    sheets.apply(file)
+    out = json.loads((server / "te.json").read_text(encoding="utf-8"))
+    assert out == {"doc.currentBalance": {"en": "Current balance", "text": "ప్రస్తుత బాకీ"},
+                   "doc.openingBalance": {"en": "Opening balance", "text": "ప్రారంభ బాకీ"}}
+
+
+def test_apply_hands_the_phone_only_reviewed_hinglish_collection_messages(tmp_path, monkeypatch):
+    """TE6: Hinglish collection messages go out only once reviewed."""
+    locales, phone = tmp_path / "locales", tmp_path / "reviewed"
+    locales.mkdir()
+    phone.mkdir()
+    en = {"collect.tpl.friendly": "Hi {name}!", "collect.tpl.urgent": "Pay now, {name}."}
+    hinglish = {"collect.tpl.friendly": "Hi {name} ji!", "collect.tpl.urgent": "Abhi pay karo, {name}."}
+    (locales / "en.json").write_text(json.dumps(en), encoding="utf-8")
+    (locales / "hinglish.json").write_text(json.dumps(hinglish), encoding="utf-8")
+    monkeypatch.setattr(sheets, "LOCALES", locales)
+    monkeypatch.setattr(sheets, "SERVER_DOCS", tmp_path / "server")
+    monkeypatch.setattr(sheets, "APP_REVIEWED", phone)
+    sheets.build(tmp_path / "review")
+    file = tmp_path / "review" / "hinglish.xlsx"
+    wb = load_workbook(file)
+    ws = wb["7 Messages retailers receive"]
+    rows = {ws.cell(r, 1).value: r for r in range(2, ws.max_row + 1)}
+    ws.cell(rows["collect.tpl.friendly"], 4).value = "Namaste {name} ji!"   # corrected; urgent: not reviewed
+    wb.save(file)
+    sheets.apply(file)
+    assert json.loads((phone / "hinglish.json").read_text(encoding="utf-8")) == {
+        "collect.tpl.friendly": {"en": "Hi {name}!", "text": "Namaste {name} ji!"}}

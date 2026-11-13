@@ -10,21 +10,15 @@ export const TONE_ORDER: CollectionTone[] = [
   'urgent',
 ];
 
-export const TONE_LABEL: Record<CollectionTone, string> = {
-  friendly: 'Friendly',
-  professional: 'Professional',
-  urgent: 'Urgent',
-};
-
 export const TONE_ICON: Record<CollectionTone, string> = {
   friendly: '😊',
   professional: '📄',
   urgent: '⚠️',
 };
 
-export type Language = 'en' | 'hi' | 'kn' | 'ta' | 'te';
+export type Language = 'en' | 'hi' | 'kn' | 'ta' | 'te' | 'hinglish';
 
-export const LANGUAGE_ORDER: Language[] = ['en', 'hi', 'kn', 'ta', 'te'];
+export const LANGUAGE_ORDER: Language[] = ['en', 'hi', 'kn', 'ta', 'te', 'hinglish'];
 
 export const LANGUAGE_LABEL: Record<Language, string> = {
   en: 'English',
@@ -32,6 +26,7 @@ export const LANGUAGE_LABEL: Record<Language, string> = {
   kn: 'ಕನ್ನಡ',
   ta: 'தமிழ்',
   te: 'తెలుగు',
+  hinglish: 'Hinglish',
 };
 
 /** Inputs the assistant personalizes the message from. */

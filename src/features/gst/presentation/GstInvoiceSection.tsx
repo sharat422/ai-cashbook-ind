@@ -26,6 +26,8 @@ export interface GstForm {
   customerGstin: string;
   /** Only used when the customer has no GSTIN. */
   placeOfSupply: IndianState | null;
+  /** A cash sale: paid in full now, so it's never owed. */
+  paidNow?: boolean;
 }
 
 export const emptyGstForm = (customerGstin?: string): GstForm => ({
@@ -43,10 +45,22 @@ export const emptyGstForm = (customerGstin?: string): GstForm => ({
  * GST fields for a sale, with a live tax split that comes from the server's
  * calculation (POST /gst/preview); offline, the same formula on the phone (gstSplit.ts).
  */
+/**
+ * The line amount from the item's sale price × quantity, or null when the
+ * item has no sale price (0 = none stored) or there's no quantity yet —
+ * never an invented 0.
+ */
+export function itemAmount(salePrice: number | undefined, quantity: string): number | null {
+  const q = Number(quantity);
+  if (!salePrice || salePrice <= 0 || !Number.isFinite(q) || q <= 0) return null;
+  return Math.round(salePrice * q * 100) / 100;
+}
+
 export function GstInvoiceSection({
   value,
   onChange,
   amount,
+  onItemAmount,
   online,
   errorField,
   error,
@@ -54,6 +68,8 @@ export function GstInvoiceSection({
   value: GstForm;
   onChange: (next: GstForm) => void;
   amount: number;
+  /** The amount from the item's price × quantity (the screen ignores it once the owner typed one). */
+  onItemAmount?: (amount: number) => void;
   online: boolean;
   errorField?: GstField | null;
   error?: string | null;
@@ -91,9 +107,15 @@ export function GstInvoiceSection({
 
   const items = useItems('');
   const products: Item[] = (items.data?.items ?? []).filter((i: Item) => i.type === 'product');
+  const fillAmount = (itemId: string | null, quantity: string) => {
+    const price = products.find(i => i.id === itemId)?.salePrice;
+    const v = itemAmount(price, quantity);
+    if (v !== null) onItemAmount?.(v);
+  };
   const pickItem = (id: string) => {
     const item = products.find(i => i.id === id);
     if (!item) return;
+    fillAmount(id, value.quantity);
     const rate = String(item.gstRate);
     set({
       itemId: id,
@@ -154,7 +176,11 @@ export function GstInvoiceSection({
             <TextField
               testID="gst-quantity"
               value={value.quantity}
-              onChangeText={v => set({quantity: v.replace(/[^0-9.]/g, '')})}
+              onChangeText={v => {
+                const quantity = v.replace(/[^0-9.]/g, '');
+                set({quantity});
+                fillAmount(value.itemId, quantity);
+              }}
               placeholder="10"
               keyboardType="decimal-pad"
               maxLength={12}
@@ -189,6 +215,17 @@ export function GstInvoiceSection({
         ]}
         onChange={v => set({priceIncludesGst: v})}
       />
+
+      <SegmentedControl
+        label={t('gst.paidNow')}
+        value={!!value.paidNow}
+        options={[
+          {label: t('gst.paidLater'), value: false},
+          {label: t('gst.paidCash'), value: true},
+        ]}
+        onChange={v => set({paidNow: v})}
+      />
+      {value.paidNow ? <Text variant="caption">{t('gst.paidNowHint')}</Text> : null}
 
       <View testID="gst-preview" className="rounded-xl bg-slate-50 p-3" style={{gap: 4}}>
         {!online && local ? (

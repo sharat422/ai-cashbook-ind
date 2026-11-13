@@ -2,6 +2,7 @@
 
 import pytest
 from conftest import days_ago_iso, today_iso
+from helpers import add_expense
 
 from app.recurring import add_months, catch_up, is_due, next_occurrence
 
@@ -273,3 +274,38 @@ def test_recurring_isolated_and_authed(make_user, client):
         == 404
     )
     assert client.get("/api/v1/recurring-expenses").status_code in (401, 403)
+
+
+# --- Duplicate template names: the alert names the existing template --------
+
+def test_shop_rent_twice_is_refused_naming_the_existing_template(user, client):
+    _make(client, user.headers, name="Shop Rent", amount=15000)
+    r = client.post("/api/v1/recurring-expenses", headers=user.headers, json={
+        "name": "shop rent ", "amount": 9000, "category": "Rent", "frequency": "monthly",
+        "interval": 1, "next_due_date": today_iso()})
+    assert r.status_code == 422, r.text
+    assert r.json()["detail"] == "Expense name already added: Shop Rent, ₹15,000.00, monthly"
+    assert len(client.get("/api/v1/recurring-expenses", headers=user.headers).json()["items"]) == 1
+
+
+def test_renaming_onto_a_name_is_refused_but_changing_the_amount_is_not(user, client):
+    _make(client, user.headers, name="Shop Rent", amount=150000, frequency="yearly")
+    tea = _make(client, user.headers, name="Tea", amount=300, frequency="weekly", interval=2)
+    body = {"category": "Rent", "frequency": "weekly", "interval": 2, "next_due_date": today_iso()}
+    r = client.patch(f"/api/v1/recurring-expenses/{tea['id']}", headers=user.headers,
+                     json={**body, "name": " SHOP RENT", "amount": 300})
+    assert r.status_code == 422
+    assert r.json()["detail"] == "Expense name already added: Shop Rent, ₹1,50,000.00, yearly"
+    ok = client.patch(f"/api/v1/recurring-expenses/{tea['id']}", headers=user.headers,
+                      json={**body, "name": "Tea", "amount": 450, "frequency": "monthly", "interval": 1})
+    assert ok.status_code == 200 and ok.json()["amount"] == 450 and ok.json()["frequency"] == "monthly"
+
+
+def test_two_one_off_expenses_named_tea_still_save(user, client):
+    _make(client, user.headers, name="Tea", amount=300)  # a template with that name changes nothing
+    for i in range(2):
+        add_expense(client, user.headers, amount=40, date=today_iso(), category="Food", vendor="Tea",
+                    client_id=f"tea{i}")
+    rows = client.get("/api/v1/expenses", headers=user.headers).json()
+    items = rows["items"] if isinstance(rows, dict) else rows
+    assert sum(1 for e in items if e.get("vendor") == "Tea") == 2

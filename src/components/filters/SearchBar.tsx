@@ -2,6 +2,7 @@ import React from 'react';
 import {Pressable, TextInput, View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import {colors} from '@theme/colors';
 
 export interface SearchBarProps {
@@ -15,9 +16,10 @@ export interface SearchBarProps {
 export function SearchBar({
   value,
   onChangeText,
-  placeholder = 'Search…',
+  placeholder,
   onClear,
 }: SearchBarProps): React.JSX.Element {
+  const t = useT();
   return (
     <View className="h-12 flex-row items-center rounded-xl border border-border bg-white px-3">
       <Text className="mr-2 text-base text-muted">🔍</Text>
@@ -25,7 +27,7 @@ export function SearchBar({
         className="flex-1 p-0 text-base text-slate-900"
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('common.search')}
         placeholderTextColor={colors.muted}
         autoCapitalize="none"
         autoCorrect={false}
@@ -35,7 +37,7 @@ export function SearchBar({
       {value.length > 0 ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Clear search"
+          accessibilityLabel={t('common.clearSearch')}
           hitSlop={8}
           onPress={() => {
             onChangeText('');

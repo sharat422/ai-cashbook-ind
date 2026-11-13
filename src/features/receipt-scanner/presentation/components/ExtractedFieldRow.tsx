@@ -2,6 +2,7 @@ import React from 'react';
 import {View} from 'react-native';
 
 import {Text} from '@components/ui';
+import {useT} from '@/i18n';
 import {
   needsReview,
   type Confidence,
@@ -24,6 +25,7 @@ export function ExtractedFieldRow({
   confidence,
   children,
 }: ExtractedFieldRowProps): React.JSX.Element {
+  const t = useT();
   const review = needsReview(confidence);
   return (
     <View>
@@ -34,7 +36,7 @@ export function ExtractedFieldRow({
       {children}
       {review ? (
         <Text className="mt-1 text-xs text-danger">
-          Low confidence — please verify this value.
+          {t('receipt.verify')}
         </Text>
       ) : null}
     </View>

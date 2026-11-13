@@ -1,15 +1,18 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..discards import refuse_if_discarded
 from .. import beats as svc
 from ..calc import IST
 from ..database import get_db
 from ..deps import get_current_membership, require
+from ..errors import error_body
 from ..models import VISIT_OUTCOMES, AccessLog, Beat, BeatAssignment, BeatRetailer, Business, BusinessMember, User, Visit, now_iso
 from ..rbac import BEATS_MANAGE, ENTRY_CREATE, role_can
 from ..security import get_current_user
@@ -29,6 +32,8 @@ class BeatBody(BaseModel):
 class OrderBody(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     customer_ids: list[str] = Field(alias="customerIds", max_length=500)
+    # The beat version this edit started from (IM3); old apps omit it.
+    base_version: int | None = Field(default=None, alias="baseVersion")
 
 
 class VisitBody(BaseModel):
@@ -44,6 +49,30 @@ class VisitBody(BaseModel):
 
 def _with_list(db: Session, beat: Beat) -> dict:
     return {**svc.beat_dto_with_team(db, beat), "retailers": svc.day_list(db, beat)}
+
+
+def _claim_version(db: Session, beat: Beat, base_version: int | None = None) -> bool:
+    """IM3, the credit-limit version pattern made atomic: take the beat's next
+    version, and with `base_version` only if nobody saved since (one conditional
+    UPDATE, so two phones saving at once can't both pass). A server counter, never
+    a device clock. Call before changing the beat: it reloads it."""
+    current = func.coalesce(Beat.version, 1)
+    q = update(Beat).where(Beat.id == beat.id).values(version=current + 1)
+    if base_version is not None:
+        q = q.where(current == base_version)
+    claimed = db.execute(q, execution_options={"synchronize_session": False}).rowcount == 1
+    db.refresh(beat)
+    return claimed
+
+
+def _changed_elsewhere(db: Session, beat: Beat) -> JSONResponse:
+    """Nothing was saved: 409 with the current beat, which the app shows with the notice."""
+    db.rollback()
+    return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={
+        **error_body(status.HTTP_409_CONFLICT, f"{beat.name}: changed on another phone — review and save again.",
+                     "beat_changed", {"beat": beat.name}),
+        "beat": _with_list(db, beat),
+    })
 
 
 @router.get("/beats")
@@ -115,6 +144,8 @@ class BeatEditBody(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     weekdays: list[int] = Field(min_length=1, max_length=7)
     assigned_user_id: str | None = Field(default=None, alias="assignedUserId")
+    # The beat version this edit started from (IM3); old apps omit it.
+    base_version: int | None = Field(default=None, alias="baseVersion")
 
 
 @router.put("/beats/{beat_id}")
@@ -125,12 +156,15 @@ def edit_beat(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Rename, change days or salesperson. Shops and order: retailers/order."""
+    """Rename, change days or salesperson. Shops and order: retailers/order.
+    Changed on another phone since `baseVersion`: nothing saved, 409 (IM3)."""
     business, role = membership
     if not role_can(role, BEATS_MANAGE):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Your role doesn't allow this action.")
     beat = svc.assert_beat_access(db, business, user, role, beat_id)
-    fields = _beat_fields(db, business, BeatBody(**body.model_dump()))
+    fields = _beat_fields(db, business, BeatBody(**body.model_dump(exclude={"base_version"})))
+    if not _claim_version(db, beat, body.base_version):
+        return _changed_elsewhere(db, beat)
     primary = fields.pop("assigned_user_id")
     for key, value in fields.items():
         setattr(beat, key, value)
@@ -166,6 +200,7 @@ def add_assignment(
     """Share a beat: add a member as secondary (or make them the primary)."""
     business, role = _manage(membership)
     beat = svc.assert_beat_access(db, business, user, role, beat_id)
+    _claim_version(db, beat)  # who works it changed: older edits are now stale (IM3)
     _beat_fields(db, business, BeatBody(name=beat.name, weekdays=[0], assignedUserId=body.user_id))  # a team member
     svc.assign(db, beat, body.user_id, body.role)
     try:
@@ -187,6 +222,7 @@ def end_assignment(
     """Take a member off the beat from tomorrow; their visits stay in history."""
     business, role = _manage(membership)
     beat = svc.assert_beat_access(db, business, user, role, beat_id)
+    _claim_version(db, beat)  # who works it changed: older edits are now stale (IM3)
     if not svc.end_assignment(db, beat, member_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "That member isn't on this beat.")
     db.commit()
@@ -213,6 +249,7 @@ def add_helper(
     on the beat for any of those days: 422."""
     business, role = _manage(membership)
     beat = svc.assert_beat_access(db, business, user, role, beat_id)
+    _claim_version(db, beat)  # who works it changed: older edits are now stale (IM3)
     _beat_fields(db, business, BeatBody(name=beat.name, weekdays=[0], assignedUserId=body.user_id))  # a team member
     today = svc.today_iso()
     start = validate_date(body.valid_from) if body.valid_from else today
@@ -248,6 +285,7 @@ def remove_helper(
     The primary can't be removed here: 422."""
     business, role = _manage(membership)
     beat = svc.assert_beat_access(db, business, user, role, beat_id)
+    _claim_version(db, beat)  # who works it changed: older edits are now stale (IM3)
     today = svc.today_iso()
     mine = [a for a in svc.upcoming(db, beat.id, member_id) if a.valid_to is None or a.valid_to > today]
     if any(a.role == "primary" for a in mine):
@@ -325,6 +363,8 @@ def order_retailers(
     if not role_can(role, BEATS_MANAGE):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Your role doesn't allow this action.")
     beat = svc.assert_beat_access(db, business, user, role, beat_id)
+    if not _claim_version(db, beat, body.base_version):  # IM3: two phones reordering at once
+        return _changed_elsewhere(db, beat)
     svc.set_retailers(db, beat, body.customer_ids)
     db.commit()
     return _with_list(db, beat)
@@ -364,6 +404,7 @@ def record_visit(
 
     if (found := existing()) is not None:
         return svc.visit_dto(found)
+    refuse_if_discarded(db, business.id, client_id)  # IM5: discarded by the owner on the phone
     if body.outcome not in VISIT_OUTCOMES:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown visit outcome.")
     if db.scalars(select(BeatRetailer).where(

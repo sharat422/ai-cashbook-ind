@@ -40,10 +40,10 @@ export function YourDataScreen(): React.JSX.Element {
     setBusy(kind);
     try {
       if (kind === 'excel') {
-        await downloadAndShare('/account/export.xlsx', `Bolcash_data_${todayIST()}.xlsx`,
+        await downloadAndShare(`/account/export.xlsx?lang=${lang}`, `Bolcash_data_${todayIST()}.xlsx`,
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       } else if (kind === 'pdf') {
-        await downloadAndShare('/account/balances.pdf', `Bolcash_balances_${todayIST()}.pdf`, 'application/pdf');
+        await downloadAndShare(`/account/balances.pdf?lang=${lang}`, `Bolcash_balances_${todayIST()}.pdf`, 'application/pdf');
       } else if (await downloadMyData()) {
         Alert.alert(t('account.exportReadyTitle'), t('account.exportReadyMsg'));
       }

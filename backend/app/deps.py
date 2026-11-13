@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from .consent import PURPOSE_AI
 from .database import get_db
+from .errors import AppError
 from .models import AccessLog, Business, BusinessMember, User, UserConsent
 from .rbac import READ_ONLY_ROLES, SELF_SERVICE_WRITES, role_can
 from .security import get_current_user
@@ -128,6 +129,14 @@ def write_audit(db: Session, request: Request, status_code: int) -> None:
     db.commit()
 
 
+def accountant_read_only() -> AppError:
+    """AC1: accountants could add and edit entries before this release. A refused
+    write names the change (with a code, so the app says it in the user's
+    language), never a bare 403."""
+    return AppError(status.HTTP_403_FORBIDDEN, "accountant_read_only",
+                    "Accountants are read-only now — ask the owner to change your role.")
+
+
 def get_current_membership(
     request: Request,
     user: User = Depends(get_current_user),
@@ -141,7 +150,7 @@ def get_current_membership(
             and (request.method, request.url.path) not in SELF_SERVICE_WRITES):
         # Read-only means read-only on every route, including any that only
         # check the role inside the handler (or forget to).
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Your role is read-only.")
+        raise accountant_read_only()
     return business, role
 
 

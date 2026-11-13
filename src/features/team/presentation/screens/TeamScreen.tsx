@@ -1,3 +1,4 @@
+import {useQuery, useQueryClient} from '@tanstack/react-query';
 import React, {useState} from 'react';
 import {Alert, Pressable, RefreshControl, ScrollView, View} from 'react-native';
 
@@ -13,9 +14,11 @@ import {
 import type {Role} from '@features/auth/rbac';
 import {useTeam, useTeamMutations} from '@features/team/presentation/hooks';
 import type {TeamMember} from '@features/team/data/team.remote';
+import {invitesRemote, type TeamInviteEntry} from '@features/team/data/invites';
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
+import {formatTimestampDate} from '@utils/date';
 import {onlyDigits} from '@utils/validation';
 
 const ROLES: Role[] = ['staff', 'accountant', 'owner'];
@@ -31,16 +34,63 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
   const [renaming, setRenaming] = useState<TeamMember | null>(null);
   const [newName, setNewName] = useState('');
 
-  const [mobile, setMobile] = useState('');
+  /** A 10-digit mobile, or (AC2) an email for a CA who works by email. */
+  const [contact, setContact] = useState('');
   const [role, setRole] = useState<Role>('staff');
   const [formError, setFormError] = useState<string | null>(null);
+  const [emailing, setEmailing] = useState(false);
+  const qc = useQueryClient();
+  const invites = useQuery({queryKey: ['team-invites'], queryFn: invitesRemote.list});
 
   const failed = (title: TKey) => (e: unknown) =>
     Alert.alert(t(title), e instanceof Error ? e.message : t('common.tryAgainMsg'));
 
+  const reset = () => {
+    setContact('');
+    setName('');
+    setRole('staff');
+  };
+
+  /** AC2: the same invite, delivered by email; the person joins from the link. */
+  const onEmail = async (email: string) => {
+    setEmailing(true);
+    try {
+      await invitesRemote.byEmail(email, role, name.trim() || undefined);
+      reset();
+      Alert.alert(t('team.emailSentTitle'), t('team.emailSent', {email}));
+    } catch (e) {
+      failed('team.addFailed')(e);
+    } finally {
+      setEmailing(false);
+      await qc.invalidateQueries({queryKey: ['team-invites']});
+    }
+  };
+
+  const onResend = async (inv: TeamInviteEntry) => {
+    try {
+      await invitesRemote.resend(inv.id);
+      Alert.alert(t('team.emailSentTitle'), t('team.emailSent', {email: inv.to ?? ''}));
+    } catch (e) {
+      failed('team.addFailed')(e);
+    } finally {
+      await qc.invalidateQueries({queryKey: ['team-invites']});
+    }
+  };
+
   const onAdd = () => {
+    const value = contact.trim();
+    if (value.includes('@')) {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
+        setFormError(t('team.contactInvalid'));
+        return;
+      }
+      setFormError(null);
+      void onEmail(value);
+      return;
+    }
+    const mobile = onlyDigits(value);
     if (mobile.length !== 10) {
-      setFormError(t('team.mobileInvalid'));
+      setFormError(t('team.contactInvalid'));
       return;
     }
     setFormError(null);
@@ -48,14 +98,18 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
       {mobile, role, name: name.trim() || undefined},
       {
         onSuccess: () => {
-          setMobile('');
-          setName('');
-          setRole('staff');
+          reset();
+          void qc.invalidateQueries({queryKey: ['team-invites']});
         },
         onError: failed('team.addFailed'),
       },
     );
   };
+
+  const inviteStatus = (inv: TeamInviteEntry) =>
+    inv.status === 'pending' && inv.expiresAt
+      ? t('team.inviteStatus.pending', {date: formatTimestampDate(inv.expiresAt)})
+      : t(`team.inviteStatus.${inv.status}` as TKey);
 
   const confirmRemove = (m: TeamMember) =>
     Alert.alert(t('team.removeTitle'), t('team.removeMsg', {mobile: m.mobile}), [
@@ -95,16 +149,18 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
         <Text variant="subtitle" className="mt-0.5">{t('team.subtitle')}</Text>
 
         <View className="mt-5 rounded-2xl border border-border bg-white p-4">
-          <FormField label={t('team.mobile')} required error={formError}>
+          <FormField label={t('team.mobileOrEmail')} required error={formError}>
             <TextField
-              placeholder={t('team.mobilePlaceholder')}
-              value={mobile}
+              testID="team-contact"
+              placeholder={t('team.mobileOrEmailPlaceholder')}
+              value={contact}
               onChangeText={v => {
-                setMobile(onlyDigits(v).slice(0, 10));
+                setContact(v.includes('@') ? v.trim() : onlyDigits(v).slice(0, 10));
                 if (formError) setFormError(null);
               }}
-              keyboardType="number-pad"
-              maxLength={10}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={254}
             />
           </FormField>
           <FormField label={t('team.name')} hint={t('common.optional')}>
@@ -114,7 +170,7 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
           <FormField label={t('team.roleLabel')} hint={t(hintKey(role))}>
             <SegmentedControl value={role} options={ROLES.map(r => ({label: t(roleKey(r)), value: r}))} onChange={setRole} />
           </FormField>
-          <Button testID="team-add" title={t('team.add')} className="mt-3" loading={add.isPending} onPress={onAdd} />
+          <Button testID="team-add" title={t('team.add')} className="mt-3" loading={add.isPending || emailing} onPress={onAdd} />
         </View>
 
         {renaming ? (
@@ -167,6 +223,26 @@ export function TeamScreen({navigation}: AppScreenProps<'Team'>): React.JSX.Elem
             ))}
           </View>
         )}
+
+        {/* AC2: the invite log — channel, to whom, who sent it, when, what became of it. */}
+        {invites.data?.length ? (
+          <>
+            <Text variant="label" className="mb-2 mt-6">{t('team.invitesHeading')}</Text>
+            {invites.data.slice(0, 20).map((inv: TeamInviteEntry) => (
+              <View key={inv.id} testID={`invite-${inv.id}`} className="mb-2 rounded-xl border border-border bg-white p-3">
+                <Text className="text-sm font-semibold">{inv.channel === 'email' ? '✉️' : '📱'} {inv.to}</Text>
+                <Text variant="caption">
+                  {t('team.inviteMeta', {role: t(roleKey(inv.role)), by: inv.sentBy, date: formatTimestampDate(inv.sentAt)})}
+                </Text>
+                <Text variant="caption">{inviteStatus(inv)}</Text>
+                {inv.channel === 'email' && (inv.status === 'pending' || inv.status === 'expired') ? (
+                  <Button testID={`invite-resend-${inv.id}`} title={t('team.resend')} variant="ghost" className="mt-1"
+                    fullWidth={false} onPress={() => void onResend(inv)} />
+                ) : null}
+              </View>
+            ))}
+          </>
+        ) : null}
       </ScrollView>
     </Screen>
   );

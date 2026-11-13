@@ -22,6 +22,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 // The loading shimmer's animation timer would outlive the test.
 jest.mock('@components/ui/Skeleton', () => ({Skeleton: () => null}));
+jest.mock('@api/download', () => ({downloadAndShare: jest.fn()})); // AC4: the activity screen's Excel export
 const mockActivity = jest.fn();
 jest.mock('@features/team/data/team.remote', () => ({
   teamRemote: {activity: (...a: unknown[]) => mockActivity(...a)},
@@ -126,7 +127,7 @@ it("the owner's log shows what was viewed and exported, in IST", async () => {
   }
   const text = strings(r).join('\n');
   act(() => r.unmount());
-  expect(mockActivity).toHaveBeenCalledWith('u1');
+  expect(mockActivity).toHaveBeenCalledWith('u1', undefined, undefined); // no date range (AC4)
   expect(text).toContain('Exported · reports');
   expect(text).toContain('Viewed · customer ledger · Ramesh Kirana');
   expect(text).toContain('07 Nov 2026, 14:05 IST'); // 08:35 UTC

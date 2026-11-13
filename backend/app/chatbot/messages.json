@@ -2,7 +2,7 @@
   "_comment": "Fixed user-facing replies the server returns instead of (or appends to) a model answer. Per-language entries are picked by language_hint (default hinglish).",
   "unverified": {
     "en": "I couldn't verify that - please try again.",
-    "hinglish": "I couldn't verify that - please try again.",
+    "hinglish": "Yeh verify nahi ho saka — kripaya dobara try kariye.",
     "hi": "I couldn't verify that - please try again.",
     "te": "నేను దానిని సరిచేయలేకపోయాను - దయచేసి మళ్లీ ప్రయత్నించండి.",
     "ta": "என்னால் அதை சரிபார்க்க முடியவில்லை - மீண்டும் முயற்சி செய்யவும்.",
@@ -10,7 +10,7 @@
   },
   "unavailable": {
     "en": "The assistant is unavailable right now. Please try again in a moment.",
-    "hinglish": "The assistant is unavailable right now. Please try again in a moment.",
+    "hinglish": "Assistant abhi available nahi hai. Kripaya kuch pal mein phir se try karein.",
     "hi": "The assistant is unavailable right now. Please try again in a moment.",
     "te": "సహాయకుడు ఇప్పుడు అందుబాటులో లేరు. దయచేసి కొద్దిగా క్షణం తర్వాత మళ్లీ ప్రయత్నించండి.",
     "ta": "உதவியாளர் இப்போது கிடைக்கவில்லை. தயவுசெய்து சிறிது நேரத்தில் மீண்டும் முயற்சி செய்யவும்.",

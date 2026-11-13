@@ -3,6 +3,8 @@ import React, {useEffect, useState} from 'react';
 
 import {APP_CONFIG} from '@config/constants';
 import {useSyncBusiness} from '@features/auth/hooks';
+import {useInviteDeepLink} from '@features/team/presentation/useInviteDeepLink';
+import {BusinessPickerScreen} from '@features/auth/screens/BusinessPickerScreen';
 import {SplashScreen} from '@features/auth/screens/SplashScreen';
 import {WelcomeScreen} from '@features/onboarding/presentation/screens/WelcomeScreen';
 import {useOnboardingStore} from '@features/onboarding/store/onboarding.store';
@@ -24,6 +26,7 @@ import {OnboardingNavigator} from './OnboardingNavigator';
  *          → (token + biz) App      : Dashboard
  */
 export function RootNavigator(): React.JSX.Element {
+  useInviteDeepLink(); // AC2: bolcash://invite/<token> from an email invite
   const hydrated = useIsHydrated();
   const status = useAuthStatus();
   const onboardingHydrated = useOnboardingStore(s => s.hydrated);
@@ -59,6 +62,11 @@ export function RootNavigator(): React.JSX.Element {
   // First-time, signed-out users see the welcome carousel once, before Login.
   if (status === 'unauthenticated' && !seenOnboarding) {
     return <WelcomeScreen onDone={markOnboardingSeen} />;
+  }
+
+  // AC3: more than one business (a CA serving several owners): pick one first.
+  if (status === 'choosing-business') {
+    return <BusinessPickerScreen />;
   }
 
   // Returning user on a fresh device: offer an explicit restore once per account
