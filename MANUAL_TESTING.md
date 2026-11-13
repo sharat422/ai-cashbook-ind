@@ -386,6 +386,10 @@ production backend you must use a number wired to a real OTP delivery channel.
 - **Steps:** Profile → 🤝 Collect.
 - **Expected:** Intro summarizing name/amount/days overdue; editable context (name, outstanding, days overdue, relationship Strong/Neutral/New); language chips; **3 message options** (tones) that update live.
 
+### 12.1a Hinglish messages (TE6)
+- **Steps:** app in Hinglish → Profile → 🤝 Collect. Then apply a reviewed Hinglish sheet 7 and try again.
+- **Expected:** the **Hinglish** chip is selected. Before review, the three messages are the English ones (Diagnostics shows "No reviewed hinglish collection message for collect.tpl.…" once per tone). After review, they're the reviewed Hinglish. Telugu, Hindi, Kannada and Tamil read exactly as before.
+
 ### 12.2 Send / share
 - **Steps:** Tap a message's WhatsApp / Share.
 - **Expected:** Opens WhatsApp to the customer's number with prefilled text (SMS fallback if absent); Share opens the OS sheet.
@@ -725,6 +729,12 @@ The app's **content language** (Settings → Preferences) is sent with every que
 | **Staff** login | No Ask AI on the staff home; a direct API call returns 403 |
 | Logged out / expired token | Back to Login (§38.4) |
 
+### 19.15 Ask AI in Hinglish (TE6)
+| Steps | Expected |
+|---|---|
+| App in **Hinglish** → Ask AI → speak or type `who owes me most?` | Answer in Hinglish, Roman letters (e.g. "Sabse zyada baaki: …"), never Devanagari. The amounts equal the English answer's for the same question |
+| Owner in తెలుగు and an accountant in Hinglish on the same business ask the same question | Each gets their own language; the same figures |
+
 ### 19.14 Ask AI history (privacy)
 | Steps | Expected |
 |---|---|
@@ -977,6 +987,10 @@ Open from Dashboard **🔁 Recurring**.
 ### 28.2 Export contents
 - **Steps:** Open the shared JSON.
 - **Expected:** Contains the user's own account, business, transactions, customers and ledger — a complete, human-readable export.
+
+### 28.2a Bills and the scheme log in the Excel export (BL12)
+- **Steps:** with a few bills (one cancelled, one with a scheme applied and one not applied) → Your data → the Excel export → open it.
+- **Expected:** a **Bills** sheet with one row per bill (lines, scheme lines, total). The cancelled bill says **Cancelled**, and its return is its own row ("Return of B-…"). A **Scheme log** sheet has one row per scheme considered, Applied / Not applied (with the reason) / Reversed, with the free goods. Retailer names in Telugu show correctly.
 
 ### 28.3 Correct account/business info
 - **Steps:** Your data & privacy → **Edit business info** → change name/owner/type/state/GST → **Save**. (Owner-only.)
@@ -1303,8 +1317,25 @@ GST-ready bookkeeping for the CA. **Bolcash does not file GST returns and does n
 - **Expected:** Totals match the invoices entered. Files: `GSTR1_ready_<from>_<to>.xlsx` (sheets b2b, b2cl, b2cs, hsn(b2b), hsn(b2c), rate changes), `GSTR3B_summary_….xlsx` (3.1, 3.2, Notes — no input tax credit), `Tally_sales_….xlsx` and `.csv`. Tally columns: Voucher Date, Party Name, GSTIN, HSN, Taxable Value, CGST, SGST, IGST, Bill Reference, GST Rate, Place of Supply, Invoice Value. Plain credits without GST are not in any file. Open the CSV in Excel: names in Hindi/Telugu show correctly; a name starting with `=` shows as text, not a formula.
 - **Permissions:** staff don't see the button; staff token → `GET /reports/tally-export.csv` → **403**.
 
+### 37C.6b Amount from the item price (G5)
+- **Steps:** an item "Rice bag" with sale price ₹120. Add credit → GST invoice Yes → quantity 10 → pick Rice bag.
+- **Expected:** the amount fills ₹1,200 with "From the item price × quantity" under it. Change it to 1,150: the note goes; change the quantity or pick the item again — it stays ₹1,150. An item with sale price ₹0 leaves the amount empty and Add credit asks for an amount.
+
+### 37C.6c Cash GST sale (G7)
+- **Steps:** Add credit for a registered retailer → GST invoice Yes → ₹1,180, price includes GST, 18% → Payment: **Paid now in cash** → Add credit.
+- **Expected:** the invoice gets the next number (same series as credit invoices) and the ledger shows the sale and a ₹1,180 cash payment; the balance doesn't change. It's in the GSTR-1 file and both Tally exports; not in ageing, not in Reconciliation's collections, not in the daily close.
+
+### 37C.6d Purchases with GST and the ITC review (G9)
+- **Steps:** Stock → record a purchase with supplier GSTIN, GST rate 18 and GST amount 144.01; another with no GST. GST reports → **Download ITC review**.
+- **Expected:** the first purchase is on the sheet with supplier, GSTIN, bill and ₹144.01 (CGST 72.00 + SGST 72.01 for a same-state supplier), "2B not checked"; the second isn't. A rate without an amount (or the reverse) is refused. The GSTR-3B summary's Table 4 sheet totals it and says "for the CA — not a claim".
+
+### 37C.6e GST invoice drafts (G10)
+- **Steps:** Add credit → GST invoice Yes → fill it → **Save invoice as draft**. On the customer's timeline it says "Draft GST invoice — no number yet" with Issue / Delete; the balance hasn't changed and the GST reports don't list it. Issue → confirm.
+- **Expected:** it gets the next number, the balance goes up, it's in the GSTR-1 file and shows "🔒 Issued · <number> · locked" with Cancel only. Cancel → confirm: the balance drops back, it leaves the CA files, and the GSTR-1 docs sheet lists its number as Cancelled; the next invoice takes the next number. A deleted draft leaves no number behind.
+
 ### 37C.7 CA test (pilot month) — required before release
 - **Runbook for the CA:** docs/CA_TALLY_TEST.md (all four files, TallyPrime and GST Offline Tool versions, signed discrepancy note).
+- **Saving it (G11):** fill in the CA's name, Tally version, Offline Tool errors and the note → **Save result**. It appears under **CA tests** (month, CA, re-typed, errors, date); tap it for the whole note; Share sends the saved record. An accountant sees the list but no Save; the CA files download exactly the same before and after.
 - **Steps:** Enter one real month of GST sales. Download the Tally export and send it to the CA. The CA imports it into Tally and counts the records imported and every field they had to re-type or correct. Enter both numbers in **CA test**.
 - **Expected:** **Passed** only with every record imported and **0** fields re-typed. More than 10% of fields re-typed (fields = records × 9) or any record not imported → **Failed**: tap **Share result** and report it to the team with the CA's notes on which columns were re-typed. In between → **Needs fixes**.
 
@@ -1365,6 +1396,39 @@ Phase 1 applies and logs schemes only: **no scheme claim filing or claim automat
 - **Steps:** Bill Oil 12.
 - **Expected:** **🎁 Oil 12+1 — 1 Oil free** applied; below it, greyed: "⏸ Oil 5% off: Not applied: 'Oil 12+1' has priority (2 before 3)." Bill Oil 4 → 12+1 doesn't qualify, so **Oil 5% off** applies (−₹30.00) with nothing greyed. Two schemes can't share a priority number (the second is refused, naming the first).
 
+### 37E.3b Group ("any 10") schemes (SC2)
+- **Steps:** Schemes → new → Buy 10 get 1 → pick Soap A (₹10) and Soap B (₹8) → **These SKUs together** → the form shows "Soap A + Soap B". Bill a retailer 6 A + 4 B.
+- **Expected:** the scheme applies; the bill says "6 Soap A + 4 Soap B = 10 · free: Soap B" and 1 Soap B is free (the cheaper line). 6 A + 3 B: no scheme. The same scheme set to **Each SKU on its own**: 6 A + 4 B gets nothing; 10 A gets 1 A free.
+
+### 37E.3c Whole-bill schemes (SC3)
+- **Steps:** Schemes → new → Applies to **Whole bill** → ₹ off the bill 500, bill of at least 10,000. Bill a retailer ₹12,000, then ₹9,000. Add a second whole-bill scheme (2% off above ₹5,000, priority 2) and bill ₹12,000 again. Make a 5% whole-bill scheme for one retailer only.
+- **Expected:** ₹12,000 → "Whole bill: … −₹500", total ₹11,500; ₹9,000 → nothing. With two, the ₹500 one applies and the 2% one shows "Not applied: … has priority (1 before 2)". The retailer-only scheme applies only to that retailer's bills.
+
+### 37E.3d Cancelling and returning a bill (SC5)
+- **Steps:** a retailer's timeline → a bill's entry → **Open bill** → **Return lines** → pick one line → confirm. Then **Cancel bill**.
+- **Expected:** the return lowers what the retailer owes by that line and puts its goods back in stock; the bill shows the line struck through and "Partly returned", and a "Return B-… " line; the timeline shows the return as its own entry (Open return). Cancel returns the rest; the bill shows "Cancelled" and no more actions. The scheme report no longer counts the cancelled bill's free goods. Staff see no Cancel/Return.
+
+### 37E.3e Bill PDF on WhatsApp (SC6, on a device)
+- **Steps:** a retailer who hasn't opted in → Open bill: the share button reads "No consent". Record their opt-in on the statement screen → back to the bill → **Share bill (PDF) on WhatsApp**.
+- **Expected:** WhatsApp opens on that retailer's chat with the bill PDF (lines, scheme lines, total, balance after the bill); the statement screen's history shows "sent" for the bill. The opted-out attempt shows "blocked".
+
+### 37E.3i Bill numbers and the prefix (BL10, on a device)
+- **Steps:** Owner → Settings → **Bill numbers**: read the example, type `sb` → **Save prefix**. Make a bill, then cancel it. Make another bill. Open an old bill (B-…).
+- **Expected:** the example reads "Next bill: B-26-27-N" and changes to "SB-26-27-N" as you type (letters and digits only, upper case). After saving, the next bill is SB-26-27-N, its return takes N+1 and the next bill N+2. The cancelled bill keeps its number. Old bills keep B-… and bills made before the change keep B-26-27-…. Staff don't see the setting.
+
+### 37E.3h A large catalogue (BL9, on a device)
+- **Steps:** an owner with 300+ items (an Excel import is quickest). Bill → **Add item** → scroll to the bottom of the list, then search "soap" (and an item name in Telugu). Schemes → new scheme → add items and a free item the same way. Open the scheme list.
+- **Expected:** the list keeps loading as you scroll, past 100 items and on to the last one. Search finds items anywhere in the catalogue as you type, in either script and ignoring case. Picked items show as chips (tap to remove). The scheme list shows the item names. Nothing freezes on a low-end phone.
+
+### 37E.3g Changing the rate on a bill (BL8, on a device)
+- **Steps:** Owner → a retailer → **🧾 Bill** → add an item whose sale price is ₹120, quantity 2. Change its rate to 110 → **Save bill** → open the bill from the timeline. Then bill the same item again without touching the rate.
+- **Expected:** the rate box starts at 120. After typing 110 the line reads 2 × ₹110 = ₹220 and the total drops before saving (a % scheme on it is re-worked on ₹110). The line and the saved bill show "Rate changed (not the catalogue price)". The untouched bill shows ₹120 with no mark. Staff see no rate box.
+
+### 37E.3f Offline bills (SC7, on a device)
+- **Steps:** Staff A, online, opens their van once. Airplane mode → a retailer → **🧾 Bill** → add van items → **Save bill**. Open Sync status and the retailer's timeline. Reconnect → **Sync now** (tap it twice).
+- **Expected:** the bill screen says "No signal: the bill will wait on this phone…" and saves at once ("Saved on this phone"). Sync status lists "Item bill · <retailer> · N item(s)"; the retailer's timeline shows "Item bill · N item(s) · waiting to sync" with no amount and an unchanged balance. After sync: one bill with a number (B-…), its credit on the timeline, van stock down once.
+- **Conflicts:** queue a bill offline, then on phone B sell that van's stock (or let a scheme on it end: its "valid to" before today) and sync phone A. Sync status shows "Made offline, refused when sent"; tapping it shows the reason ("Only 1 pcs of Soap in this van." / "Scheme '…' ended on …"). Nothing is saved and stock never goes below zero. **Try again** with the stock still short brings the conflict back; **Discard** removes it.
+
 ### 37E.4 Slabs and free goods
 - **Expected:** Shampoo 10–49 → 2% off, 50+ → 4.5% off (the highest slab reached); Shampoo gift is shown "not applied" (lower priority). With only the gift scheme on: 48 Shampoo → 2 Sachets free, and Sachet stock drops by 2 as well.
 
@@ -1399,10 +1463,34 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 
 ### 37F.4 Opt-out stops it at once
 - **Steps:** As the retailer, open the link → **Stop WhatsApp statements**. Then, as the owner, tap **🟢 WhatsApp link** again.
-- **Expected:** The retailer sees "Done. You won't get statements on WhatsApp any more." The owner's card shows "Opted out … by the retailer", and the WhatsApp button is refused. The refusal is in the history (`GET /customers/{id}/statement-consent`). The retailer can opt back in from the same page. **Retailer opted out** on the owner's side does the same.
+- **Expected:** The retailer sees "Done. You won't get statements on WhatsApp any more. This link is now closed…". The owner's card shows "Opted out … by the retailer", and the WhatsApp button is refused. The refusal is in the history (`GET /customers/{id}/statement-consent`). Opening the link again says "This link has been revoked." (ST4), so to opt back in the retailer asks the distributor, who records it and sends a fresh link. **Retailer opted out** on the owner's side does the same, and revokes their live links.
+
+### 37F.4b Revoking a link (ST4)
+- **Steps:** Send a retailer two statement links (🟢 WhatsApp link / SMS). Statement screen → **Statement links sent** → **Revoke link** on one → confirm. Open both links in a browser.
+- **Expected:** The revoked link (and its PDF) shows "This link has been revoked."; the other still opens. The list shows "Revoked <date>" with no button, and there's no way to turn it back on. Then record **Retailer opted out**: every live link shows Revoked.
+
+### 37F.4a Every PDF share is checked and logged (ST3, on a device)
+- **Steps:** A retailer who **opted out** → Statement → **📄 PDF** → the "Send or save" sheet. Then **📊 Excel** and **🖨️ Printable ledger**, and Open bill → **Share or save the bill**.
+- **Expected:** **WhatsApp to the retailer** and **Other apps** are greyed out, with "No consent — ask the retailer to opt in." **Email** opens the email app with the file attached (not the share sheet). **Save to phone** puts it in Downloads (Android) or opens Save to Files (iOS). Each one appears in the retailer's history (`GET /customers/{id}/statement-consent`) as "shared" on pdf_email / pdf_save. For a retailer who **opted in**: WhatsApp opens their chat with the file, and Other apps opens the usual share sheet. Android 10: check that Save to phone works (Downloads write).
+
+### 37F.6 The statement in Telugu (ST5, after sheet 6 is reviewed and applied)
+- **Steps:** apply the reviewed Telugu sheet (`i18n_review_sheets.py apply review/te.xlsx`) and deploy. A retailer → Statement → **Statement language: తెలుగు**. Open their statement link, its PDF, and 🖨️ Printable ledger → Save.
+- **Expected:** headings, labels, ageing buckets, column names and month names are in Telugu, and joined letters (ప్రా, స్తు) look right on screen and on paper. Amounts read ₹1,23,456.70. English lines (anything not reviewed) keep all their letters. A retailer left on "Business default" follows **Settings → Retailer statements in**.
+
+### 37F.7 Bill lines on the statement (ST6)
+- **Steps:** a retailer with a 3-line item bill (one line on a scheme) and a cancelled bill. Statement → **Bills on the PDF: Summary** → 🟢 WhatsApp link; then **Detailed** → another link; and 🖨️ Printable ledger in each mode.
+- **Expected:** on the link page, each bill sale shows "3 item(s)" and tapping it opens the lines and the scheme line. The cancelled bill's lines are struck through with "Cancelled". The Summary PDF lists sales only. The Detailed PDF prints the lines under each sale. Totals and balances are identical in both.
+
+### 37F.8 Bulk send and the monthly schedule (ST7, after ST1's template is approved)
+- **Steps:** three test retailers (two opted in, one opted out). Settings → **📨 Send statements to all retailers** → preview → **Send 2 statements** → confirm. Send again. Try after 8 p.m. IST. Set **Every month: On, day today, time the next hour** → Save; wait for the hourly job. Then tap **Off**.
+- **Expected:** the preview reads Opted in 2, Not opted in 1, Will send 2. The send gives "Sent 2 · skipped 1 · failed 0", and the opted-out retailer gets nothing. The second send skips both ("already got a message today"). After 8 p.m. the send is refused with the 9–8 rule. The schedule's "Last run" shows the month and counts; Off stops it. Each retailer's history shows the outcome.
+
+### 37F.9 The owner's files in Telugu (TE5, after sheet 6 is reviewed and applied)
+- **Steps:** apply the reviewed Telugu sheet and deploy. With the app in తెలుగు: Settings → Your data → **Excel** and **Balances PDF**. Then switch the app to English and download both again.
+- **Expected:** in Telugu, the PDF's heading ("… నాటికి కస్టమర్ బాకీలు"-style), column names, total line and footer are Telugu, with the date's month in Telugu, and joined letters (ర్లు, స్తు) look right on screen and on paper. Amounts read ₹1,23,456.70, and names are as typed. The Excel sheet names and column headings are Telugu; dates are date cells and amounts are numbers. In English, both files are English.
 
 ### 37F.5 Printable ledger
-- **Steps:** Statement → pick a range with more than 30 entries → **🖨️ Printable ledger** → print or save.
+- **Steps:** Statement → pick a range with more than 30 entries → **🖨️ Printable ledger** → Save to phone (or email) → print from the file.
 - **Expected:** A4 pages each headed with the distributor name, customer and period, "Page n of N", Brought forward, Page total (sale, paid, carried-forward balance) and, on the last page, Period total. **Period total sale / paid / closing equal the on-screen statement's Total credit / Total received / Closing balance for the same range.** The page totals add up to the period total.
 
 
@@ -1421,6 +1509,10 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 ### 37G.3 Import, log and backup
 - **Steps:** Import the CSV → confirm.
 - **Expected:** "493 rows imported", skipped 7, new retailers 39. Each retailer's balance equals udhar − jama of their rows; the opening entry is dated the earliest day in the file and is listed first. **Past imports** shows date, file name, imported/skipped and who (role · mobile). **Download backup** gives an Excel of the khata as it was before the import (1 customer, no entries).
+
+### 37G.3a Undo an import (IM7) and the limits (IM6)
+- **Steps:** before picking a file, read the line under **Choose Excel / CSV file**. Import a small CSV with one new retailer and two rows for an existing one. **Past imports → Undo this import** → confirm. Then import again, edit the new retailer's mobile, and look at the log. As staff, open the screen.
+- **Expected:** the line reads "First sheet only · up to 10,000 rows · 5 MB · Excel or CSV". After undo: the new retailer is gone, the existing one's balance is back to what it was before, other entries are unchanged, and the log says "Undone on …"; there's no Undo on it any more. After the edit, the import shows "Can't be undone…" and names the retailer. Staff see no Undo.
 
 ### 37G.4 Re-import adds nothing
 - **Steps:** Import the same CSV again.
@@ -1441,9 +1533,21 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 - **Steps:** Tap the status line on home (or Settings → 🔄 Sync status).
 - **Expected:** Synced / Waiting / Failed / Conflict counts; each queued item with its kind and amount; **Sync now** is disabled while offline. An entry the server refuses (e.g. a customer deleted on phone B meanwhile) shows as Failed with the reason and stays on the phone — it is never dropped.
 
+### 37H.2a Weak signal (IM2)
+- **Steps:** make a connection that accepts but never answers: phone on a Wi-Fi hotspot whose upstream is unplugged, or a proxy that holds connections open. Add an udhar and an income; time Save → success. Then airplane mode → another entry. Then restore the upstream and wait up to 30 s without touching the app.
+- **Expected:** each weak-signal save finishes in **under 3 seconds** (not 15) and shows on Sync status as **"Queued — weak signal"**. The airplane-mode save queues at once and shows "Waiting to sync". Within about 30 s of the upstream returning, everything syncs, each entry exactly once (check phone B / the web).
+
+### 37H.2b Fix or discard a failed entry (IM5)
+- **Steps:** on phone A, offline, record a UPI payment with a UTR already used on another payment; reconnect → it shows as Failed on Sync status. Tap **Edit**, change the UTR → **Save and sync**. Make another failed entry; tap **Discard** → read the confirm → **Discard ₹…**. Then log in as staff on a phone with a failed visit.
+- **Expected:** after Edit, the payment syncs once (one row on phone B, with the new UTR). The Discard confirm names the entry and the amount on its button; after it, the entry is gone from Sync status and never appears on B. Offline, Discard says it needs a connection and keeps the entry. Staff see their failed entry, with Edit for money entries, but no Discard.
+
 ### 37H.3 Same customer changed on two phones
 - **Steps:** On A and B open the same customer → Edit. On B change the address and save. On A (still showing the old details) change the name and save. Repeat with A in airplane mode: edit on A (saved on this phone), edit on B, then reconnect A.
 - **Expected:** A does not save over B. It opens **Changed on two phones** with both versions side by side and the differing fields marked. Home shows "⚖️ 1 changed on two phones — owner must choose". Nothing changes until a button is pressed. **Keep the other device's version** → B's details stay. **Keep this phone's version** → A's details are saved. If B edits again before A chooses, A is told it changed again and sees the newest version.
+
+### 37H.3a One beat edited on two phones (IM3)
+- **Steps:** two owner phones open Beat plan → the same beat → **Shops & order**. On A move a shop to the top → Save order. On B (still showing the old order) move a different shop → Save order. Repeat with **Edit details** (rename on A, change days on B).
+- **Expected:** B saves nothing and shows "<beat>: changed on another phone — review and save again". B's editor closes and the list shows A's order or name. Opening the editor again on B starts from A's version, and saving then works. A's edit is never lost.
 
 ### 37H.4 Logout with unsynced entries
 - **Steps:** Offline, add an entry, then Log out.
@@ -1461,6 +1565,10 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 - **Steps:** Owner of A → Settings → Team → mobile M, role **Accountant** → Add. On the CA phone log in with M.
 - **Expected:** The role hint reads "Read-only: ledgers, ageing, daily close, GST reports and CA/Tally export". The CA lands on A's home with the blue "Read-only access" note and no Add / AI entry / Scan / Categorise / Cash counter buttons.
 
+### 37I.1a Invite by email (AC2, needs SMTP_* set on the server)
+- **Steps:** Owner → Team → type an email in **Mobile number or email**, role Accountant → Add. Open the email on the CA's phone; tap the link, then **Open in Bolcash** (log in with the CA's own mobile if asked). Then: send another invite, tap **Resend** under Team → Invites, and try the first email's link. Try a link more than 7 days old.
+- **Expected:** "Invite sent", and the invite shows "Waiting · link valid until …". The page names no business. After **Open in Bolcash** and login, the CA is on the business with "Read-only access", the same as a phone invite, and Team shows them as Accountant. The first link after Resend says a newer invite was sent. An old link says it has expired, and Team → Invites shows **Expired**. Pasting the link in Settings → **Join with an invite** works too.
+
 ### 37I.2 Can view and export
 - **Steps:** As the CA open Customers → a customer (timeline), Customer ageing, Daily close, GST reports (GSTR-1 Excel, Tally CSV), Settings → Your data → Excel.
 - **Expected:** All open / download. A customer's screen shows Statement, Scheme log and Call only — no Add credit, Receive payment, Request, Reminder, Collect, New bill, Limit or Edit. The customer list has no "+ Add".
@@ -1472,6 +1580,18 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 ### 37I.4 Scoped to assigned businesses
 - **Steps:** With the CA's token call `GET /api/v1/customers` with header `X-Business-Id: <B's id>`. Then have B's owner also invite M as accountant; on the CA phone open Settings.
 - **Expected:** 403 "You don't have access to this business." Once B invites M, Settings shows **Your businesses** with A and B; tapping B opens B's books (and A's are no longer on screen). Switching is refused while entries are waiting to sync.
+
+### 37I.4a Business picker after login (AC3)
+- **Steps:** Three owners invite the same CA mobile. Log in as the CA. Pick the second business, use it, log out, log in again. Then one owner removes the CA; log out and in. Separately, log in as a CA with only one business.
+- **Expected:** after login, **Which business?** lists the three, each with its owner and "last opened …" or "not opened yet". Picking opens that business. At the next login it's first, marked "Last opened on this phone". After a removal, that business is gone from the list. A CA with one business goes straight to its home. Settings → switcher still works.
+
+### 37I.6a Find, export and notice (AC4)
+- **Steps:** As the CA, download the Tally CSV and the GSTR-1 workbook. On the owner's phone, open home. Tap the blue notice. Then Team → Accountant activity: set From / To to last week, then to today; **Export to Excel**.
+- **Expected:** home shows "Your accountant exported files (2)" with "… exported the Tally file, <date time> IST" and the GSTR-1 line. Tapping it opens the activity, and back on home the notice is gone (it comes back only for a new export). The date range shows only those days. The Excel has the same rows, newest first, with IST times.
+
+### 37I.6b What an Ask AI answer used (AC7) and what the log can't see (AC5)
+- **Steps:** as the CA, ask Ask AI "who owes me most?", then "hello", then a question with a mobile number and an OTP in it. On the owner's phone: Team → Accountant activity.
+- **Expected:** the top of the screen says onward sharing isn't tracked. Each question is a row with a line like "Asked: who owes me most. Used: Ramesh ₹3,500.00; Traders ₹800.20; 2 customers", "Asked: hello. Used: none", and the number and OTP shown as "••••". No answer text anywhere. The same lines are in **Export to Excel**.
 
 ### 37I.5 Revoke is instant
 - **Steps:** CA has a customer timeline open. Owner → Team → the CA → Manage → **Remove access** → Remove now. On the CA phone pull to refresh (or open any screen).
@@ -1522,6 +1642,12 @@ The retailer never needs Bolcash. **Set-up:** two customers, **A** and **B**, ea
 ## 37M. Stock, names and credit limits
 
 - **37M.1 No overselling:** (QA) two phones sell the last box at the same moment → one succeeds, the other gets "Only 0 box…". Stock never goes below 0.
+- **37M.1b Moving stock (S2):** owner → Stock → an item → **Move stock**: From a van holding 30 → To Godown → 10 → saved: van −10, godown +10, total unchanged; Stock history shows two "transfer" lines, no sale. Van → another van works the same. Moving more than the van holds is refused and nothing changes. Staff → My van → **Move**: only Godown is offered; another person's van can't be the source.
+- **37M.1c Suppliers and purchase expenses (S3):** Stock → Purchase → type "Sharma Traders" (new) → save: Expenses shows a Purchases expense for quantity × price (+ GST if entered) with Sharma Traders as vendor. Next purchase: type "sha" → pick Sharma Traders from the chips → no second supplier. Typing "Sharma Trader" makes a new supplier.
+- **37M.1d Reversing a stock entry (S4):** Stock history → a purchase of 10 → **Reverse** → confirm: a "Reversal · Purchase" line of −10 appears, the original is struck through and says Reversed, the godown is back to before. Reverse is gone from both lines. Sell 8 after a purchase of 10, then try to reverse the purchase: refused, nothing changes. Counts never show Reverse.
+- **37M.1e Offline stock (S5, on a device):** airplane mode → My van → Sell 3 → "Saved on this phone"; Sync status lists it under Stock. Back online → it syncs once (van −3, one line in history); tapping Sync now again adds nothing. Offline again: sell 5 from a van that has 6, and on another phone sell 4 from it online; reconnect → the offline sale appears under "Stock entries waiting for you" (recorded 5, in stock 2), nothing is saved; Try again keeps it there, Discard removes it; the van never goes below 0. Stock → Count in airplane mode: the screen says counts need a connection and Save is off.
+- **37M.1f Units (S6):** an item Soap with base unit pcs and box = 24 (set via the API). Stock → Purchase → pick **box** → 10 at ₹192 → the list shows "10 box" (240 pcs), the expense is ₹1,920. Sell 30 in pcs → "8 box 18 pcs". Selling 2 box when 1 box is left is refused. History shows "+240 (10 box)".
+- **37M.1g Month-end count and lock (S8):** on the 29th–31st (or set the phone's date), the owner's home shows "Month-end count due" → it opens Stock → Count. Count the godown → **Confirm count and lock month** → the card is gone. Record a sale dated in that month: "Month locked — add it to the open month"; dated next month: saved. Add credit dated in the locked month: saved (only stock is locked). **Unlock month**: the screen shows "Unlocked by <name> · <time>"; staff don't see the button.
 - **37M.2 Names:** Team → add a staff member with a name (or Manage → **Change name**) → vans, beat salesperson chips, visit history and accountant activity show the name instead of the number.
 - **37M.3 Credit limit on two phones:** open a customer on A and B; set ₹50,000 on A; then ₹20,000 on B → B shows "Credit limit changed on another device" with ₹50,000, and nothing is saved from B.
 
