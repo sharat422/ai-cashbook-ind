@@ -52,6 +52,7 @@ class CreditNoteBody(BaseModel):
     reason: str
     amount: Decimal = Field(description="Taxable value credited (before GST)")
     quantity: Decimal | None = None  # a return: how many came back
+    line: int | None = Field(default=None, ge=1)  # the item (1, 2…) on an invoice with several
     date: str
     buyer_itc_reversed: bool = Field(default=False, alias="buyerItcReversed")
     note: str | None = Field(default=None, max_length=500)
@@ -67,7 +68,7 @@ def credit_note_dto(n: CreditNote) -> dict:
         "id": n.id, "number": n.number, "date": n.date, "reason": n.reason,
         "invoiceId": n.invoice_entry_id, "invoiceNumber": n.invoice_number, "invoiceDate": n.invoice_date,
         "customerName": n.customer_name, "customerGstin": n.customer_gstin,
-        "hsn": n.hsn_code, "rate": f"{Decimal(n.gst_rate).normalize():f}",
+        "hsn": n.hsn_code, "rate": f"{Decimal(n.gst_rate).normalize():f}", "invoiceLineId": n.invoice_line_id,
         "quantity": None if n.quantity is None else f"{Decimal(n.quantity).normalize():f}", "uqc": n.uqc,
         "taxableValue": gst.money(n.taxable_value), "cgst": gst.money(n.cgst), "sgst": gst.money(n.sgst),
         "igst": gst.money(n.igst),
@@ -113,17 +114,28 @@ def create_credit_note(
     amount = Decimal(str(body.amount)).quantize(Decimal("0.01"))
     if amount <= 0:
         raise HTTPException(422, "Enter the amount being credited.")
+    # A note corrects one item: on an invoice with several, the one named by `line`.
+    items = gst.lines_of(inv)
+    if len(items) > 1 and not (body.line and body.line <= len(items)):
+        raise HTTPException(422, f"Invoice {inv.invoice_number} has {len(items)} items. "
+                                 "Pick the item this note is for.")
+    if len(items) == 1 and body.line not in (None, 1):
+        raise HTTPException(422, f"Invoice {inv.invoice_number} has one item.")
+    ln = items[(body.line or 1) - 1]
+    line_id = ln.id if len(items) > 1 else None
+    what = f"Invoice {inv.invoice_number}" + (f", item {body.line}," if line_id else "")
     # Lock the business row: one number at a time, and no two notes overspending one invoice.
     db.execute(select(Business.id).where(Business.id == business.id).with_for_update())
     already = db.scalar(select(func.coalesce(func.sum(CreditNote.taxable_value), 0))
-                        .where(CreditNote.invoice_entry_id == inv.id)) or 0
-    room = Decimal(inv.taxable_value) - Decimal(already)
+                        .where(CreditNote.invoice_entry_id == inv.id,
+                               *([CreditNote.invoice_line_id == line_id] if line_id else []))) or 0
+    room = Decimal(ln.taxable_value) - Decimal(already)
     if amount > room:
-        raise HTTPException(422, f"Invoice {inv.invoice_number} has ₹{room:.2f} of taxable value left "
-                                 f"to credit (of ₹{Decimal(inv.taxable_value):.2f}).")
-    if body.quantity is not None and (body.quantity <= 0 or (inv.gst_quantity and body.quantity > inv.gst_quantity)):
+        raise HTTPException(422, f"{what} has ₹{room:.2f} of taxable value left "
+                                 f"to credit (of ₹{Decimal(ln.taxable_value):.2f}).")
+    if body.quantity is not None and (body.quantity <= 0 or (ln.gst_quantity and body.quantity > ln.gst_quantity)):
         raise HTTPException(422, "The quantity can't be more than on the invoice.")
-    tax = gst.split(amount, Decimal(inv.gst_rate), inclusive=False, inter_state=Decimal(inv.igst or 0) > 0)
+    tax = gst.split(amount, Decimal(ln.gst_rate), inclusive=False, inter_state=Decimal(inv.igst or 0) > 0)
     fy = gst.financial_year(day)
     serial = (db.scalar(select(func.max(CreditNote.serial)).where(
         CreditNote.business_id == business.id, CreditNote.fy == fy)) or 0) + 1
@@ -135,7 +147,8 @@ def create_credit_note(
         invoice_number=inv.invoice_number or "", invoice_date=inv.date, customer_name=cust.business_name or cust.full_name,
         customer_gstin=inv.customer_gstin, place_of_supply=inv.place_of_supply,
         invoice_b2cl=not registered and Decimal(inv.igst or 0) > 0 and invoice_total > B2CL_LIMIT,
-        hsn_code=inv.hsn_code, gst_rate=inv.gst_rate, quantity=body.quantity, uqc=inv.gst_uqc,
+        invoice_line_id=line_id,
+        hsn_code=ln.hsn_code, gst_rate=ln.gst_rate, quantity=body.quantity, uqc=ln.gst_uqc,
         taxable_value=tax["taxable_value"], cgst=tax["cgst"], sgst=tax["sgst"], igst=tax["igst"],
         buyer_registered=registered, buyer_itc_reversed=registered and body.buyer_itc_reversed,
         itc_reversed_at=now_iso() if registered and body.buyer_itc_reversed else None,

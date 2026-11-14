@@ -17,7 +17,7 @@ type EntryInput = LedgerEntryInput;
 export function warnIfDuplicateReference(entry: LedgerEntry): void {
   const w = entry.warning;
   if (!w) return;
-  Alert.alert(tNow('payments.duplicateRefTitle'), tNow('payments.duplicateRefMsg', {
+  Alert.alert(tNow('payments.duplicateRefTitle'), tNow(w.numberOnly ? 'payments.duplicateRefNumberOnlyMsg' : 'payments.duplicateRefMsg', {
     amount: formatINR(Number(w.amount)), customer: w.customerName, date: formatDisplayDate(w.date),
   }));
 }

@@ -1,4 +1,5 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {screenLayout} from './screenLayout';
 import React from 'react';
 
 import {CreateBusinessScreen} from '@features/auth/screens/CreateBusinessScreen';
@@ -11,7 +12,7 @@ const Stack = createNativeStackNavigator<OnboardingStackParamList>();
  * consent is captured first, then the business profile. */
 export function OnboardingNavigator(): React.JSX.Element {
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Navigator screenOptions={{headerShown: false}} screenLayout={screenLayout}>
       <Stack.Screen name="Consent" component={ConsentScreen} />
       <Stack.Screen name="CreateBusiness" component={CreateBusinessScreen} />
     </Stack.Navigator>

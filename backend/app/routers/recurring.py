@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ..errors import AppError
 from ..calc import today_iso
 from ..database import get_db
 from ..deps import require
@@ -65,11 +66,13 @@ def _assert_name_unique(
         q = q.where(RecurringExpense.id != exclude_id)
     existing = db.scalars(q).first()
     if existing is not None:
-        every = existing.frequency if existing.interval == 1 else f"every {existing.interval} {existing.frequency}"
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Expense name already added: {existing.name}, {inr(money(existing.amount))}, {every}",
-        )
+        unit = {"weekly": "weeks", "monthly": "months", "yearly": "years", "custom": "days"}[existing.frequency]
+        every = existing.frequency if existing.interval == 1 else f"every {existing.interval} {unit}"
+        amount = inr(money(existing.amount))
+        # A code, so the app says it in the user's language (the app's own check usually catches it first).
+        raise AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, "recurring_duplicate",
+                       f"Expense name already added: {existing.name}, {amount}, {every}",
+                       name=existing.name, amount=amount)
 
 
 def _anchor_day(body: RecurringBody) -> int | None:

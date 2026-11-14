@@ -44,6 +44,11 @@ function assertValid(draft: LedgerEntryDraft): void {
     if (draft.type !== 'credit') throw new Error(tNow('errors.gstOnPayment'));
     const problem = gstInputError(draft.gst);
     if (problem) throw new Error(problem.message);
+    for (const [i, line] of (draft.gst.lines ?? []).entries()) {
+      const p = gstInputError({...line, customerGstin: draft.gst.customerGstin});
+      if (p) throw new Error(tNow('gst.itemProblem', {n: i + 1, message: p.message}));
+      if (!(Number(line.amount) > 0)) throw new Error(tNow('gst.itemProblem', {n: i + 1, message: tNow('errors.amountPositive')}));
+    }
   }
 }
 

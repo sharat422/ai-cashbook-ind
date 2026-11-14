@@ -1,3 +1,4 @@
+import {keeps12Percent} from '@features/gst/domain/gst';
 import React, {useState} from 'react';
 import {Alert, View} from 'react-native';
 
@@ -177,7 +178,7 @@ export function ItemFormScreen({
 
           <FormField label={t('items.gstRate')}>
             <View className="flex-row flex-wrap" style={{gap: 8}}>
-              {GST_RATES.map(r => (
+              {(keeps12Percent(hsnSac) ? [0, 5, 12, 18, 40] : GST_RATES).map(r => (
                 <FilterChip
                   key={r}
                   label={`${r}%`}

@@ -149,6 +149,7 @@ def _backfill_payment_utrs(engine) -> None:
 def _add_bank_soft_delete_columns(engine, inspector, tables: set[str]) -> None:
     wanted = {"bank_imports": {"deleted_at": "VARCHAR(40)", "deleted_by": "VARCHAR(40)"},
               "bank_lines": {"deleted_at": "VARCHAR(40)"},
+              "credit_notes": {"invoice_line_id": "VARCHAR(40)"},
               "beats": {"deleted_at": "VARCHAR(40)", "version": "INTEGER DEFAULT 1"},
               "expenses": {"purchase_id": "VARCHAR(40)"},
               "schemes": {"scope": "VARCHAR(12) DEFAULT 'single_sku'", "level": "VARCHAR(5) DEFAULT 'line'",

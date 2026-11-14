@@ -1,5 +1,6 @@
 export * from './AiInsightCard';
 export * from './Avatar';
+export * from './BackButton';
 export * from './BottomSheet';
 export * from './Button';
 export * from './Confetti';

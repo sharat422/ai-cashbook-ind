@@ -6,6 +6,8 @@
  * as a real expense.
  */
 
+import type {TKey, TranslateFn} from '@/i18n';
+
 export const RECURRING_FREQUENCIES = [
   'weekly',
   'monthly',
@@ -15,21 +17,15 @@ export const RECURRING_FREQUENCIES = [
 
 export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
 
-/** Unit each frequency's `interval` counts (for building the human label). */
-export const FREQUENCY_UNIT: Record<RecurringFrequency, string> = {
-  weekly: 'week',
-  monthly: 'month',
-  yearly: 'year',
-  custom: 'day',
-};
-
-/** "Every month", "Every 2 weeks", "Every 10 days"… */
+/** "Every month", "Every 2 weeks", "Every 10 days"…, in the user's language. */
 export function frequencyLabel(
+  t: TranslateFn,
   frequency: RecurringFrequency,
   interval: number,
 ): string {
-  const unit = FREQUENCY_UNIT[frequency];
-  return interval === 1 ? `Every ${unit}` : `Every ${interval} ${unit}s`;
+  return interval === 1
+    ? t(`recurring.every.${frequency}` as TKey)
+    : t(`recurring.everyN.${frequency}` as TKey, {n: interval});
 }
 
 /** What the user fills in on the form. */

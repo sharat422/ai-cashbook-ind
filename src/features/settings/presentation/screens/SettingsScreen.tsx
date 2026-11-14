@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Alert, Linking, View} from 'react-native';
+import {Alert, Linking, Pressable, View} from 'react-native';
 
 import {
   Button,
@@ -43,7 +43,8 @@ import {useAuthStore} from '@store/auth.store';
 
 type PinMode = 'idle' | 'set' | 'confirm';
 
-/** Settings home: security (app lock), language preference, and logout. */
+/** Settings home, one group per feature area (security, language, team, money,
+ *  stock, customers, GST, data, account, help, privacy), then logout. */
 export function SettingsScreen({
   navigation,
 }: AppScreenProps<'Settings'>): React.JSX.Element {
@@ -182,9 +183,11 @@ export function SettingsScreen({
     confirmLogout(t, logout);
   };
 
+  const canData = can(PERMISSIONS.DATA_VIEW);
+
   return (
     <Screen>
-      <View className="py-8">
+      <View className="pb-8 pt-2">
         <BusinessSwitcher />
         <Text variant="title">{t('settings.title')}</Text>
         {/* AC2: join another business from an email invite (a CA serving several owners) */}
@@ -290,41 +293,56 @@ export function SettingsScreen({
           </Text>
         </View>
 
-        {/* Preferences */}
-        <Text variant="label" className="mt-8 mb-3">
-          {t('settings.preferences')}
-        </Text>
-        <View className="rounded-2xl border border-border bg-white p-4">
-          <Text className="mb-2 text-base font-semibold text-slate-900">
-            {t('settings.contentLanguage')}
-          </Text>
-          <Select
-            value={APP_LANGUAGE_LABEL[language]}
-            options={SUPPORTED_APP_LANGUAGES.map(l => APP_LANGUAGE_LABEL[l])}
-            onSelect={label => setLanguage(appLanguageByLabel(label))}
-          />
-          <View className="mt-4 border-t border-border pt-4">
+        {/* Language and notifications */}
+        <Group
+          title={t('settings.preferences')}
+          rows={[
+            {title: t('settings.notifications'), onPress: () => navigation.navigate('Notifications')},
+          ]}>
+          <View className="rounded-2xl border border-border bg-white p-4">
             <Text className="mb-2 text-base font-semibold text-slate-900">
-              {t('settings.voiceLanguage')}
-            </Text>
-            <Text variant="caption" className="mb-2">
-              {t('settings.voiceLanguageDesc')}
+              {t('settings.contentLanguage')}
             </Text>
             <Select
-              value={voiceLanguageLabel(voiceLanguage)}
-              options={VOICE_LANGUAGES.map(voiceLanguageLabel)}
-              onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
+              value={APP_LANGUAGE_LABEL[language]}
+              options={SUPPORTED_APP_LANGUAGES.map(l => APP_LANGUAGE_LABEL[l])}
+              onSelect={label => setLanguage(appLanguageByLabel(label))}
             />
+            <View className="mt-4 border-t border-border pt-4">
+              <Text className="mb-2 text-base font-semibold text-slate-900">
+                {t('settings.voiceLanguage')}
+              </Text>
+              <Text variant="caption" className="mb-2">
+                {t('settings.voiceLanguageDesc')}
+              </Text>
+              <Select
+                value={voiceLanguageLabel(voiceLanguage)}
+                options={VOICE_LANGUAGES.map(voiceLanguageLabel)}
+                onSelect={label => setVoiceLanguage(voiceLanguageByLabel(label))}
+              />
+            </View>
           </View>
-        </View>
+        </Group>
 
-        {/* Payments / collections — owner-manages business config */}
-        {canManageSettings ? (
-          <>
-            <Text variant="label" className="mt-8 mb-3">
-              {t('settings.payments')}
-            </Text>
+        <Group
+          title={t('settings.group.team')}
+          rows={[
+            can(PERMISSIONS.TEAM_MANAGE) && {title: t('settings.team'), onPress: () => navigation.navigate('Team')},
+            can(PERMISSIONS.BEATS_MANAGE) && {title: t('beats.planTitle'), onPress: () => navigation.navigate('BeatPlan')},
+          ]}
+        />
+
+        {/* Collections, the bank and cash; the owner sets the UPI ID for payment requests */}
+        <Group
+          title={t('settings.group.money')}
+          rows={[
+            canData && {title: t('recon.title'), onPress: () => navigation.navigate('Reconciliation')},
+            canData && {title: t('close.title'), onPress: () => navigation.navigate('DailyClose')},
+            {title: t('settings.cashCounter'), onPress: () => navigation.navigate('CashCounter')},
+          ]}>
+          {canManageSettings ? (
             <View className="rounded-2xl border border-border bg-white p-4" style={{gap: 14}}>
+              <Text className="text-base font-semibold text-slate-900">{t('settings.payments')}</Text>
               <View>
                 <Text className="mb-1.5 text-sm font-semibold text-slate-700">
                   {t('settings.upiLabel')}
@@ -348,218 +366,144 @@ export function SettingsScreen({
               </View>
               <Button title={t('settings.upiSave')} variant="secondary" onPress={onSaveUpi} />
             </View>
+          ) : null}
+        </Group>
 
-            <Text variant="label" className="mt-8 mb-3">
-              {t('settings.billNumbers')}
-            </Text>
-            <BillPrefixCard />
-            <StatementLanguageSetting />
-          </>
-        ) : null}
+        <Group
+          title={t('settings.group.stock')}
+          rows={[
+            canManageSettings && {title: t('settings.itemCatalog'), onPress: () => navigation.navigate('Items')},
+            canData && {title: t('stock.title'), onPress: () => navigation.navigate('Stock')},
+            canData && {title: t('schemes.title'), onPress: () => navigation.navigate('Schemes')},
+          ]}>
+          {canManageSettings ? <BillPrefixCard /> : null}
+        </Group>
 
-        {/* Business */}
-        <Text variant="label" className="mt-8 mb-3">
-          {t('settings.business')}
-        </Text>
-        {can(PERMISSIONS.TEAM_MANAGE) ? (
-          <Button
-            title={t('settings.team')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('Team')}
-          />
-        ) : null}
-        {can(PERMISSIONS.BEATS_MANAGE) ? (
-          <Button
-            title={t('beats.planTitle')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('BeatPlan')}
-          />
-        ) : null}
-        {can(PERMISSIONS.DATA_VIEW) ? (
-          <Button
-            title={t('recon.title')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('Reconciliation')}
-          />
-        ) : null}
-        {can(PERMISSIONS.DATA_VIEW) ? (
-          <Button
-            title={t('close.title')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('DailyClose')}
-          />
-        ) : null}
-        {can(PERMISSIONS.DATA_VIEW) ? (
-          <Button
-            title={t('stock.title')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('Stock')}
-          />
-        ) : null}
-        {can(PERMISSIONS.DATA_VIEW) ? (
-          <Button
-            title={t('schemes.title')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('Schemes')}
-          />
-        ) : null}
-        {can(PERMISSIONS.REPORTS_VIEW) ? (
-          <Button
-            title={t('gst.reportsTitle')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('GstReports')}
-          />
-        ) : null}
-        {canManageSettings ? (
-          <Button
-            title={t('bulk.settingsButton')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('BulkStatements')}
-          />
-        ) : null}
-        {canManageSettings ? (
-          <Button
-            title={t('settings.itemCatalog')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('Items')}
-          />
-        ) : null}
-        <Button
-          title={t('settings.cashCounter')}
-          variant="secondary"
-          onPress={() => navigation.navigate('CashCounter')}
-        />
-        <Button
-          title={t('settings.notifications')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('Notifications')}
-        />
-        <Button
-          title={t('settings.privacyConsent')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('ConsentSettings')}
-        />
-        <Button
-          title={t('settings.help')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('Help')}
-        />
-        <Button
-          title={t('settings.diagnostics')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('Diagnostics')}
-        />
-        {canManageSettings ? (
-          <Button
-            title={t('settings.restoreData')}
-            variant="secondary"
-            className="mt-3"
-            onPress={onRestoreData}
-          />
-        ) : null}
+        <Group
+          title={t('settings.group.customers')}
+          rows={[
+            canManageSettings && {title: t('bulk.settingsButton'), onPress: () => navigation.navigate('BulkStatements')},
+          ]}>
+          {canManageSettings ? <StatementLanguageSetting /> : null}
+        </Group>
 
-        {/* Your data & privacy (self-service data rights) */}
-        <Text variant="label" className="mt-8 mb-3">
-          {t('account.section')}
-        </Text>
-        <Button
-          testID="settings-your-data"
-          title={t('yourData.open')}
-          variant="secondary"
-          className="mb-3"
-          onPress={() => navigation.navigate('YourData')}
+        <Group
+          title={t('settings.group.gst')}
+          rows={[
+            can(PERMISSIONS.REPORTS_VIEW) && {title: t('gst.reportsTitle'), onPress: () => navigation.navigate('GstReports')},
+          ]}
         />
-        {can(PERMISSIONS.ENTRY_EDIT) ? (
-          <Button
-            testID="settings-import"
-            title={t('import.open')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('KhataImport')}
-          />
-        ) : null}
-        <Button
-          testID="settings-sync"
-          title={t('sync.open')}
-          variant="secondary"
-          className="mb-3"
-          onPress={() => navigation.navigate('SyncStatus')}
+
+        {/* Your data (self-service data rights), imports and sync */}
+        <Group
+          title={t('settings.group.data')}
+          rows={[
+            {testID: 'settings-your-data', title: t('yourData.open'), onPress: () => navigation.navigate('YourData')},
+            can(PERMISSIONS.ENTRY_EDIT) && {testID: 'settings-import', title: t('import.open'),
+              onPress: () => navigation.navigate('KhataImport')},
+            {testID: 'settings-sync', title: t('sync.open'), onPress: () => navigation.navigate('SyncStatus')},
+            canManageSettings && {title: t('settings.restoreData'), onPress: onRestoreData},
+          ]}
         />
-        {canManageSettings ? (
-          <Button
-            title={t('account.editBusiness')}
-            variant="secondary"
-            className="mb-3"
-            onPress={() => navigation.navigate('BusinessEdit')}
-          />
-        ) : null}
-        <Button
-          title={t('account.deleteAccount')}
-          variant="secondary"
-          onPress={() => navigation.navigate('DeleteAccount')}
+
+        <Group
+          title={t('settings.group.account')}
+          rows={[
+            canManageSettings && {title: t('account.editBusiness'), onPress: () => navigation.navigate('BusinessEdit')},
+            {title: t('account.deleteAccount'), onPress: () => navigation.navigate('DeleteAccount')},
+          ]}
+        />
+
+        <Group
+          title={t('settings.group.help')}
+          rows={[
+            {title: t('settings.help'), onPress: () => navigation.navigate('Help')},
+            {title: t('settings.diagnostics'), onPress: () => navigation.navigate('Diagnostics')},
+          ]}
         />
 
         {/* Privacy & Grievances — the DPDP data-protection / grievance contact,
             deliberately separate from generic customer support (Help). */}
-        <Text variant="label" className="mt-8 mb-3">
-          {t('grievance.section')}
-        </Text>
-        <View className="rounded-2xl border border-border bg-white p-4">
-          <Text className="text-base font-semibold text-slate-900">
-            {GRIEVANCE.officerName}
-          </Text>
-          <Text variant="caption" className="mt-1 leading-5">
-            {t('grievance.desc')}
-          </Text>
-          <Text className="mt-2 text-sm font-medium text-primary">
-            {GRIEVANCE.email}
-          </Text>
-          <Button
-            title={t('grievance.contact')}
-            variant="secondary"
-            className="mt-3"
-            onPress={() =>
-              Linking.openURL(
-                `mailto:${GRIEVANCE.email}?subject=${encodeURIComponent(
-                  'Privacy / grievance — Bolcash',
-                )}`,
-              ).catch(() => {})
-            }
-          />
-        </View>
-        <Button
-          title={t('auth.privacy')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('LegalDoc', {doc: 'privacy'})}
-        />
-        <Button
-          title={t('auth.terms')}
-          variant="secondary"
-          className="mt-3"
-          onPress={() => navigation.navigate('LegalDoc', {doc: 'terms'})}
-        />
+        <Group
+          title={t('grievance.section')}
+          rows={[
+            {title: t('settings.privacyConsent'), onPress: () => navigation.navigate('ConsentSettings')},
+            {title: t('auth.privacy'), onPress: () => navigation.navigate('LegalDoc', {doc: 'privacy'})},
+            {title: t('auth.terms'), onPress: () => navigation.navigate('LegalDoc', {doc: 'terms'})},
+          ]}>
+          <View className="rounded-2xl border border-border bg-white p-4">
+            <Text className="text-base font-semibold text-slate-900">
+              {GRIEVANCE.officerName}
+            </Text>
+            <Text variant="caption" className="mt-1 leading-5">
+              {t('grievance.desc')}
+            </Text>
+            <Text className="mt-2 text-sm font-medium text-primary">
+              {GRIEVANCE.email}
+            </Text>
+            <Button
+              title={t('grievance.contact')}
+              variant="secondary"
+              className="mt-3"
+              onPress={() =>
+                Linking.openURL(
+                  `mailto:${GRIEVANCE.email}?subject=${encodeURIComponent(
+                    'Privacy / grievance — Bolcash',
+                  )}`,
+                ).catch(() => {})
+              }
+            />
+          </View>
+        </Group>
 
         <Button
           title={t('common.logout')}
           variant="secondary"
-          className="mt-3"
+          className="mt-8"
           onPress={onLogout}
         />
       </View>
     </Screen>
+  );
+}
+
+interface Row {
+  title: string;
+  onPress: () => void;
+  testID?: string;
+}
+
+/** One feature area: its heading, a card of what's under it (only the rows the
+ *  person may use), then any setting cards. Nothing to show → no heading. */
+function Group({title, rows, children}: {
+  title: string;
+  rows: (Row | false)[];
+  children?: React.ReactNode;
+}): React.JSX.Element | null {
+  const visible = rows.filter((r): r is Row => !!r);
+  const extra = React.Children.toArray(children);
+  if (!visible.length && !extra.length) return null;
+  return (
+    <>
+      <Text variant="label" className="mt-8 mb-3">
+        {title}
+      </Text>
+      {visible.length ? (
+        <View className="rounded-2xl border border-border bg-white px-4">
+          {visible.map((r, i) => (
+            <Pressable
+              key={r.title}
+              testID={r.testID}
+              onPress={r.onPress}
+              accessibilityRole="button"
+              className={`flex-row items-center py-3.5 ${i ? 'border-t border-border' : ''}`}>
+              <Text className="flex-1 text-base text-slate-900">{r.title}</Text>
+              <Text className="text-lg text-slate-400">{'›'}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      {extra.length ? <View className={visible.length ? 'mt-3' : ''} style={{gap: 12}}>{extra}</View> : null}
+    </>
   );
 }

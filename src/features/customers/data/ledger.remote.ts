@@ -51,6 +51,7 @@ export const ledgerRemote = {
       if (draft.gst.placeOfSupply) form.append('place_of_supply', draft.gst.placeOfSupply);
       if (draft.gst.paidNow) form.append('paid_now', 'true');
       if (draft.gst.draft) form.append('draft', 'true');
+      if (draft.gst.lines && draft.gst.lines.length > 1) form.append('lines', JSON.stringify(draft.gst.lines));
     }
     if (draft.attachment) {
       form.append('attachment', {

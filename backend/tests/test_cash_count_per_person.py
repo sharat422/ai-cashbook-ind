@@ -76,3 +76,27 @@ def test_staff_see_and_count_only_their_own_cash(make_user, client):
     assert _close(client, c, beat_id).status_code == 403                    # another beat's close
     assert _count(client, c, beat_id, 1, _c_id).status_code == 403          # or its counts
     assert _count(client, owner.headers, beat_id, 1, "nobody").status_code == 422
+
+
+def test_cash_with_no_salesperson_is_its_own_row_the_owner_counts(make_user, client):
+    from sqlalchemy import update
+    from app.models import LedgerEntry
+    owner, (a_id, a), (b_id, b), _c, beat_id = _two_collected(make_user, client)
+    shop = _close(client, owner.headers, beat_id).json()["collections"][0]["customerId"]
+    _collect(client, owner.headers, shop, beat_id, 2000, "old1")
+    with SessionLocal() as db:  # saved before who-recorded-it was kept
+        db.execute(update(LedgerEntry).where(LedgerEntry.client_id == "old1").values(salesman_id=None))
+        db.commit()
+    _count(client, a, beat_id, 8000, a_id)
+    _count(client, b, beat_id, 5000, b_id)
+    close = _close(client, owner.headers, beat_id).json()
+    assert {m["userId"]: m["cash"] for m in close["members"]}["none"] == "2000.00"
+    assert close["cashOverShort"] is None  # waits for the 2000 to be counted
+    assert _count(client, b, beat_id, 2000, "none").status_code == 403  # staff can't count it
+    close = _count(client, owner.headers, beat_id, 1900, "none").json()
+    assert (close["cashCounted"], close["cashOverShort"]) == ("14900.00", "-100.00")
+    none = next(m for m in close["members"] if m["userId"] == "none")
+    assert (none["cashCounted"], none["cashOverShort"]) == ("1900.00", "-100.00")
+    r = client.post(f"{API}/reconciliation/deposits", headers=owner.headers, json={
+        "date": today_iso(), "beatId": beat_id, "amount": "1900", "kind": "deposit", "userId": "none"})
+    assert r.status_code == 200, r.text

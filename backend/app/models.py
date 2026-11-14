@@ -266,8 +266,34 @@ class LedgerEntry(Base):
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     customer: Mapped[Customer] = relationship(back_populates="ledger")
+    # A GST invoice with several items: one row each (gst.lines_of). A one-item
+    # invoice has none: its HSN, rate, quantity and unit are on the entry, as
+    # on every invoice saved before several items were possible. With several,
+    # the entry has the totals, no HSN/quantity/unit, and the first item's rate
+    # (gst_rate set is what marks a GST invoice).
+    gst_lines: Mapped[list["GstInvoiceLine"]] = relationship(
+        order_by="GstInvoiceLine.position", cascade="all, delete-orphan", passive_deletes=True)
 
     __table_args__ = (Index("uq_ledger_client", "customer_id", "client_id", unique=True),)
+
+
+class GstInvoiceLine(Base):
+    """One item on a GST invoice that has several. Same column names as the
+    entry's own line fields, so reports read either the same way."""
+
+    __tablename__ = "gst_invoice_lines"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    entry_id: Mapped[str] = mapped_column(ForeignKey("ledger_entries.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer)  # 1, 2, 3… as on the invoice
+    hsn_code: Mapped[str] = mapped_column(String(8))
+    gst_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    gst_quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3))
+    gst_uqc: Mapped[str] = mapped_column(String(3))
+    taxable_value: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    cgst: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    sgst: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    igst: Mapped[Decimal] = mapped_column(Numeric(12, 2))
 
 
 class AccessLog(Base):
@@ -1080,6 +1106,8 @@ class CreditNote(Base):
     client_id: Mapped[str] = mapped_column(String(80))  # idempotency key for retries
     invoice_entry_id: Mapped[str | None] = mapped_column(
         ForeignKey("ledger_entries.id", ondelete="SET NULL"), nullable=True, index=True)
+    # The item corrected, on an invoice with several (gst_invoice_lines.id); None = a one-item invoice.
+    invoice_line_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     ledger_entry_id: Mapped[str | None] = mapped_column(
         ForeignKey("ledger_entries.id", ondelete="SET NULL"), nullable=True)
     fy: Mapped[str] = mapped_column(String(5))

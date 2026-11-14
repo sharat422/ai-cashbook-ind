@@ -84,7 +84,7 @@ export function RecurringFormScreen({
       setError(t('recurring.errDuplicateNameOf', {
         name: duplicate.name,
         amount: formatINR(duplicate.amount),
-        frequency: frequencyLabel(duplicate.frequency, duplicate.interval),
+        frequency: frequencyLabel(t, duplicate.frequency, duplicate.interval),
       }));
       setErrorField('name');
       return;
@@ -211,7 +211,7 @@ export function RecurringFormScreen({
             />
           </FormField>
 
-          <FormField label={t('recurring.repeatEvery')} hint={frequencyLabel(frequency, interval)}>
+          <FormField label={t('recurring.repeatEvery')} hint={frequencyLabel(t, frequency, interval)}>
             <Stepper value={interval} onChange={setInterval} />
           </FormField>
 

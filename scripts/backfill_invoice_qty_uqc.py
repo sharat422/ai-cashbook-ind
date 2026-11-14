@@ -45,6 +45,7 @@ def backfill(db: Session) -> dict:
     rows = db.execute(
         select(LedgerEntry, Customer).join(Customer, Customer.id == LedgerEntry.customer_id)
         .where(LedgerEntry.type == "credit", LedgerEntry.gst_rate.is_not(None),
+               ~LedgerEntry.gst_lines.any(),  # several items: quantity and unit are per item, never blank
                or_(LedgerEntry.gst_quantity.is_(None), LedgerEntry.gst_uqc.is_(None)))
         .order_by(LedgerEntry.date, LedgerEntry.created_at)).all()
     catalogue: dict[str, list[Item]] = {}

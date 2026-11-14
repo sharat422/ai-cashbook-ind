@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 
@@ -5,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..discards import refuse_if_discarded
 from .. import gst
@@ -16,7 +17,7 @@ from ..errors import AppError
 from ..beats import assert_beat_access
 from ..deps import get_current_membership, require
 from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
-from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, CreditNote, Customer, GstInvoiceNumber, LedgerEntry, PaymentUtr, User, Visit, now_iso
+from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, CreditNote, Customer, GstInvoiceNumber, LedgerEntry, PaymentUtr, User, Visit, now_iso, GstInvoiceLine
 from ..security import get_current_user
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
@@ -41,6 +42,36 @@ class CustomerBody(BaseModel):
 _GST_COLUMNS = ("customer_gstin", "hsn_code", "place_of_supply", "gst_rate",
                 "price_includes_gst", "taxable_value", "cgst", "sgst", "igst",
                 "gst_quantity", "gst_uqc")
+def _read_lines(lines: str | None, **one) -> list[dict]:
+    """The invoice's items: `lines` (JSON, several items) or the single-item fields."""
+    if not lines:
+        return [one]
+    try:
+        raw = json.loads(lines)
+    except ValueError:
+        raw = None
+    if not isinstance(raw, list) or not all(isinstance(x, dict) for x in raw):
+        raise HTTPException(422, "The invoice items couldn't be read. Please try again.")
+    return raw
+
+
+def _gst_columns(tax: dict) -> dict:
+    """The entry's GST columns: the totals, and with one item its HSN/rate/unit
+    (several items: those are on gst_invoice_lines; the entry keeps the first
+    item's rate, which marks it a GST invoice)."""
+    cols = {k: tax[k] for k in _GST_COLUMNS}
+    if len(tax["lines"]) > 1:
+        cols.update(hsn_code=None, gst_quantity=None, gst_uqc=None)
+    return cols
+
+
+def _line_rows(tax: dict) -> list[GstInvoiceLine]:
+    if len(tax["lines"]) == 1:
+        return []
+    return [GstInvoiceLine(position=n, **{k: t[k] for k in gst.LINE_COLUMNS})
+            for n, t in enumerate(tax["lines"], 1)]
+
+
 def _issue_invoice_number(db: Session, business: Business, day: str) -> GstInvoiceNumber:
     """The next consecutive GST invoice number for this business in that
     financial year (Rule 46). The server always assigns it; the business row
@@ -91,18 +122,22 @@ def _duplicate_ref(db: Session, business: Business, ref_hash: str) -> tuple[Ledg
     ).first()
 
 
-def _ref_warning(method: str, earlier: LedgerEntry, who: Customer) -> dict:
+def _ref_warning(method: str, earlier: LedgerEntry, who: Customer, number_only: bool = False) -> dict:
     d = earlier.date
     what = "cheque" if method == "cheque" else "bank reference"
+    seen = f"₹{earlier.amount:,.2f} from {who.full_name} on {d[8:10]}-{d[5:7]}-{d[:4]}"
     return {"code": "duplicate_reference", "entryId": earlier.id, "customerName": who.full_name,
-            "amount": f"{earlier.amount:.2f}", "date": d,
-            "message": (f"Same {what} as ₹{earlier.amount:,.2f} from {who.full_name} on "
-                        f"{d[8:10]}-{d[5:7]}-{d[:4]} — check it isn't entered twice.")}
+            "amount": f"{earlier.amount:.2f}", "date": d, "numberOnly": number_only,
+            "message": (f"Same cheque number as {seen}, which has no bank or account recorded — "
+                        "check it isn't the same cheque." if number_only else
+                        f"Same {what} as {seen} — check it isn't entered twice.")}
 
 
 class GstPreviewBody(BaseModel):
     amount: float
     rate: str
+    # Several items: [{amount, rate}] (then amount and rate above are ignored).
+    lines: list[dict] | None = Field(default=None, max_length=100)
     price_includes_gst: bool = False
     customer_gstin: str | None = None
     place_of_supply: str | None = None
@@ -116,11 +151,10 @@ def gst_preview(
 ) -> dict:
     """The tax split the server will save for these inputs (nothing is saved).
     The app shows this instead of computing tax itself."""
-    tax = gst.invoice(business, amount=validate_amount(body.amount), rate=body.rate,
-                      inclusive=body.price_includes_gst, hsn=None,
-                      customer_gstin=body.customer_gstin,
-                      place_of_supply=body.place_of_supply,
-                      day=validate_date(body.date) if body.date else None)
+    tax = gst.invoice_lines(business, body.lines or [{"amount": validate_amount(body.amount), "rate": body.rate}],
+                            inclusive=body.price_includes_gst, customer_gstin=body.customer_gstin,
+                            place_of_supply=body.place_of_supply,
+                            day=validate_date(body.date) if body.date else None, preview=True)
     return {
         "place_of_supply": gst.place_label(tax["place_of_supply"]),
         "inter_state": tax["inter_state"],
@@ -355,6 +389,7 @@ def list_ledger(
     rows = db.scalars(
         select(LedgerEntry)
         .where(LedgerEntry.customer_id == customer_id)
+        .options(selectinload(LedgerEntry.gst_lines))
         .order_by(LedgerEntry.date.desc(), LedgerEntry.created_at.desc())
     ).all()
     return [ledger_dto(r) for r in rows]
@@ -379,6 +414,9 @@ def add_ledger_entry(
     hsn_code: str | None = Form(None),
     quantity: str | None = Form(None),  # GST invoice: quantity and unit (UQC), both required
     uqc: str | None = Form(None),
+    # Several items: a JSON list of {amount, rate, hsn, quantity, uqc} (then the
+    # single-item fields above are ignored, and `amount` is their sum).
+    lines: str | None = Form(None),
     customer_gstin: str | None = Form(None),
     price_includes_gst: bool = Form(False),
     place_of_supply: str | None = Form(None),
@@ -411,13 +449,13 @@ def add_ledger_entry(
                                                          utr_rule=utr_rule)
     utr_missing = type == "payment" and payment_method == "upi" and reference_number is None
     tax: dict = {}
-    if gst_rate not in (None, ""):
+    if gst_rate not in (None, "") or lines:
         if type != "credit":
             raise HTTPException(422, "GST applies to a sale (credit), not a payment.")
-        tax = gst.invoice(business, amount=amount, rate=gst_rate, inclusive=price_includes_gst,
-                          hsn=hsn_code or "", customer_gstin=customer_gstin,
-                          place_of_supply=place_of_supply, day=date)
-        tax["gst_quantity"], tax["gst_uqc"] = gst.clean_line(quantity, uqc)
+        tax = gst.invoice_lines(business, _read_lines(lines, amount=amount, rate=gst_rate, hsn=hsn_code,
+                                                      quantity=quantity, uqc=uqc),
+                                inclusive=price_includes_gst, customer_gstin=customer_gstin,
+                                place_of_supply=place_of_supply, day=date)
         amount = float(tax["total"])
     if paid_now and not tax:
         raise HTTPException(422, "Only a GST invoice can be marked paid now (a cash GST sale).")
@@ -447,6 +485,13 @@ def add_ledger_entry(
                                    for v in (cheque_bank, cheque_account))
     ref_hash = _ref_key(payment_method, reference_number, cheque_bank, cheque_account) if type == "payment" else None
     repeat = _duplicate_ref(db, business, ref_hash) if ref_hash else None
+    number_only = False
+    if repeat is None and ref_hash and payment_method == "cheque" and (cheque_bank or cheque_account):
+        # A cheque saved before bank and account were asked for has only its
+        # number, so it can't match one entered with them. Same number: warn
+        # (never block); it may also be another bank's cheque, and the warning says so.
+        repeat = _duplicate_ref(db, business, _ref_key("cheque", reference_number, None, None))
+        number_only = repeat is not None
     issued = _issue_invoice_number(db, business, date) if tax and not draft else None
     if issued is not None:
         invoice_number = issued.number  # never the app's own number for a GST invoice
@@ -470,7 +515,8 @@ def add_ledger_entry(
         salesman_id=user.id,
         beat_id=beat_id or None,
         attachment_url=save_upload(attachment),
-        **{k: tax[k] for k in _GST_COLUMNS if tax},
+        **(_gst_columns(tax) if tax else {}),
+        gst_lines=_line_rows(tax) if tax else [],
         gst_status="draft" if draft else None,
     )
     db.add(row)
@@ -503,7 +549,7 @@ def add_ledger_entry(
     if repeat is None:
         return ledger_dto(row)
     log.info("duplicate %s reference: entry %s repeats %s", payment_method, row.id, repeat[0].id)
-    return {**ledger_dto(row), "warning": _ref_warning(payment_method, *repeat)}
+    return {**ledger_dto(row), "warning": _ref_warning(payment_method, *repeat, number_only=number_only)}
 
 
 # --- GST invoice drafts: editable until issued; issued ones are locked ---------
@@ -532,10 +578,11 @@ def edit_draft(
     entry_id: str,
     amount: float = Form(...),
     date: str = Form(...),
-    gst_rate: str = Form(...),
+    gst_rate: str | None = Form(None),
     hsn_code: str = Form(""),
     quantity: str | None = Form(None),
     uqc: str | None = Form(None),
+    lines: str | None = Form(None),  # several items, as when adding
     customer_gstin: str | None = Form(None),
     price_includes_gst: bool = Form(False),
     place_of_supply: str | None = Form(None),
@@ -550,11 +597,13 @@ def edit_draft(
     amount, date = validate_amount(amount), validate_date(date)
     if notes is not None and len(notes) > 5000:
         raise HTTPException(422, "Notes must not exceed 5000 characters.")
-    tax = gst.invoice(business, amount=amount, rate=gst_rate, inclusive=price_includes_gst, hsn=hsn_code,
-                      customer_gstin=customer_gstin, place_of_supply=place_of_supply, day=date)
-    tax["gst_quantity"], tax["gst_uqc"] = gst.clean_line(quantity, uqc)
-    for k in _GST_COLUMNS:
-        setattr(entry, k, tax[k])
+    tax = gst.invoice_lines(business, _read_lines(lines, amount=amount, rate=gst_rate, hsn=hsn_code,
+                                                  quantity=quantity, uqc=uqc),
+                            inclusive=price_includes_gst, customer_gstin=customer_gstin,
+                            place_of_supply=place_of_supply, day=date)
+    for k, v in _gst_columns(tax).items():
+        setattr(entry, k, v)
+    entry.gst_lines = _line_rows(tax)
     entry.amount, entry.date, entry.notes = float(tax["total"]), date, notes
     db.commit()
     db.refresh(entry)

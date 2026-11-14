@@ -9,6 +9,20 @@ import {tNow} from '@/i18n';
  *  server still accepts them on invoices dated before they ended. */
 export const GST_RATES = ['0', '5', '18', '40'] as const;
 
+/** 12% stays for building bricks and tiles (Notification 14/2025-CT(Rate));
+ *  as TWELVE_PERCENT_HSN in backend/app/gst.py, change both together. */
+const TWELVE_PERCENT_HSN = ['6815', '69010010', '69041000', '69051000'];
+
+export function keeps12Percent(hsn?: string | null): boolean {
+  const h = (hsn ?? '').replace(/\s/g, '');
+  return h.length >= 4 && TWELVE_PERCENT_HSN.some(code => h.startsWith(code) || code.startsWith(h));
+}
+
+/** The rate chips for an item with this HSN: 12% only for bricks and tiles. */
+export function gstRatesFor(hsn?: string | null): readonly string[] {
+  return keeps12Percent(hsn) ? ['0', '5', '12', '18', '40'] : GST_RATES;
+}
+
 const GSTIN_RE = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const HSN_RE = /^(\d{4}|\d{6}|\d{8})$/;
 const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -48,7 +62,7 @@ export function uqcForUnit(unit?: string | null): string | null {
   return map[u] ?? ((UQC_CODES as readonly string[]).includes(code) ? code : null);
 }
 
-export type GstField = 'gstin' | 'hsn' | 'quantity' | 'uqc';
+export type GstField = 'gstin' | 'hsn' | 'quantity' | 'uqc' | 'amount';
 
 /** First problem with a GST invoice's inputs, or null when it can be saved.
  *  The invoice number isn't one: the server assigns it (Rule 46). */

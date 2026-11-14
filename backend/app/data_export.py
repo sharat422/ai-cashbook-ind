@@ -23,7 +23,7 @@ from . import gst_reports as gr
 from .calc import today_iso
 from .models import (
     AccessLog, BankImport, BankLine, BankMatch, Beat, BeatAssignment, BeatRetailer, Bill, BillLine, BillSeries, Business,
-    BusinessMember, CaTestResult, CashCount, CashDeposit, CreditNote, Customer, DiscardedEntry, TeamInvite, Supplier, Expense, GstInvoiceNumber, GstRateChangeLog, ImportLog,
+    BusinessMember, CaTestResult, CashCount, CashDeposit, CreditNote, Customer, DiscardedEntry, TeamInvite, Supplier, Expense, GstInvoiceLine, GstInvoiceNumber, GstRateChangeLog, ImportLog,
     Income, Item, ItemUnit, LedgerEntry, StockMonthLock, RecurringExpense, Scheme, SchemeApplication, SchemeItem,
     StatementEvent, StatementSchedule, StockLevel, StockMove, Visit,
 )
@@ -80,9 +80,12 @@ def sections(db: Session, business: Business) -> dict[str, list[dict]]:
         q = select(model).where(column.in_(ids))
         return db.scalars(q.order_by(order) if order is not None else q).all()
 
+    ledger = child(LedgerEntry, LedgerEntry.customer_id, cust_ids, LedgerEntry.date)
     groups = {
         "customers": customers,
-        "ledger_entries": child(LedgerEntry, LedgerEntry.customer_id, cust_ids, LedgerEntry.date),
+        "ledger_entries": ledger,
+        "gst_invoice_lines": child(GstInvoiceLine, GstInvoiceLine.entry_id, [e.id for e in ledger],
+                                   GstInvoiceLine.position),
         "gst_invoice_numbers": by_business(GstInvoiceNumber, GstInvoiceNumber.created_at),
         "gst_rate_changes": by_business(GstRateChangeLog, GstRateChangeLog.changed_at),
         "incomes": by_business(Income, Income.date),

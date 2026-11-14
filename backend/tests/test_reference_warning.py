@@ -68,3 +68,23 @@ def test_upi_is_still_refused_and_never_mixed_with_bank_references(make_user, cl
     assert bank.status_code == 200 and "warning" not in bank.json()
     with SessionLocal() as db:
         assert db.get(LedgerEntry, first.json()["id"]).ref_hash is None  # UPI keeps its own unique index
+
+
+def test_a_cheque_saved_with_its_number_only_still_warns_a_later_one_with_bank_and_account(make_user, client):
+    """Cheques saved before bank and account were asked for have only a number.
+    A later cheque with that number (now with bank and account) warns, saying
+    the earlier one has no bank recorded; it may be another bank's cheque."""
+    owner = make_user()
+    ravi = add_customer(client, owner.headers, full_name="Ravi Stores")["id"]
+    old = _pay(client, owner.headers, ravi, "old1", "cheque", "007788")   # number only, as old cheques were
+    assert old.status_code == 200 and "warning" not in old.json()
+    new = _pay(client, owner.headers, ravi, "new1", "cheque", "007788", cheque_bank="SBI", cheque_account="4321")
+    assert new.status_code == 200, new.text
+    w = new.json()["warning"]
+    assert w["entryId"] == old.json()["id"] and w["numberOnly"] is True
+    assert "no bank or account recorded" in w["message"]
+    # A different number: nothing. And a full match still says the plain repeat.
+    other = _pay(client, owner.headers, ravi, "new2", "cheque", "009999", cheque_bank="SBI", cheque_account="4321")
+    assert "warning" not in other.json()
+    again = _pay(client, owner.headers, ravi, "new3", "cheque", "007788", cheque_bank="SBI", cheque_account="4321")
+    assert again.json()["warning"]["numberOnly"] is False and again.json()["warning"]["entryId"] == new.json()["id"]

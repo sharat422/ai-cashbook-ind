@@ -1,22 +1,25 @@
 import type {Scheme} from '@features/schemes/data/schemes.remote';
+import type {TranslateFn} from '@/i18n';
 
 const n = (s: string | null | undefined): string =>
   s == null ? '' : s.includes('.') ? s.replace(/\.?0+$/, '') : s;
 
-/** One line describing the offer, e.g. "Buy 10, get 1 free". */
-export function describeScheme(s: Scheme, itemName: (id: string) => string): string {
+/** One line describing the offer, e.g. "Buy 10, get 1 free", in the user's language. */
+export function describeScheme(t: TranslateFn, s: Scheme, itemName: (id: string) => string): string {
   switch (s.type) {
     case 'buy_get':
-      return `Buy ${n(s.buyQty)}, get ${n(s.freeQty)} free`;
+      return t('schemes.desc.buyGet', {buy: n(s.buyQty), free: n(s.freeQty)});
     case 'free_goods':
-      return `Every ${n(s.minQty)} bought: ${n(s.freeQty)} ${itemName(s.freeItemId ?? '')} free`;
+      return t('schemes.desc.freeGoods', {min: n(s.minQty), free: n(s.freeQty), item: itemName(s.freeItemId ?? '')});
     case 'percent':
-      if (s.level === 'bill') return `${n(s.percent)}% off bills of ₹${n(s.minBillValue ?? '0')} or more`;
-      return `${n(s.percent)}% off${s.minQty && Number(s.minQty) > 0 ? ` from ${n(s.minQty)} units` : ''}`;
+      if (s.level === 'bill') return t('schemes.desc.percentBill', {percent: n(s.percent), min: n(s.minBillValue ?? '0')});
+      return s.minQty && Number(s.minQty) > 0
+        ? t('schemes.desc.percentFrom', {percent: n(s.percent), min: n(s.minQty)})
+        : t('schemes.desc.percent', {percent: n(s.percent)});
     case 'amount_off':
-      return `₹${n(s.amountOff)} off bills of ₹${n(s.minBillValue ?? '0')} or more`;
+      return t('schemes.desc.amountOff', {amount: n(s.amountOff), min: n(s.minBillValue ?? '0')});
     case 'slab':
-      return (s.slabs ?? []).map(([q, p]) => `${n(q)}+ → ${n(p)}% off`).join(', ');
+      return (s.slabs ?? []).map(([q, p]) => t('schemes.desc.slab', {qty: n(q), percent: n(p)})).join(', ');
   }
 }
 

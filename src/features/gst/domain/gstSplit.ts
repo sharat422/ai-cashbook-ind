@@ -64,6 +64,19 @@ export function gstSplit(amount: number | string, rate: string, inclusive: boole
   };
 }
 
+/** Several items: each split on its own and rounded, then added up — as the server does. */
+export function gstSplitLines(lines: {amount: number | string; rate: string}[], inclusive: boolean,
+  interState: boolean): GstSplit {
+  const keys = ['taxableValue', 'cgst', 'sgst', 'igst', 'total'] as const;
+  const sum = {taxableValue: 0n, cgst: 0n, sgst: 0n, igst: 0n, total: 0n};
+  for (const l of lines) {
+    const s = gstSplit(l.amount, l.rate, inclusive, interState);
+    for (const k of keys) sum[k] += scaled(s[k], 2);
+  }
+  return {taxableValue: rupees(sum.taxableValue), cgst: rupees(sum.cgst), sgst: rupees(sum.sgst),
+    igst: rupees(sum.igst), total: rupees(sum.total)};
+}
+
 /**
  * Place of supply exactly as the server picks it: the customer's GSTIN state,
  * else the state picked for an unregistered customer, else the seller's own.

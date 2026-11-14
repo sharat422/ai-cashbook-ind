@@ -7,6 +7,8 @@ import {
 } from 'react-native';
 import {Edge, SafeAreaView} from 'react-native-safe-area-context';
 
+import {BackButton} from './BackButton';
+
 export interface ScreenProps {
   children: React.ReactNode;
   /** Wrap content in a ScrollView (default true). Disable for fixed layouts. */
@@ -14,17 +16,20 @@ export interface ScreenProps {
   /** Extra classes on the inner content container. */
   className?: string;
   edges?: readonly Edge[];
+  /** The "<" back button at the top (default true; hidden when there's nowhere to go back to). */
+  back?: boolean;
 }
 
 /**
- * Page wrapper: applies safe-area insets, the app background, keyboard
- * avoidance and optional scrolling so screens stay focused on content.
+ * Page wrapper: applies safe-area insets, the app background, the "<" back
+ * button, keyboard avoidance and optional scrolling so screens stay focused on content.
  */
 export function Screen({
   children,
   scroll = true,
   className,
   edges = ['top', 'bottom'],
+  back = true,
 }: ScreenProps): React.JSX.Element {
   const content = (
     <View className={`flex-1 px-5 ${className ?? ''}`}>{children}</View>
@@ -32,6 +37,7 @@ export function Screen({
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={edges}>
+      {back ? <BackButton /> : null}
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

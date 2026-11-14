@@ -37,7 +37,7 @@ def _validated(body: ItemBody) -> dict:
         raise _reject("Sale price can't be negative.")
     if body.purchase_price < 0:
         raise _reject("Purchase price can't be negative.")
-    gst.clean_rate(body.gst_rate)  # one rate list, in app/gst.py
+    gst.clean_rate(body.gst_rate, hsn=body.hsn_sac or "")  # one rate list, in app/gst.py (12%: bricks and tiles)
     values = body.model_dump()
     if body.low_stock_threshold is not None:
         values["low_stock_threshold"] = stock.quantity(body.low_stock_threshold, allow_zero=True)

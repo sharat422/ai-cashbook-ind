@@ -1,4 +1,4 @@
-import {gstSplit, placeOfSupply} from '@features/gst/domain/gstSplit';
+import {gstSplitLines, placeOfSupply} from '@features/gst/domain/gstSplit';
 import {useAuthStore} from '@store/auth.store';
 import type {LedgerEntry, LedgerEntryDraft} from '@features/customers/domain/ledger';
 import {
@@ -12,7 +12,8 @@ export function invoiceTotal(draft: LedgerEntryDraft): number {
   const seller = useAuthStore.getState().business?.gstin;
   if (!draft.gst || !seller) return draft.amount;
   const pos = placeOfSupply(seller, draft.gst.customerGstin, draft.gst.placeOfSupply);
-  return Number(gstSplit(draft.amount, draft.gst.rate, draft.gst.priceIncludesGst, pos !== seller.slice(0, 2)).total);
+  const lines = draft.gst.lines?.length ? draft.gst.lines : [{amount: draft.amount, rate: draft.gst.rate}];
+  return Number(gstSplitLines(lines, draft.gst.priceIncludesGst, pos !== seller.slice(0, 2)).total);
 }
 
 /** Map a queued pending entry to an optimistic LedgerEntry for the timeline. */

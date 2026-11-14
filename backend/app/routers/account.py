@@ -65,6 +65,7 @@ from ..models import (
     CashDeposit,
     CreditNote,
     Supplier,
+    GstInvoiceLine,
     GstInvoiceNumber,
     ImportLog,
     PaymentUtr,
@@ -236,6 +237,8 @@ def delete_account(
             counts[model.__tablename__] += db.query(model).filter(
                 model.business_id.in_(biz_ids)).delete(synchronize_session=False)
         if cust_ids:
+            counts["gst_invoice_lines"] += db.query(GstInvoiceLine).filter(GstInvoiceLine.entry_id.in_(
+                select(LedgerEntry.id).where(LedgerEntry.customer_id.in_(cust_ids)))).delete(synchronize_session=False)
             counts["ledger_entries"] += db.query(LedgerEntry).filter(
                 LedgerEntry.customer_id.in_(cust_ids)
             ).delete(synchronize_session=False)

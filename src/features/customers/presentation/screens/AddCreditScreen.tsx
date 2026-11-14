@@ -61,7 +61,11 @@ export function AddCreditScreen({
   const gstRegistered = useAuthStore(s => s.business?.gstRegistered ?? false);
   const hasSellerGstin = useAuthStore(s => !!s.business?.gstin);
   const [gst, setGst] = useState<GstForm | null>(null);
-  const [gstError, setGstError] = useState<{field: GstField; message: string} | null>(null);
+  /** `line`: which extra item (0 = item 2) it's about; none = item 1 or the invoice. */
+  const [gstError, setGstError] = useState<{field: GstField; message: string; line?: number} | null>(null);
+  // A GST invoice with several items: item 1 is the amount field, the rest have their own.
+  const extraTotal = (gst?.extra ?? []).reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  const saleAmount = Math.round(((Number.isNaN(amount) ? 0 : amount) + extraTotal) * 100) / 100;
 
   // Restore a saved draft for this customer on first mount.
   useEffect(() => {
@@ -118,6 +122,11 @@ export function AddCreditScreen({
       return;
     }
     const gstin = gst ? cleanGstin(gst.customerGstin) : '';
+    const extra = gst?.extra ?? [];
+    const lines = gst && extra.length
+      ? [{amount: String(amount), rate: gst.rate, hsn: gst.hsn, quantity: gst.quantity, uqc: gst.uqc ?? ''},
+         ...extra.map(l => ({amount: l.amount, rate: l.rate, hsn: l.hsn, quantity: l.quantity, uqc: l.uqc ?? ''}))]
+      : undefined;
     const gstInput = gst
       ? {
           rate: gst.rate,
@@ -129,14 +138,21 @@ export function AddCreditScreen({
           placeOfSupply: gstin ? undefined : gst.placeOfSupply ?? undefined,
           paidNow: gst.paidNow || undefined,
           draft: asDraft || undefined,
+          lines,
         }
       : undefined;
-    const problem = gstInput ? gstInputError(gstInput) : null;
+    let problem: typeof gstError = gstInput ? gstInputError(gstInput) : null;
+    for (const [i, l] of extra.entries()) {
+      if (problem) break;
+      const p = gstInputError({...l, uqc: l.uqc ?? ''}) ??
+        (Number(l.amount) > 0 ? null : {field: 'amount' as const, message: t('customers.amountError')});
+      if (p) problem = {...p, line: i};
+    }
     setGstError(problem);
     if (problem) return;
     addCredit.mutate(
       {
-        amount,
+        amount: lines ? saleAmount : amount,
         date,
         invoiceNumber: invoiceNumber.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -186,7 +202,7 @@ export function AddCreditScreen({
 
         {(() => {
           const projected =
-            customer.outstandingAmount + (Number.isNaN(amount) ? 0 : amount);
+            customer.outstandingAmount + saleAmount;
           const info = creditLimitStatus(projected, creditLimit);
           if (info.status === 'ok') return null;
           return (
@@ -299,6 +315,7 @@ export function AddCreditScreen({
               online={online}
               errorField={gstError?.field}
               error={gstError?.message}
+              errorLine={gstError?.line}
             />
           ) : null}
 
@@ -343,7 +360,7 @@ export function AddCreditScreen({
       <SuccessOverlay
         visible={success}
         title={t('customers.creditAdded', {
-          amount: formatINR(Number.isNaN(amount) ? 0 : amount),
+          amount: formatINR(saleAmount),
         })}
         subtitle={
           online

@@ -77,7 +77,7 @@ export function SchemesScreen({navigation}: AppScreenProps<'Schemes'>): React.JS
                   {t(`schemes.status.${status}`)}
                 </Text>
               </View>
-              <Text className="mt-1 text-sm text-slate-900">{describeScheme(s, () => s.freeItemName || '—')}</Text>
+              <Text className="mt-1 text-sm text-slate-900">{describeScheme(t, s, () => s.freeItemName || '—')}</Text>
               <Text variant="caption" className="mt-1">
                 {(s.itemNames ?? []).map(n => n || '—').join(', ')} · {formatDisplayDate(s.validFrom)} – {formatDisplayDate(s.validTo)}
               </Text>

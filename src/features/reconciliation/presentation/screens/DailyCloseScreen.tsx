@@ -43,9 +43,12 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
   const me = useAuthStore(s => s.user?.id);
   /** Per-salesperson counts being typed, by user id (pre-filled with their cash recorded). */
   const [personCounted, setPersonCounted] = useState<Record<string, string>>({});
+  /** Cash with no salesperson (old entries) comes back as the member "none", counted by the owner. */
+  const memberLabel = (m: {userId: string | null; name: string | null; mobile: string | null}) =>
+    m.userId === 'none' ? t('close.noSalesperson') : personLabel(m.name, m.mobile);
   const memberName = (uid: string) => {
     const m = (data?.members ?? []).find(x => x.userId === uid);
-    return m ? personLabel(m.name, m.mobile) : '';
+    return m ? memberLabel(m) : '';
   };
   const overShortLabel = (v: string) =>
     Number(v) < 0 ? t('close.short') : Number(v) > 0 ? t('close.over') : t('close.countMatches');
@@ -167,7 +170,7 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
               <View testID="close-members" className="mt-3 rounded-2xl border border-border bg-white p-4" style={{gap: 6}}>
                 <Text className="text-sm font-semibold">{t('close.byMember')}</Text>
                 {(data.members ?? []).map(m => (
-                  <Row key={m.userId ?? 'none'} label={personLabel(m.name, m.mobile)}
+                  <Row key={m.userId ?? 'none'} label={memberLabel(m)}
                     value={`${formatMoney(m.collected)} · ${t('close.cash')} ${formatMoney(m.cash)}`} />
                 ))}
               </View>
@@ -195,7 +198,7 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
                 const uid = m.userId as string;
                 return (
                   <View key={uid} testID={`count-person-${uid}`} className="mt-2 border-t border-border pt-2" style={{gap: 6}}>
-                    <Row label={personLabel(m.name, m.mobile)} value={`${t('close.cash')} ${formatMoney(m.cash)}`} />
+                    <Row label={memberLabel(m)} value={`${t('close.cash')} ${formatMoney(m.cash)}`} />
                     {m.cashCounted != null && m.cashOverShort != null ? (
                       <Row label={`${t('close.cashCounted')} ${formatMoney(m.cashCounted)} · ${overShortLabel(m.cashOverShort)}`}
                         value={absMoney(m.cashOverShort)} />
@@ -263,7 +266,7 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
                   const preset = m.cashCounted ?? m.cash;
                   return (
                     <View key={uid} testID={`deposit-person-${uid}`} className="flex-row items-center" style={{gap: 8}}>
-                      <Text className="flex-1 text-sm">{personLabel(m.name, m.mobile)}</Text>
+                      <Text className="flex-1 text-sm">{memberLabel(m)}</Text>
                       <View className="flex-1">
                         <Input testID={`deposit-person-input-${uid}`} keyboardType="decimal-pad"
                           value={personDeposit[uid] ?? preset}

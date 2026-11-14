@@ -1,4 +1,5 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {screenLayout} from './screenLayout';
 import React from 'react';
 
 import {PERMISSIONS} from '@features/auth/rbac';
@@ -101,7 +102,7 @@ const Stack = createNativeStackNavigator<AppStackParamList>();
 /** Main app for fully onboarded users. */
 export function AppNavigator(): React.JSX.Element {
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Navigator screenOptions={{headerShown: false}} screenLayout={screenLayout}>
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="ConsentSettings" component={ConsentSettingsScreen} />

@@ -430,6 +430,20 @@ def list_deposits(db: Session, business: Business, user: User, role: str, day: s
     return [deposit_dto(d, lines.get(d.id)) for d in rows]
 
 
+# Cash recorded with no salesperson (entries from before who-recorded-it was
+# kept, or by a since-deleted user) is counted and deposited as this "person".
+NO_SALESPERSON = "none"
+
+
+def _check_person(db: Session, business: Business, role: str, user_id: str) -> None:
+    if user_id == NO_SALESPERSON:
+        if not role_can(role, DATA_VIEW):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the owner can count cash with no salesperson.")
+    elif not db.scalars(select(BusinessMember.id).where(
+            BusinessMember.business_id == business.id, BusinessMember.user_id == user_id)).first():
+        raise HTTPException(422, "That person isn't on your team.")
+
+
 def record_deposit(db: Session, business: Business, user: User, role: str, *, day: str,
                    beat_id: str | None, amount: Decimal, kind: str, note: str | None,
                    user_id: str | None = None) -> dict:
@@ -440,9 +454,8 @@ def record_deposit(db: Session, business: Business, user: User, role: str, *, da
     _deposit_scope(db, business, user, role, beat_id)
     if amount <= 0 or amount > Decimal("100000000"):
         raise HTTPException(422, "Enter the cash amount.")
-    if user_id and not db.scalars(select(BusinessMember.id).where(
-            BusinessMember.business_id == business.id, BusinessMember.user_id == user_id)).first():
-        raise HTTPException(422, "That person isn't on your team.")
+    if user_id:
+        _check_person(db, business, role, user_id)
     if kind != "deposit":
         count = None
     elif user_id:
@@ -614,7 +627,7 @@ def daily_close(db: Session, business: Business, user: User, role: str,
     collections = []
     for e, c in rows:
         p = to_paise(e.amount)
-        m = per.setdefault(e.salesman_id, dict.fromkeys(("collected", "cash", "creditGiven"), 0))
+        m = per.setdefault(e.salesman_id or NO_SALESPERSON, dict.fromkeys(("collected", "cash", "creditGiven"), 0))
         if e.type == "credit":
             totals["creditGiven"] += p
             m["creditGiven"] += p
@@ -665,7 +678,7 @@ def daily_close(db: Session, business: Business, user: User, role: str,
     if by_person:
         counted = sum(c.counted_paise for c in people.values())
         # The beat's over/short needs everyone holding cash counted (cash
-        # recorded with no salesperson can only be counted for the whole beat).
+        # with no salesperson is counted by the owner, as its own row).
         complete = all(uid in people for uid, m in per.items() if m["cash"])
         beat_count = {
             "cashCounted": rupees(counted) if sees_all else None,
@@ -738,9 +751,7 @@ def record_count(db: Session, business: Business, user: User, role: str, *, day:
     if user_id:
         if not role_can(role, DATA_VIEW) and user_id != user.id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "You can count only your own cash.")
-        if not db.scalars(select(BusinessMember.id).where(
-                BusinessMember.business_id == business.id, BusinessMember.user_id == user_id)).first():
-            raise HTTPException(422, "That person isn't on your team.")
+        _check_person(db, business, role, user_id)
     if counted < 0 or counted > Decimal("100000000"):
         raise HTTPException(422, "Enter the cash counted.")
     db.add(CashCount(business_id=business.id, date=day, beat_id=beat_id, user_id=user_id or None,

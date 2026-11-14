@@ -11,6 +11,7 @@ import {
   useRecurringMutations,
 } from '@features/recurring/presentation/hooks';
 import {useT} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
@@ -174,7 +175,7 @@ function RecurringRow({
             ) : null}
           </View>
           <Text variant="caption" className="mt-0.5">
-            {frequencyLabel(rec.frequency, rec.interval)} · {rec.category}
+            {frequencyLabel(t, rec.frequency, rec.interval)} · {categoryLabel(t, rec.category)}
             {rec.active
               ? ` · ${t('recurring.next', {date: formatDisplayDate(rec.nextDueDate)})}`
               : ''}

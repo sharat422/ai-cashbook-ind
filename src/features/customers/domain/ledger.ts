@@ -78,6 +78,8 @@ export interface DuplicateReference {
   customerName: string;
   amount: string;
   date: string;
+  /** The earlier cheque was saved with its number only (before bank and account were asked for). */
+  numberOnly?: boolean;
 }
 
 /** A ledger entry with the running outstanding balance after it. */
@@ -128,6 +130,17 @@ export interface GstInvoiceInput {
   paidNow?: boolean;
   /** Save as a draft: no number yet, not in the books until issued. */
   draft?: boolean;
+  /** Several items: every item, item 1 first (the same as rate/hsn/quantity/uqc
+   *  above). The draft's `amount` is then their sum. */
+  lines?: GstLineInput[];
+}
+
+export interface GstLineInput {
+  amount: string;
+  rate: string;
+  hsn: string;
+  quantity: string;
+  uqc: string;
 }
 
 export type GstStatus = 'draft' | 'issued' | 'cancelled';

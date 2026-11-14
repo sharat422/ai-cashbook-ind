@@ -20,6 +20,11 @@ CURRENT_RATES = {Decimal(r) for r in ("0", "0.25", "3", "5", "18", "40")}
 #   28%: kept for tobacco and pan masala until the compensation cess ended on
 #        1 Feb 2026, when those moved to 40%.
 RETIRED_RATES = {Decimal("12"): "2025-09-22", Decimal("28"): "2026-02-01"}
+# ...except that 12% stays after 22 Sep 2025 for building bricks, fly ash
+# bricks/blocks/aggregates and earthen/roofing tiles (Notification
+# 14/2025-Central Tax (Rate), 17 Sep 2025). By HSN: these codes, or a shorter
+# HSN they start with (a 4-digit HSN "6904" is allowed; the CA confirms).
+TWELVE_PERCENT_HSN = ("6815", "69010010", "69041000", "69051000")
 # Every rate any invoice can carry (tests and exports).
 GST_RATES = CURRENT_RATES | set(RETIRED_RATES)
 # ponytail: the only place rates live — re-check on every GST Council change.
@@ -137,21 +142,35 @@ def clean_hsn(value: str | None) -> str:
     return v
 
 
-def rates_on(day: str | None) -> set[Decimal]:
-    """Rates allowed on an invoice dated `day` (YYYY-MM-DD); None = today."""
-    return CURRENT_RATES | {r for r, ends in RETIRED_RATES.items() if day is not None and day < ends}
+def keeps_12_percent(hsn: str | None) -> bool:
+    """Bricks and tiles keep 12% (TWELVE_PERCENT_HSN)."""
+    h = re.sub(r"\s", "", hsn or "")
+    return len(h) >= 4 and any(h.startswith(code) or code.startswith(h) for code in TWELVE_PERCENT_HSN)
 
 
-def clean_rate(value, day: str | None = None) -> Decimal:
+def rates_on(day: str | None, hsn: str | None = "") -> set[Decimal]:
+    """Rates allowed on an invoice dated `day` (YYYY-MM-DD; None = today) for an
+    item with this HSN. `hsn=None` means not known yet (a preview): 12% passes
+    there and is checked again when the invoice is saved with its HSN."""
+    rates = CURRENT_RATES | {r for r, ends in RETIRED_RATES.items() if day is not None and day < ends}
+    if hsn is None or keeps_12_percent(hsn):
+        rates = rates | {Decimal("12")}
+    return rates
+
+
+def clean_rate(value, day: str | None = None, hsn: str | None = "") -> Decimal:
     try:
         rate = Decimal(str(value))
     except (InvalidOperation, ValueError):
         raise _reject("Enter a GST rate.") from None
-    if rate in RETIRED_RATES and rate not in rates_on(day):
+    if rate == Decimal("12") and rate not in rates_on(day, hsn):
+        raise _reject("12% GST ended on 2025-09-22 except for building bricks and tiles (HSN 6815, "
+                      "6901 00 10, 6904 10 00, 6905 10 00). Check the HSN, or use the current rate.")
+    if rate in RETIRED_RATES and rate not in rates_on(day, hsn):
         raise _reject(f"{rate.normalize():f}% GST ended on {RETIRED_RATES[rate]}. Use the current rate "
                       "for this item (0, 5, 18 or 40%; 3% gold/silver; 0.25% rough diamonds).")
-    if rate not in rates_on(day):
-        allowed = ", ".join(f"{r.normalize():f}" for r in sorted(rates_on(day)))
+    if rate not in rates_on(day, hsn):
+        allowed = ", ".join(f"{r.normalize():f}" for r in sorted(rates_on(day, hsn)))
         raise _reject(f"GST rate must be one of {allowed}%.")
     return rate
 
@@ -220,7 +239,7 @@ def invoice(business, *, amount, rate, inclusive: bool, hsn: str | None,
             raise _reject("Pick the customer's state.")
     else:
         pos = seller
-    rate = clean_rate(rate, day)
+    rate = clean_rate(rate, day, hsn)  # hsn None = a preview: 12% is checked again on save
     inter = pos != seller
     return {
         "customer_gstin": gstin,
@@ -231,6 +250,40 @@ def invoice(business, *, amount, rate, inclusive: bool, hsn: str | None,
         "inter_state": inter,
         **split(amount, rate, inclusive, inter),
     }
+
+
+MAX_LINES = 100
+LINE_COLUMNS = ("hsn_code", "gst_rate", "gst_quantity", "gst_uqc", "taxable_value", "cgst", "sgst", "igst")
+TOTALS = ("taxable_value", "cgst", "sgst", "igst", "total")
+
+
+def invoice_lines(business, lines: list[dict], *, inclusive: bool, customer_gstin: str | None,
+                  place_of_supply: str | None, day: str | None = None, preview: bool = False) -> dict:
+    """A GST invoice of one or more items. Each item's tax is worked out and
+    rounded on its own, as printed on the invoice; the totals are their sums.
+    An item: {amount, rate, hsn, quantity, uqc}. A preview needs only amount and rate."""
+    if not isinstance(lines, list) or not 1 <= len(lines) <= MAX_LINES:
+        raise _reject(f"A GST invoice has 1 to {MAX_LINES} items.")
+    out = []
+    for ln in lines:
+        try:
+            amount = Decimal(str(ln.get("amount")))
+        except (InvalidOperation, ValueError, AttributeError):
+            raise _reject("Enter the amount for each item.") from None
+        if not amount.is_finite() or amount <= 0 or amount > Decimal("100000000"):
+            raise _reject("Enter the amount for each item.")
+        t = invoice(business, amount=amount, rate=ln.get("rate"), inclusive=inclusive,
+                    hsn=None if preview else (ln.get("hsn") or ""), customer_gstin=customer_gstin,
+                    place_of_supply=place_of_supply, day=day)
+        if not preview:
+            t["gst_quantity"], t["gst_uqc"] = clean_line(ln.get("quantity"), ln.get("uqc"))
+        out.append(t)
+    return {**out[0], **{k: sum((t[k] for t in out), Decimal("0.00")) for k in TOTALS}, "lines": out}
+
+
+def lines_of(entry) -> list:
+    """Every item of a saved invoice: its gst_lines, or the entry itself for a one-item invoice."""
+    return list(entry.gst_lines) or [entry]
 
 
 def financial_year(day: str) -> str:

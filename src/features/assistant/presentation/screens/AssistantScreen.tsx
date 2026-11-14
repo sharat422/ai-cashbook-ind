@@ -10,7 +10,7 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {ApiError} from '@api/client';
-import {Text} from '@components/ui';
+import {BackButton, Text} from '@components/ui';
 import {isLiveVoiceAvailable} from '@features/ai-entry/data/liveVoice';
 import {useLiveVoice} from '@features/ai-entry/presentation/hooks/useLiveVoice';
 import type {
@@ -216,6 +216,7 @@ export function AssistantScreen({
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <BackButton />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

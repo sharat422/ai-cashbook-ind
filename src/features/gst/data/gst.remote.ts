@@ -7,6 +7,8 @@ export type Money = string;
 export interface GstPreviewInput {
   amount: number;
   rate: string;
+  /** Several items: every item's amount and rate (amount and rate above are item 1's). */
+  lines?: {amount: number; rate: string}[];
   priceIncludesGst: boolean;
   customerGstin?: string;
   placeOfSupply?: string;
@@ -90,6 +92,7 @@ export const gstRemote = {
       body: {
         amount: input.amount,
         rate: input.rate,
+        lines: input.lines,
         price_includes_gst: input.priceIncludesGst,
         customer_gstin: input.customerGstin || null,
         place_of_supply: input.placeOfSupply || null,

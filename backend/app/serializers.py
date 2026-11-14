@@ -4,7 +4,7 @@ from decimal import Decimal
 The app's auth/business DTOs are camelCase; all other DTOs are snake_case.
 """
 
-from .gst import money
+from .gst import lines_of, money
 from .models import (
     Business,
     Customer,
@@ -105,6 +105,11 @@ def gst_dto(m: LedgerEntry) -> dict | None:
         "igst": money(m.igst),
         "quantity": None if m.gst_quantity is None else f"{Decimal(m.gst_quantity).normalize():f}",
         "uqc": m.gst_uqc,
+        # Every item (one for a one-item invoice, the same as the fields above).
+        "lines": [{"hsn": ln.hsn_code, "rate": f"{Decimal(ln.gst_rate).normalize():f}",
+                   "quantity": None if ln.gst_quantity is None else f"{Decimal(ln.gst_quantity).normalize():f}",
+                   "uqc": ln.gst_uqc, "taxable_value": money(ln.taxable_value), "cgst": money(ln.cgst),
+                   "sgst": money(ln.sgst), "igst": money(ln.igst)} for ln in lines_of(m)],
     }
 
 

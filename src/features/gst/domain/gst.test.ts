@@ -42,3 +42,15 @@ test('an item unit becomes its GST unit code where it can', () => {
   expect(uqcForUnit('NOS')).toBe('NOS');
   expect(uqcForUnit('handful')).toBeNull();
 });
+
+describe('12% for bricks and tiles (Notification 14/2025-CT(Rate))', () => {
+  const {gstRatesFor, keeps12Percent} = require('./gst');
+  it.each(['6815', '68151090', '69010010', '69041000', '69051000', '6904', '690410'])('%s keeps 12%%', hsn => {
+    expect(keeps12Percent(hsn)).toBe(true);
+    expect(gstRatesFor(hsn)).toEqual(['0', '5', '12', '18', '40']);
+  });
+  it.each(['1006', '6907', '69049000', '69059000', '', null])('%s does not', hsn => {
+    expect(keeps12Percent(hsn)).toBe(false);
+    expect(gstRatesFor(hsn)).toEqual(['0', '5', '18', '40']);
+  });
+});

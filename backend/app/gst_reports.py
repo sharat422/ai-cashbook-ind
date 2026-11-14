@@ -15,10 +15,10 @@ from decimal import Decimal
 
 from openpyxl import Workbook
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .calc import IST
-from .gst import UQC, money, place_label, state_code
+from .gst import UQC, lines_of, money, place_label, state_code
 from .models import (Business, CreditNote, Customer, GstInvoiceNumber, GstRateChangeLog, Item, LedgerEntry, in_books,
                      StockMove)
 
@@ -43,6 +43,7 @@ def invoices(db: Session, business: Business, start: str, end: str) -> list[tupl
         .where(Customer.business_id == business.id, LedgerEntry.type == "credit",
                LedgerEntry.gst_rate.is_not(None), in_books(),
                LedgerEntry.date >= start, LedgerEntry.date <= end)
+        .options(selectinload(LedgerEntry.gst_lines))
         .order_by(LedgerEntry.date, LedgerEntry.invoice_number)
     ).all()
 
@@ -219,7 +220,7 @@ def _party(c: Customer) -> str:
     return c.business_name or c.full_name
 
 
-def _rate(e: LedgerEntry) -> Decimal:
+def _rate(e) -> Decimal:  # an entry or one of its gst_lines
     return Decimal(e.gst_rate).normalize() + 0  # 18.00 -> 18 (and never 1.8E+1)
 
 
@@ -238,11 +239,13 @@ def summary(rows: list[tuple]) -> dict:
 # ---------------------------------------------------------------- Tally
 
 def tally_rows(rows: list[tuple]) -> list[list]:
+    """One row per item; an invoice with several items repeats its bill
+    reference and invoice value on each."""
     return [
-        [date.fromisoformat(e.date), _party(c), e.customer_gstin or "", e.hsn_code,
-         _d(e.taxable_value), _d(e.cgst), _d(e.sgst), _d(e.igst), e.invoice_number or "",
-         _rate(e), place_label(e.place_of_supply), _total(e)]
-        for e, c in rows
+        [date.fromisoformat(e.date), _party(c), e.customer_gstin or "", ln.hsn_code,
+         _d(ln.taxable_value), _d(ln.cgst), _d(ln.sgst), _d(ln.igst), e.invoice_number or "",
+         _rate(ln), place_label(e.place_of_supply), _total(e)]
+        for e, c in rows for ln in lines_of(e)
     ]
 
 
@@ -314,22 +317,28 @@ def gstr1_xlsx(rows: list[tuple], changes: list, notes: list | None = None,
     b2cs: dict[tuple, Decimal] = defaultdict(lambda: ZERO)
     hsn: dict[tuple, list] = {}
     for e, c in rows:
-        rate, taxable, total = _rate(e), _d(e.taxable_value), _total(e)
+        total = _total(e)  # the invoice value, on every rate row of the invoice
         when, pos = date.fromisoformat(e.date), place_label(e.place_of_supply)
-        if e.customer_gstin:
-            b2b.append([e.customer_gstin, _party(c), e.invoice_number, when, total, pos,
-                        "N", "", "Regular B2B", "", rate, taxable, ZERO])
-        elif _d(e.igst) > 0 and total > B2CL_LIMIT:
-            b2cl.append([e.invoice_number, when, total, pos, "", rate, taxable, ZERO, ""])
-        else:
-            b2cs[(pos, rate)] += taxable
-        # One row per HSN + unit + rate. Invoices saved before quantity/UQC were
-        # recorded group under a blank unit, for the CA to fill.
-        key = ("b2b" if e.customer_gstin else "b2c", e.hsn_code, e.gst_uqc or "", rate)
-        acc = hsn.setdefault(key, [ZERO] * 6)
-        for i, v in enumerate((total, taxable, _d(e.igst), _d(e.cgst), _d(e.sgst),
-                               Decimal(e.gst_quantity or 0))):
-            acc[i] += v
+        by_rate: dict[Decimal, Decimal] = defaultdict(lambda: ZERO)
+        for ln in lines_of(e):
+            rate, taxable = _rate(ln), _d(ln.taxable_value)
+            by_rate[rate] += taxable
+            # One row per HSN + unit + rate. Invoices saved before quantity/UQC were
+            # recorded group under a blank unit, for the CA to fill.
+            key = ("b2b" if e.customer_gstin else "b2c", ln.hsn_code, ln.gst_uqc or "", rate)
+            acc = hsn.setdefault(key, [ZERO] * 6)
+            for i, v in enumerate((_total(ln), taxable, _d(ln.igst), _d(ln.cgst), _d(ln.sgst),
+                                   Decimal(ln.gst_quantity or 0))):
+                acc[i] += v
+        # b2b and b2cl: one row per invoice and rate, as the offline tool wants.
+        for rate, taxable in sorted(by_rate.items()):
+            if e.customer_gstin:
+                b2b.append([e.customer_gstin, _party(c), e.invoice_number, when, total, pos,
+                            "N", "", "Regular B2B", "", rate, taxable, ZERO])
+            elif _d(e.igst) > 0 and total > B2CL_LIMIT:
+                b2cl.append([e.invoice_number, when, total, pos, "", rate, taxable, ZERO, ""])
+            else:
+                b2cs[(pos, rate)] += taxable
 
     cdnr, cdnur = [], []
     for n in notes:
@@ -394,15 +403,16 @@ def gstr3b_xlsx(rows: list[tuple], start: str, end: str, notes: list | None = No
     nil = ZERO                           # 3.1(c) nil-rated
     inter_unreg: dict[str, list] = {}    # 3.2 by place of supply
     for e, _ in rows:
-        if _rate(e) == 0:
-            nil += _d(e.taxable_value)
-            continue
-        for k in ("taxable_value", "igst", "cgst", "sgst"):
-            taxable[k] += _d(getattr(e, k))
-        if not e.customer_gstin and _d(e.igst) > 0:
-            acc = inter_unreg.setdefault(place_label(e.place_of_supply), [ZERO, ZERO])
-            acc[0] += _d(e.taxable_value)
-            acc[1] += _d(e.igst)
+        for ln in lines_of(e):
+            if _rate(ln) == 0:
+                nil += _d(ln.taxable_value)
+                continue
+            for k in ("taxable_value", "igst", "cgst", "sgst"):
+                taxable[k] += _d(getattr(ln, k))
+            if not e.customer_gstin and _d(ln.igst) > 0:
+                acc = inter_unreg.setdefault(place_label(e.place_of_supply), [ZERO, ZERO])
+                acc[0] += _d(ln.taxable_value)
+                acc[1] += _d(ln.igst)
     pending = []
     for n in notes:
         if not n.reduces_tax:
