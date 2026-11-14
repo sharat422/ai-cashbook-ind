@@ -2,10 +2,11 @@ import React from 'react';
 import {View} from 'react-native';
 
 import {BrandLogo, Screen, Text} from '@components/ui';
+import {colors} from '@theme/colors';
 
 /** Soft elevation for the auth card (RN needs style props for shadows). */
 const CARD_SHADOW = {
-  shadowColor: '#4F46E5',
+  shadowColor: colors.primary,
   shadowOpacity: 0.12,
   shadowRadius: 24,
   shadowOffset: {width: 0, height: 10},

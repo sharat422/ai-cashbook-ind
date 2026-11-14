@@ -93,7 +93,7 @@ function LineMatch({line, onDone}: {line: BankLine; onDone: () => void}): React.
               return (
                 <Pressable key={l.id} testID={`more-line-${l.id}`} accessibilityRole="checkbox"
                   accessibilityState={{checked: on}} onPress={() => toggleLine(l)}
-                  className={`rounded-xl border p-3 ${on ? 'border-primary bg-indigo-50' : 'border-border bg-white'}`}>
+                  className={`rounded-xl border p-3 ${on ? 'border-primary bg-orange-50' : 'border-border bg-white'}`}>
                   <Text className="text-sm font-semibold">{on ? '☑' : '☐'} 🏦 {formatMoney(l.remaining)}</Text>
                   <Text variant="caption">
                     {formatDisplayDate(l.date)}{l.utr ? ` · ${l.utr}` : ''}{l.narration ? ` · ${l.narration}` : ''}
@@ -113,7 +113,7 @@ function LineMatch({line, onDone}: {line: BankLine; onDone: () => void}): React.
             return (
               <Pressable key={c.id} testID={`cand-${c.id}`} accessibilityRole="checkbox" accessibilityState={{checked: on}}
                 onPress={() => toggle(c)}
-                className={`rounded-xl border p-3 ${on ? 'border-primary bg-indigo-50' : 'border-border bg-white'}`}>
+                className={`rounded-xl border p-3 ${on ? 'border-primary bg-orange-50' : 'border-border bg-white'}`}>
                 <Text className="text-sm font-semibold">{on ? '☑' : '☐'} {formatMoney(c.amount)} · {c.customerName}</Text>
                 <Text variant="caption">
                   {formatDisplayDate(c.date)}{c.mode ? ` · ${c.mode.toUpperCase()}` : ''}{c.reference ? ` · ${c.reference}` : ''}
@@ -182,7 +182,7 @@ function SplitMatch({collection, onDone}: {collection: Collection; onDone: () =>
             return (
               <Pressable key={l.id} testID={`line-${l.id}`} accessibilityRole="checkbox" accessibilityState={{checked: on}}
                 onPress={() => toggle(l)}
-                className={`rounded-xl border p-3 ${on ? 'border-primary bg-indigo-50' : 'border-border bg-white'}`}>
+                className={`rounded-xl border p-3 ${on ? 'border-primary bg-orange-50' : 'border-border bg-white'}`}>
                 <Text className="text-sm font-semibold">{on ? '☑' : '☐'} 🏦 {formatMoney(l.remaining)}</Text>
                 <Text variant="caption">
                   {formatDisplayDate(l.date)}{l.utr ? ` · ${l.utr}` : ''}{l.narration ? ` · ${l.narration}` : ''}

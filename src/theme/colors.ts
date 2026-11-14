@@ -3,9 +3,9 @@
  * styles (e.g. StatusBar, ActivityIndicator) that can't consume className.
  */
 export const colors = {
-  primary: '#4F46E5',
-  primaryDark: '#4338CA',
-  primaryLight: '#818CF8',
+  primary: '#B05500',
+  primaryDark: '#8A4200',
+  primaryLight: '#E5952A',
   surface: '#FFFFFF',
   background: '#F5F6FF',
   muted: '#64748B',

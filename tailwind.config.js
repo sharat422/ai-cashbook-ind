@@ -5,10 +5,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // The Bolcash logo's orange (#D76901), deepened so white text on it
+        // and it as text on the background stay readable (≥ 4.5:1).
         primary: {
-          DEFAULT: '#4F46E5',
-          dark: '#4338CA',
-          light: '#818CF8',
+          DEFAULT: '#B05500',
+          dark: '#8A4200',
+          light: '#E5952A',
         },
         surface: '#FFFFFF',
         background: '#F5F6FF',
