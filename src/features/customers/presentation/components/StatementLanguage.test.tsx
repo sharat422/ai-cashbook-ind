@@ -6,6 +6,7 @@ import {act, create, type ReactTestRenderer} from 'react-test-renderer';
 
 import {StatementConsentCard} from './StatementConsentCard';
 
+jest.setTimeout(60_000); // the first test also loads the screen's modules
 jest.mock('@features/auth/hooks', () => ({usePermissions: () => ({can: () => true})}));
 const mockSetLanguage = jest.fn(async (..._a: unknown[]) => ({}));
 jest.mock('@features/customers/data/statements.remote', () => ({

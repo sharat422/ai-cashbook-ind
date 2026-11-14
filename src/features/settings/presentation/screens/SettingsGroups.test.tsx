@@ -13,6 +13,7 @@ import {SettingsScreen} from './SettingsScreen';
 
 // A card stand-in: plain text, found like any other label.
 const stub = (label: string) => require('react').createElement(require('react-native').Text, null, label);
+jest.setTimeout(60_000); // the first test also loads the screen's modules
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({children}: {children: React.ReactNode}) => children,
 }));

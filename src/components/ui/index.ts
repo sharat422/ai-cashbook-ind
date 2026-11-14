@@ -1,6 +1,7 @@
 export * from './AiInsightCard';
 export * from './Avatar';
 export * from './BackButton';
+export * from './BrandLogo';
 export * from './BottomSheet';
 export * from './Button';
 export * from './Confetti';

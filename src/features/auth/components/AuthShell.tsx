@@ -1,7 +1,7 @@
 import React from 'react';
 import {View} from 'react-native';
 
-import {Screen, Text} from '@components/ui';
+import {BrandLogo, Screen, Text} from '@components/ui';
 
 /** Soft elevation for the auth card (RN needs style props for shadows). */
 const CARD_SHADOW = {
@@ -13,13 +13,6 @@ const CARD_SHADOW = {
 } as const;
 
 /** Coloured glow under the logo tile. */
-const LOGO_SHADOW = {
-  shadowColor: '#4F46E5',
-  shadowOpacity: 0.35,
-  shadowRadius: 14,
-  shadowOffset: {width: 0, height: 6},
-  elevation: 6,
-} as const;
 
 export interface AuthShellProps {
   title: string;
@@ -52,16 +45,9 @@ export function AuthShell({
         className="absolute -left-28 top-40 h-56 w-56 rounded-full bg-primary opacity-10"
       />
       <View className="flex-1 justify-center py-8">
-        {/* Wordmark */}
-        <View className="mb-9 flex-row items-center justify-center">
-          <View
-            className="h-12 w-12 items-center justify-center rounded-2xl bg-primary"
-            style={LOGO_SHADOW}>
-            <Text className="text-2xl font-black text-white">₹</Text>
-          </View>
-          <Text className="ml-3 text-2xl font-black tracking-tight text-primary-dark">
-            Bolcash
-          </Text>
+        {/* Logo */}
+        <View className="mb-9 items-center">
+          <BrandLogo width={220} />
         </View>
 
         {/* Hero */}

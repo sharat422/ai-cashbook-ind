@@ -2,8 +2,7 @@ import React from 'react';
 import {ActivityIndicator, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
-import {Text} from '@components/ui';
-import {APP_CONFIG} from '@config/constants';
+import {BrandLogo, Text} from '@components/ui';
 import {useT} from '@/i18n';
 
 /**
@@ -15,13 +14,11 @@ export function SplashScreen(): React.JSX.Element {
   return (
     <SafeAreaView className="flex-1 bg-primary">
       <View className="flex-1 items-center justify-center px-6">
-        <View className="h-20 w-20 items-center justify-center rounded-3xl bg-white">
-          <Text className="text-3xl">₹</Text>
+        {/* The logo is orange on white: on a white card over the brand colour. */}
+        <View className="items-center rounded-3xl bg-white px-6 py-5">
+          <BrandLogo width={240} />
         </View>
-        <Text className="mt-5 text-2xl font-bold text-white">
-          {APP_CONFIG.name}
-        </Text>
-        <Text className="mt-1 text-sm text-white/80">
+        <Text className="mt-4 text-sm text-white/80">
           {t('auth.splash.tagline')}
         </Text>
       </View>
