@@ -15,14 +15,14 @@ export type AppLanguage =
 /** Telugu first: a new install opens in Telugu (switchable on the login screen). */
 export const DEFAULT_APP_LANGUAGE: AppLanguage = 'te';
 
-/** Picker order: the three main choices first, then the other languages. */
-export const PRIMARY_APP_LANGUAGES: ReadonlyArray<AppLanguage> = ['te', 'hinglish', 'en'];
+/** Picker order: the four main choices first (also the login screen's switch), then the other languages. */
+export const PRIMARY_APP_LANGUAGES: ReadonlyArray<AppLanguage> = ['te', 'hi', 'hinglish', 'en'];
 
 export const SUPPORTED_APP_LANGUAGES: ReadonlyArray<AppLanguage> = [
   'te',
+  'hi',
   'hinglish',
   'en',
-  'hi',
   'ta',
   'kn',
   'mr',

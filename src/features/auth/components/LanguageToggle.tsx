@@ -10,7 +10,7 @@ import {useT} from '@/i18n';
 import {useAuthStore} from '@store/auth.store';
 
 /**
- * Telugu / Hinglish / English, one tap each — on the login screen so the very
+ * Telugu / Hindi / Hinglish / English, one tap each — on the login screen so the very
  * first screen a new user sees can be switched. Other languages are in Settings.
  */
 export function LanguageToggle(): React.JSX.Element {

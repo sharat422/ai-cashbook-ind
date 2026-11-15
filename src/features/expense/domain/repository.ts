@@ -8,6 +8,8 @@ export interface PendingExpense {
   createdAt: string;
   retryCount: number;
   lastError?: string;
+  /** Queued because the server didn't answer in time, not because the phone was offline (IM2). */
+  weakSignal?: boolean;
 }
 
 /**
@@ -17,9 +19,8 @@ export interface PendingExpense {
  */
 export interface ExpenseRepository {
   /**
-   * Create an expense. Offline-first + optimistic: always inserts an optimistic
-   * `pending` entry immediately and queues it, returning without waiting on the
-   * network. The queue is flushed by `syncPending`.
+   * Create an expense: saved on the server when it can be reached; otherwise
+   * queued with an optimistic `pending` entry, flushed later by `syncPending`.
    */
   create(draft: ExpenseDraft): Promise<Expense>;
 

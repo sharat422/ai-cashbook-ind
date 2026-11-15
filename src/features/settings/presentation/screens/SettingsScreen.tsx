@@ -41,7 +41,7 @@ import {confirmLogout} from '@features/sync/syncStatus';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 
-type PinMode = 'idle' | 'set' | 'confirm';
+type PinMode = 'idle' | 'current' | 'set' | 'confirm';
 
 /** Settings home, one group per feature area (security, language, team, money,
  *  stock, customers, GST, data, account, help, privacy), then logout. */
@@ -60,6 +60,7 @@ export function SettingsScreen({
   const lockEnabled = useAppLockStore(s => s.enabled);
   const setPin = useAppLockStore(s => s.setPin);
   const disableLock = useAppLockStore(s => s.disableLock);
+  const verifyPin = useAppLockStore(s => s.verifyPin);
   const biometricEnabled = useAppLockStore(s => s.biometricEnabled);
   const enableBiometric = useAppLockStore(s => s.enableBiometric);
   const disableBiometric = useAppLockStore(s => s.disableBiometric);
@@ -118,6 +119,19 @@ export function SettingsScreen({
   useEffect(() => {
     if (mode === 'idle' || pin.length < PIN_LENGTH) return;
 
+    if (mode === 'current') {
+      // Changing the PIN: the current one first.
+      void verifyPin(pin).then(ok => {
+        setPinInput('');
+        if (ok) {
+          setError(null);
+          setMode('set');
+        } else {
+          setError(t('unlock.incorrect'));
+        }
+      });
+      return;
+    }
     if (mode === 'set') {
       setFirstPin(pin);
       setPinInput('');
@@ -219,7 +233,7 @@ export function SettingsScreen({
           {mode !== 'idle' ? (
             <View className="mt-5 border-t border-border pt-5">
               <Text className="text-center text-base font-semibold text-slate-900">
-                {mode === 'set' ? t('settings.setPin') : t('settings.confirmPin')}
+                {mode === 'current' ? t('settings.currentPin') : mode === 'set' ? t('settings.setPin') : t('settings.confirmPin')}
               </Text>
               <View className="mt-4 self-center" style={{width: 224}}>
                 <OtpInput
@@ -243,6 +257,20 @@ export function SettingsScreen({
                 onPress={cancelPinSetup}
               />
             </View>
+          ) : null}
+
+          {lockEnabled && mode === 'idle' ? (
+            <Button
+              testID="settings-change-pin"
+              title={t('settings.changePin')}
+              variant="ghost"
+              className="mt-3"
+              onPress={() => {
+                setMode('current');
+                setPinInput('');
+                setError(null);
+              }}
+            />
           ) : null}
 
           {/* Biometric unlock — only when the lock is on and the device supports it */}

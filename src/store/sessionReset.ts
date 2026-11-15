@@ -1,4 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useEffect, useRef} from 'react';
+import {create} from 'zustand';
+import {createJSONStorage, persist} from 'zustand/middleware';
 
 import {useVisitQueue} from '@features/beats/data/visitQueue';
 import {useCategorizationStore} from '@features/categorization/presentation/store/categorization.store';
@@ -46,25 +49,38 @@ export function resetBusinessData(): void {
 }
 
 /**
- * Clears business-scoped local data whenever the active business changes —
- * i.e. on logout (id → null) or when a different business becomes active
- * (account switch / new registration). The first run after mount only *adopts*
- * the current business so a returning user keeps their own offline queue.
+ * Which business the local data on this phone belongs to. Kept across app
+ * restarts: every start is a fresh login, and entries waiting to sync stay on
+ * the phone in between, so the next login must know whose they are.
+ */
+export const useLocalDataOwner = create<{businessId: string | null; setBusinessId: (id: string) => void}>()(
+  persist(
+    set => ({businessId: null, setBusinessId: businessId => set({businessId})}),
+    {name: 'local-data-owner', storage: createJSONStorage(() => AsyncStorage)},
+  ),
+);
+
+/**
+ * Clears business-scoped local data whenever another business takes over the
+ * phone: on logout (id → null), on an account switch, and at a login to a
+ * different business than the one whose data is on the phone — e.g. the
+ * owner closed the app with entries waiting to sync and someone else logs in
+ * next (without this they'd sync into that person's business). A login back to
+ * the same business keeps its waiting entries, so they sync.
  */
 export function useSessionDataReset(): void {
   const businessId = useAuthStore(s => s.business?.id ?? null);
   const previousId = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    if (previousId.current === undefined) {
-      previousId.current = businessId; // adopt on first mount, don't clear
-      return;
-    }
-    if (previousId.current !== businessId) {
-      // Only wipe when leaving a real business; going null→id (a fresh login
-      // right after a logout that already cleared) needs no second wipe.
-      if (previousId.current !== null) resetBusinessData();
-      previousId.current = businessId;
+    const previous = previousId.current;
+    previousId.current = businessId;
+    if (businessId) {
+      const owner = useLocalDataOwner.getState().businessId;
+      if (owner && owner !== businessId) resetBusinessData();
+      useLocalDataOwner.getState().setBusinessId(businessId);
+    } else if (previous) {
+      resetBusinessData(); // logout: leaving a real business
     }
   }, [businessId]);
 }

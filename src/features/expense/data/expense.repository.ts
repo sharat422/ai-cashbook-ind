@@ -1,4 +1,4 @@
-import {NetworkError} from '@api/client';
+import {NetworkError, WeakSignalError} from '@api/client';
 import {singleFlight} from '@utils/singleFlight';
 import {connectivity} from '@/services/network/connectivity';
 import type {Expense, ExpenseDraft} from '@features/expense/domain/entities';
@@ -24,18 +24,33 @@ function pendingToEntry(pending: PendingExpense): Expense {
 }
 
 /**
- * Concrete repository wiring remote + local data sources and connectivity.
+ * Concrete repository wiring remote + local data sources and connectivity —
+ * the same as income:
  *
- * Offline-first + optimistic: `create` ALWAYS inserts a `pending` entry and
- * queues the draft immediately, returning without awaiting the network. The
- * UI updates instantly; `syncPending` reconciles each entry against the server
- * (replacing it with the synced version, or flagging it `failed` to retry).
+ * - Online  : POST to FastAPI, store the synced entry.
+ * - Offline : enqueue the draft + show an optimistic `pending` entry. The sync
+ *             manager flushes the queue when connectivity returns.
+ *
+ * (Expenses used to always queue first and rely on a background sync, so an
+ * expense could sit "waiting to sync" while an income saved at once.)
  */
 export const expenseRepository: ExpenseRepository = {
   async create(draft: ExpenseDraft): Promise<Expense> {
     const localId = makeLocalId();
     const createdAt = new Date().toISOString();
-    const pending: PendingExpense = {localId, draft, createdAt, retryCount: 0};
+    let weakSignal = false;
+    try {
+      await connectivity.beforeSave();
+      const expense = await expenseRemote.create(draft, localId);
+      expenseLocal.addEntry(expense);
+      return expense;
+    } catch (err) {
+      // Offline, weak signal, or the network blipped mid-request: fall through
+      // to the offline path so the entry is never lost.
+      weakSignal = err instanceof WeakSignalError;
+    }
+
+    const pending: PendingExpense = {localId, draft, createdAt, retryCount: 0, ...(weakSignal ? {weakSignal} : {})};
 
     expenseLocal.enqueue(pending);
     const optimistic = pendingToEntry(pending);

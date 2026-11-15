@@ -15,6 +15,7 @@ import {inviteToken, type TeamInviteEntry} from '../data/invites';
 import {JoinInviteCard} from './JoinInviteCard';
 import {TeamScreen} from './screens/TeamScreen';
 import {useInviteDeepLink} from './useInviteDeepLink';
+import {CreateBusinessScreen} from '@features/auth/screens/CreateBusinessScreen';
 
 jest.setTimeout(90_000);
 jest.mock('react-native-safe-area-context', () => ({
@@ -117,6 +118,23 @@ test('bolcash://invite/<token> opened before login is accepted once signed in', 
   await settle();
   expect(api).toHaveBeenCalledWith('/team/invites/accept', {method: 'POST', body: {token: TOKEN}});
   expect(api).toHaveBeenCalledTimes(1);
+  alert.mockRestore();
+  act(() => r.unmount());
+});
+
+test('a new person on the registration screen joins with the link instead of creating a business', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  useAuthStore.setState({token: 'tok', business: null});
+  api.mockResolvedValue({businessId: 'biz-1', businessName: 'Sri Lakshmi Agencies', role: 'accountant'});
+  let r!: ReactTestRenderer;
+  await act(async () => { r = create(wrap(<CreateBusinessScreen />)); });
+  expect(text(r)).toContain('Join with an invite');
+  await act(async () => { byId(r, 'invite-link')[0].props.onChangeText(`https://api.example.com/invite/${TOKEN}`); });
+  await act(async () => { byId(r, 'invite-join')[0].props.onPress(); });
+  await settle();
+  expect(api).toHaveBeenCalledWith('/team/invites/accept', {method: 'POST', body: {token: TOKEN}});
+  expect(api.mock.calls.some(([path]) => path === '/businesses')).toBe(false); // no business of their own
+  expect(useAuthStore.getState().business).toMatchObject({id: 'biz-1'});
   alert.mockRestore();
   act(() => r.unmount());
 });

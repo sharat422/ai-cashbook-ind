@@ -61,7 +61,7 @@ export function SyncStatusScreen({navigation}: AppScreenProps<'SyncStatus'>): Re
       kind: 'income' as const, amount: q.draft.amount,
       fix: {kind: 'income' as const, values: {amount: q.draft.amount, date: q.draft.date, notes: q.draft.notes}}})),
     ...expense.map(q => ({key: q.localId, what: t('sync.kind.expense'), detail: formatINR(q.draft.amount), error: q.lastError,
-      kind: 'expense' as const, amount: q.draft.amount,
+      weak: q.weakSignal, kind: 'expense' as const, amount: q.draft.amount,
       fix: {kind: 'expense' as const, values: {amount: q.draft.amount, date: q.draft.date, notes: q.draft.notes}}})),
     ...ledger.map(q => ({
       key: q.localId,

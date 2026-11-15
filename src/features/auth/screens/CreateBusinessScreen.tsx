@@ -24,6 +24,7 @@ import {
 } from '@features/auth/utils/languagePreference';
 import {useAuthStore} from '@store/auth.store';
 import {useT} from '@/i18n';
+import {businessTypeLabel} from '@/i18n/labels';
 import {validateRequired} from '@utils/validation';
 
 interface FormState {
@@ -134,6 +135,7 @@ export function CreateBusinessScreen(): React.JSX.Element {
             label={t('auth.business.typeLabel')}
             placeholder={t('auth.business.typePlaceholder')}
             options={BUSINESS_TYPES}
+            labelOf={type => businessTypeLabel(t, type)}
             value={form.businessType}
             onSelect={value => update('businessType', value)}
             error={errors.businessType}

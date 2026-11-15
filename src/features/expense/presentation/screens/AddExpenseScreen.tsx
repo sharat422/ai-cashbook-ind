@@ -136,9 +136,15 @@ export function AddExpenseScreen({
     if (!form.isValid) return;
 
     createExpense.mutate(form.draft, {
-      onSuccess: () => {
+      onSuccess: expense => {
         form.reset();
-        navigation.goBack();
+        // Say what happened, as Add Income does: saved, or kept on the phone.
+        const queued = expense.syncStatus === 'pending';
+        Alert.alert(
+          queued ? t('entry.savedOfflineTitle') : t('expense.addedTitle'),
+          queued ? t('entry.savedOfflineMsg') : t('expense.addedMsg'),
+          [{text: t('common.ok'), onPress: () => navigation.goBack()}],
+        );
       },
       onError: err => Alert.alert(t('form.couldNotSave'), err.message),
     });

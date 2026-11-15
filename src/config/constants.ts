@@ -43,9 +43,14 @@ export const GRIEVANCE = {
 } as const;
 
 /** Business types selectable on the Create Business screen. */
+/** Stored as these English names (the server keeps the text); shown in the
+ *  user's language via businessTypeLabel (src/i18n/labels.ts). */
 export const BUSINESS_TYPES = [
-  'Retail',
+  'Distributor',
+  'Agency',
+  'FMCG',
   'Wholesale',
+  'Retail',
   'Manufacturing',
   'Services',
   'Restaurant / Food',

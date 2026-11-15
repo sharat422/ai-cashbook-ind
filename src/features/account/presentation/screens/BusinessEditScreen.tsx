@@ -7,6 +7,7 @@ import {accountRemote} from '@features/account/data/account.remote';
 import {cleanGstin, isValidGstin} from '@features/gst/domain/gst';
 import {useAuthStore} from '@store/auth.store';
 import {useT} from '@/i18n';
+import {businessTypeLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 
 /**
@@ -99,6 +100,7 @@ export function BusinessEditScreen({
           label={t('auth.business.typeLabel')}
           placeholder={t('auth.business.typePlaceholder')}
           options={BUSINESS_TYPES as unknown as string[]}
+          labelOf={type => businessTypeLabel(t, type)}
           value={businessType}
           onSelect={setBusinessType}
         />

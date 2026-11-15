@@ -19,7 +19,7 @@ const isTextProp = (name: string) =>
 const LABEL_TABLE = /(?:^|_)(?:LABELS?|TITLES?|COPY|TEXTS?|MESSAGES?)$/;
 
 /** Words that are the same in every language the app ships (brands, units, formats, tax names). */
-const ALLOWED = /^(?:₹|GST|GSTIN|CGST|SGST|IGST|HSN|SAC|UQC|UPI|UTR|PIN|PDF|OCR|GPT|MB|Excel|CSV|xlsx|csv|SMS|WhatsApp|Meta|OTP|AI|ID|OK|OS|HTTPS|Android|iOS|Keystore|Keychain|Bolcash|Smart CashBook|Tally|TallyPrime|CA|SKU|IST|SB|SBI|Swiggy|ITC|BOX|PCS|KGS|Dr|Cr|DD|MM|YYYY|US|English|Hinglish|తెలుగు)$/;
+const ALLOWED = /^(?:₹|GST|GSTIN|CGST|SGST|IGST|HSN|SAC|UQC|UPI|UTR|PIN|PDF|OCR|GPT|MB|Excel|CSV|xlsx|csv|SMS|WhatsApp|Meta|OTP|AI|ID|OK|OS|HTTPS|Android|iOS|Keystore|Keychain|Bolcash|Smart CashBook|Tally|TallyPrime|CA|SKU|FMCG|IST|SB|SBI|Swiggy|ITC|BOX|PCS|KGS|Dr|Cr|DD|MM|YYYY|US|English|Hinglish|తెలుగు)$/;
 
 export interface Finding {
   line: number;
