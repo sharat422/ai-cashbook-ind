@@ -4,14 +4,14 @@ import {Modal, Platform, Pressable, StyleSheet, View} from 'react-native';
 
 import {Text} from '@components/ui';
 import {useT} from '@/i18n';
-import {formatDisplayDate, toISODate} from '@utils/date';
+import {endOfTodayIST, formatDisplayDate, nowIST, toISODate} from '@utils/date';
 
 export interface DateFieldProps {
   /** ISO date (YYYY-MM-DD). */
   value: string;
   onChange: (iso: string) => void;
   error?: string | null;
-  /** Latest selectable date (defaults to today — no future income dates). */
+  /** Latest selectable date (defaults to today in India — no future income dates). */
   maximumDate?: Date;
 }
 
@@ -27,17 +27,17 @@ export function DateField({
   value,
   onChange,
   error,
-  maximumDate = new Date(),
+  maximumDate = endOfTodayIST(),
 }: DateFieldProps): React.JSX.Element {
   const t = useT();
   const [open, setOpen] = useState(false);
   // Holds the in-progress iOS spinner selection until the user taps Done.
   const [draft, setDraft] = useState<Date>(() =>
-    value ? new Date(`${value}T00:00:00`) : new Date(),
+    value ? new Date(`${value}T00:00:00`) : nowIST(),
   );
 
   const openPicker = () => {
-    setDraft(value ? new Date(`${value}T00:00:00`) : new Date());
+    setDraft(value ? new Date(`${value}T00:00:00`) : nowIST());
     setOpen(true);
   };
 
@@ -97,7 +97,7 @@ export function DateField({
         </Modal>
       ) : open ? (
         <DateTimePicker
-          value={value ? new Date(`${value}T00:00:00`) : new Date()}
+          value={value ? new Date(`${value}T00:00:00`) : nowIST()}
           mode="date"
           maximumDate={maximumDate}
           display="default"

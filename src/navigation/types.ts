@@ -5,6 +5,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {Customer} from '@features/customers/domain/entities';
 import type {ExpenseCategory} from '@features/expense/domain/entities';
 import type {Item} from '@features/items/domain/entities';
+import type {EntryDetail} from '@features/transactions/domain/entities';
 import type {RecurringExpense} from '@features/recurring/domain/entities';
 import type {Attachment} from '@/shared/types/attachment';
 
@@ -84,6 +85,7 @@ export type AppStackParamList = {
     | {initialValues?: ExpensePrefill; initialAttachment?: Attachment | null}
     | undefined;
   TransactionHistory: undefined;
+  TransactionDetail: {entry: EntryDetail};
   ReceiptCapture: undefined;
   ReceiptReview: {image: Attachment};
   Categorize: undefined;

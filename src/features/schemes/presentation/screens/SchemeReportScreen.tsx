@@ -11,7 +11,7 @@ import {useSchemeLog, useSchemeReport} from '@features/schemes/presentation/hook
 import {formatQty} from '@features/stock/domain/qty';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
-import {formatDisplayDate} from '@utils/date';
+import {formatDisplayDate, nowIST} from '@utils/date';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 function monthRange(ym: string): {from: string; to: string} {
@@ -34,7 +34,7 @@ export function SchemeReportScreen({route}: AppScreenProps<'SchemeReport'>): Rea
   const {customerId, customerName} = route.params ?? {};
   const {can} = usePermissions();
   const canReport = can(PERMISSIONS.REPORTS_VIEW);
-  const now = new Date();
+  const now = nowIST(); // India's today, whatever the phone's time zone
   const [month, setMonth] = useState(`${now.getFullYear()}-${pad(now.getMonth() + 1)}`);
   const [tab, setTab] = useState<'summary' | 'log'>(customerId || !canReport ? 'log' : 'summary');
   const {from, to} = monthRange(month);

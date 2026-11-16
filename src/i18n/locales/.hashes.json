@@ -1989,7 +1989,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "gu": {
     "account.deleteAccount": "5b4180f40b06",
@@ -3981,7 +3985,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "hi": {
     "account.deleteAccount": "5b4180f40b06",
@@ -5973,7 +5981,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "hinglish": {
     "account.deleteAccount": "5b4180f40b06",
@@ -7965,7 +7977,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "kn": {
     "account.deleteAccount": "5b4180f40b06",
@@ -9957,7 +9973,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "ml": {
     "account.deleteAccount": "5b4180f40b06",
@@ -11949,7 +11969,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "mr": {
     "account.deleteAccount": "5b4180f40b06",
@@ -13941,7 +13965,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "pa": {
     "account.deleteAccount": "5b4180f40b06",
@@ -15933,7 +15961,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "ta": {
     "account.deleteAccount": "5b4180f40b06",
@@ -17925,7 +17957,11 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   },
   "te": {
     "account.deleteAccount": "5b4180f40b06",
@@ -19917,6 +19953,10 @@
     "businessType.services": "5cbd58404686",
     "businessType.restaurant": "6ae2af8cfc02",
     "businessType.ecommerce": "c991b729c7a3",
-    "businessType.other": "6e6a6f2086bb"
+    "businessType.other": "6e6a6f2086bb",
+    "txDetail.title": "f3b3e118c7af",
+    "txDetail.type": "3deb74565196",
+    "txDetail.status": "bae7d5be7082",
+    "txDetail.openFile": "f11b8781300b"
   }
 }

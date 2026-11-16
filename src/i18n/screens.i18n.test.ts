@@ -109,6 +109,7 @@ const GROUPS: Record<string, string[]> = {
   ],
   'everything else': [
     'features/transactions/presentation/screens/TransactionHistoryScreen.tsx',
+    'features/transactions/presentation/screens/TransactionDetailScreen.tsx',
     'features/account/presentation/screens/BusinessEditScreen.tsx',
     'features/account/presentation/screens/DeleteAccountScreen.tsx',
     'features/business/presentation/screens/BusinessScreen.tsx',

@@ -45,3 +45,17 @@ def test_listing_returns_only_own_rows(user, client):
     incomes = client.get("/api/v1/incomes", headers=user.headers).json()
     assert {r["id"] for r in incomes} >= set()
     assert len(incomes) == 2
+
+
+def test_an_expense_saves_without_a_vendor(user, client):
+    """The app's "Vendor / Paid to" is optional (and quick add has none). It
+    used to be required here, so those expenses never synced."""
+    for key, extra in (("no-vendor-empty", {"vendor": ""}), ("no-vendor-missing", {}),
+                       ("no-vendor-blank", {"vendor": "   "})):
+        r = client.post("/api/v1/expenses", headers=user.headers, data={
+            "amount": "120", "category": "Fuel", "date": today_iso(), "client_id": key, **extra})
+        assert r.status_code == 200, r.text
+        assert r.json()["vendor"] == ""
+    long = client.post("/api/v1/expenses", headers=user.headers, data={
+        "amount": "1", "category": "Fuel", "date": today_iso(), "client_id": "long-vendor", "vendor": "x" * 201})
+    assert long.status_code == 422  # a vendor that is given still has its length limit

@@ -13,6 +13,7 @@ export interface TransactionDto {
   date: string;
   vendor: string | null;
   notes: string | null;
+  attachment_url?: string | null;
   created_at: string;
 }
 
@@ -32,6 +33,7 @@ export function toTransaction(dto: TransactionDto): Transaction {
     date: dto.date,
     vendor: dto.vendor ?? undefined,
     notes: dto.notes ?? undefined,
+    attachmentUrl: dto.attachment_url ?? undefined,
     createdAt: dto.created_at,
   };
 }

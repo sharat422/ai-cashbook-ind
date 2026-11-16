@@ -18,7 +18,23 @@ export interface Transaction {
   /** Present on expenses (who was paid). */
   vendor?: string;
   notes?: string;
+  /** The attached bill/photo on the server, if any. */
+  attachmentUrl?: string;
   createdAt: string;
+}
+
+/** One income or expense as the Entry details screen shows it (from either list). */
+export interface EntryDetail {
+  kind: TransactionType;
+  amount: number;
+  category: string;
+  date: string;
+  vendor?: string;
+  notes?: string;
+  /** Uploaded file (server) — or, while still waiting to sync, the photo on the phone. */
+  attachmentUrl?: string;
+  attachmentUri?: string;
+  syncStatus?: 'synced' | 'pending' | 'failed';
 }
 
 export type SortField = 'date' | 'amount';

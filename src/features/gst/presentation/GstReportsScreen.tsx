@@ -13,7 +13,7 @@ import {formatMoney} from '@features/reconciliation/domain/money';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
-import {formatDisplayDate} from '@utils/date';
+import {formatDisplayDate, nowIST} from '@utils/date';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -43,7 +43,7 @@ const REPORTS = [
  */
 export function GstReportsScreen(_: AppScreenProps<'GstReports'>): React.JSX.Element {
   const t = useT();
-  const now = new Date();
+  const now = nowIST(); // India's today, whatever the phone's time zone
   const [month, setMonth] = useState(`${now.getFullYear()}-${pad(now.getMonth() + 1)}`);
   const {from, to} = monthRange(month);
   const businessId = useAuthStore(s => s.business?.id ?? '');

@@ -10,6 +10,7 @@ import {
 import {FilterChip, SearchBar} from '@components/filters';
 import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import {useT, type TKey} from '@/i18n';
+import type {AppScreenProps} from '@navigation/types';
 import {categoryLabel} from '@/i18n/labels';
 import type {Transaction} from '@features/transactions/domain/entities';
 import {
@@ -37,7 +38,7 @@ const SORT_LABEL: Record<string, TKey> = {
  * category, date range), and sort. Built on a tuned FlatList that scales to
  * 100k+ records via server-side pagination + getItemLayout + windowing.
  */
-export function TransactionHistoryScreen(): React.JSX.Element {
+export function TransactionHistoryScreen({navigation}: Partial<AppScreenProps<'TransactionHistory'>> = {}): React.JSX.Element {
   const t = useT();
   const {
     filters,
@@ -73,9 +74,16 @@ export function TransactionHistoryScreen(): React.JSX.Element {
 
   const sortKey = `${filters.sort.field}-${filters.sort.direction}`;
 
+  // Tap a row: its details, including notes and the attached bill photo.
+  const openEntry = useCallback(
+    (tx: Transaction) => navigation?.navigate('TransactionDetail', {entry: {
+      kind: tx.type, amount: tx.amount, category: tx.category, date: tx.date,
+      vendor: tx.vendor, notes: tx.notes, attachmentUrl: tx.attachmentUrl, syncStatus: 'synced'}}),
+    [navigation],
+  );
   const renderItem = useCallback(
-    ({item}: {item: Transaction}) => <TransactionRow tx={item} />,
-    [],
+    ({item}: {item: Transaction}) => <TransactionRow tx={item} onPress={openEntry} />,
+    [openEntry],
   );
   const keyExtractor = useCallback((item: Transaction) => item.id, []);
   const getItemLayout = useCallback(

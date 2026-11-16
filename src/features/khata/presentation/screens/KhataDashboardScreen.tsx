@@ -21,7 +21,7 @@ import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
-import {toISODate} from '@utils/date';
+import {nowIST, toISODate} from '@utils/date';
 
 type DatePreset = 'today' | 'week' | 'month' | 'quarter' | 'custom';
 
@@ -29,7 +29,7 @@ function presetRange(preset: Exclude<DatePreset, 'custom'>): {
   from: string;
   to: string;
 } {
-  const now = new Date();
+  const now = nowIST(); // India's today, whatever the phone's time zone
   const y = now.getFullYear();
   const m = now.getMonth();
   const today = toISODate(now);

@@ -66,6 +66,7 @@ import {StockConflictScreen} from '@features/sync/presentation/StockConflictScre
 import {SyncStatusScreen} from '@features/sync/presentation/SyncStatusScreen';
 import {LegalDocScreen} from '@features/legal/presentation/screens/LegalDocScreen';
 import {TransactionHistoryScreen} from '@features/transactions/presentation/screens/TransactionHistoryScreen';
+import {TransactionDetailScreen} from '@features/transactions/presentation/screens/TransactionDetailScreen';
 import {QuickAddScreen} from '@features/transactions/presentation/screens/QuickAddScreen';
 import type {AppStackParamList} from './types';
 
@@ -182,6 +183,7 @@ export function AppNavigator(): React.JSX.Element {
         name="TransactionHistory"
         component={TransactionHistoryScreen}
       />
+      <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <Stack.Screen
         name="ReceiptCapture"
         component={Guarded.ReceiptCaptureScreen}

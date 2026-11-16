@@ -76,3 +76,15 @@ def test_pagination_cursor(user, client):
     ids = {r["id"] for r in page1["items"]} | {r["id"] for r in page2["items"]}
     assert len(ids) == 4
     assert page2["next_cursor"] is None
+
+
+def test_the_list_carries_each_entrys_attachment_link(user, client):
+    """The app's Entry details screen shows the attached bill from the history list."""
+    from conftest import today_iso
+    r = client.post("/api/v1/expenses", headers=user.headers, files={"attachment": ("bill.png", b"\x89PNG fake", "image/png")},
+                    data={"amount": "90", "category": "Fuel", "date": today_iso(), "client_id": "with-photo", "vendor": "HP"})
+    assert r.status_code == 200, r.text
+    items = client.get("/api/v1/transactions", headers=user.headers).json()["items"]
+    row = next(i for i in items if i["id"] == r.json()["id"])
+    assert row["attachment_url"] and row["attachment_url"] == r.json()["attachment_url"]
+    assert all("attachment_url" in i for i in items)

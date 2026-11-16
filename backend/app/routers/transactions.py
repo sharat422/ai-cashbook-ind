@@ -38,7 +38,7 @@ def list_transactions(
             rows.append({
                 "id": i.id, "type": "income", "amount": i.amount,
                 "category": i.category, "date": i.date, "vendor": None,
-                "notes": i.notes, "created_at": i.created_at,
+                "notes": i.notes, "attachment_url": i.attachment_url, "created_at": i.created_at,
             })
 
     if type != "income":
@@ -48,7 +48,7 @@ def list_transactions(
             rows.append({
                 "id": e.id, "type": "expense", "amount": e.amount,
                 "category": e.category, "date": e.date, "vendor": e.vendor,
-                "notes": e.notes, "created_at": e.created_at,
+                "notes": e.notes, "attachment_url": e.attachment_url, "created_at": e.created_at,
             })
 
     if search:

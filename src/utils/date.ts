@@ -25,6 +25,22 @@ export function istDate(instant: Date = new Date()): string {
 /** Today's date in India. */
 export const todayIST = (): string => istDate();
 
+/**
+ * India's today as a phone-local Date (noon, clear of midnight edges), for
+ * date pickers and preset ranges that work in the phone's own calendar. On a
+ * phone outside India (e.g. a US evening, when India is already on the next
+ * day) `new Date()` is the wrong day: the picker couldn't reach India's today
+ * and "Today" in Reports meant yesterday.
+ */
+export function nowIST(): Date {
+  return new Date(`${todayIST()}T12:00:00`);
+}
+
+/** The last moment of India's today, as a phone-local Date: the latest a date picker may allow. */
+export function endOfTodayIST(): Date {
+  return new Date(`${todayIST()}T23:59:59`);
+}
+
 /** "14 Jun 2026" — month name in the app language; numbers stay 0-9. */
 export function formatDisplayDate(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);

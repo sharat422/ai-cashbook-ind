@@ -1,5 +1,5 @@
 import React from 'react';
-import {View} from 'react-native';
+import {Pressable, View} from 'react-native';
 
 import {Text} from '@components/ui';
 import type {Transaction} from '@features/transactions/domain/entities';
@@ -16,7 +16,7 @@ import {categoryLabel} from '@/i18n/labels';
 export const ROW_HEIGHT = 76;
 const GAP = 8;
 
-function TransactionRowBase({tx}: {tx: Transaction}): React.JSX.Element {
+function TransactionRowBase({tx, onPress}: {tx: Transaction; onPress?: (tx: Transaction) => void}): React.JSX.Element {
   const t = useT();
   const isIncome = tx.type === 'income';
   const category = categoryLabel(t, tx.category);
@@ -24,7 +24,9 @@ function TransactionRowBase({tx}: {tx: Transaction}): React.JSX.Element {
 
   return (
     <View style={{height: ROW_HEIGHT, paddingBottom: GAP}}>
-      <View className="flex-1 flex-row items-center rounded-xl border border-border bg-white px-4">
+      <Pressable testID={`tx-row-${tx.id}`} accessibilityRole="button" disabled={!onPress}
+        onPress={() => onPress?.(tx)}
+        className="flex-1 flex-row items-center rounded-xl border border-border bg-white px-4">
         <View
           className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
             isIncome ? 'bg-green-50' : 'bg-red-50'
@@ -47,7 +49,7 @@ function TransactionRowBase({tx}: {tx: Transaction}): React.JSX.Element {
           {isIncome ? '+' : '−'}
           {formatINR(tx.amount)}
         </Text>
-      </View>
+      </Pressable>
     </View>
   );
 }

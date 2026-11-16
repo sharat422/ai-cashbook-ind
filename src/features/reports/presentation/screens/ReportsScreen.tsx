@@ -21,12 +21,12 @@ import {useT, type TKey} from '@/i18n';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
-import {toISODate} from '@utils/date';
+import {nowIST, toISODate} from '@utils/date';
 
 type Preset = 'today' | 'week' | 'month' | 'quarter' | 'custom';
 
 function presetRange(p: Exclude<Preset, 'custom'>): {from: string; to: string} {
-  const now = new Date();
+  const now = nowIST(); // India's today, whatever the phone's time zone
   const y = now.getFullYear();
   const m = now.getMonth();
   const today = toISODate(now);

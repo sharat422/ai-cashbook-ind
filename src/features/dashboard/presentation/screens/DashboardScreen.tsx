@@ -2,6 +2,7 @@ import React, {useCallback, useMemo} from 'react';
 import {Pressable, RefreshControl, ScrollView, View} from 'react-native';
 
 import {Button, EmptyState, ErrorState, Screen, Text} from '@components/ui';
+import type {EntryDetail} from '@features/transactions/domain/entities';
 import {isSummaryEmpty} from '@features/dashboard/domain/entities';
 import {
   StaffHome,
@@ -39,6 +40,8 @@ interface ActivityItem {
   amount: number;
   createdAt: string;
   syncStatus: SyncStatus;
+  /** What the Entry details screen shows when the row is tapped. */
+  entry: EntryDetail;
 }
 
 /**
@@ -71,15 +74,19 @@ export function DashboardScreen({
         amount: e.amount,
         createdAt: e.createdAt,
         syncStatus: e.syncStatus,
+        entry: {kind: 'income' as const, amount: e.amount, category: e.category, date: e.date, notes: e.notes,
+          attachmentUrl: e.attachmentUrl, attachmentUri: e.attachment?.uri, syncStatus: e.syncStatus},
       })),
       ...expenses.map(e => ({
         id: e.id,
         kind: 'expense' as const,
-        title: `${categoryLabel(t, e.category)} · ${e.vendor}`,
+        title: e.vendor ? `${categoryLabel(t, e.category)} · ${e.vendor}` : categoryLabel(t, e.category),
         date: e.date,
         amount: e.amount,
         createdAt: e.createdAt,
         syncStatus: e.syncStatus,
+        entry: {kind: 'expense' as const, amount: e.amount, category: e.category, date: e.date, vendor: e.vendor,
+          notes: e.notes, attachmentUrl: e.attachmentUrl, attachmentUri: e.attachment?.uri, syncStatus: e.syncStatus},
       })),
     ];
     return merged
@@ -308,7 +315,8 @@ export function DashboardScreen({
         ) : (
           <View style={{gap: 8}}>
             {activity.map(item => (
-              <ActivityRow key={`${item.kind}-${item.id}`} item={item} />
+              <ActivityRow key={`${item.kind}-${item.id}`} item={item}
+                onPress={() => navigation.navigate('TransactionDetail', {entry: item.entry})} />
             ))}
           </View>
         )}
@@ -325,10 +333,11 @@ export function DashboardScreen({
   );
 }
 
-function ActivityRow({item}: {item: ActivityItem}): React.JSX.Element {
+function ActivityRow({item, onPress}: {item: ActivityItem; onPress: () => void}): React.JSX.Element {
   const isIncome = item.kind === 'income';
   return (
-    <View className="flex-row items-center justify-between rounded-xl border border-border bg-white px-4 py-3">
+    <Pressable testID={`activity-${item.id}`} accessibilityRole="button" onPress={onPress}
+      className="flex-row items-center justify-between rounded-xl border border-border bg-white px-4 py-3">
       <View className="flex-1 pr-3">
         <Text className="font-semibold text-slate-900" numberOfLines={1}>
           {item.title}
@@ -349,6 +358,6 @@ function ActivityRow({item}: {item: ActivityItem}): React.JSX.Element {
           </Text>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }

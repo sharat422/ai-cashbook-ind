@@ -1988,5 +1988,9 @@
   "businessType.services": "Services",
   "businessType.restaurant": "Restaurant / Food",
   "businessType.ecommerce": "E-commerce",
-  "businessType.other": "Other"
+  "businessType.other": "Other",
+  "txDetail.title": "Entry details",
+  "txDetail.type": "Type",
+  "txDetail.status": "Status",
+  "txDetail.openFile": "Open file"
 }

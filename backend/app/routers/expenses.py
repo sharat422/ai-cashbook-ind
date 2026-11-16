@@ -33,7 +33,10 @@ def create_expense(
     amount: float = Form(...),
     category: str = Form(...),
     date: str = Form(...),
-    vendor: str = Form(...),
+    # Optional: the app lets you save an expense with just an amount (quick add,
+    # "Vendor / Paid to" left empty). It used to be required here, so those
+    # expenses were refused and stayed "waiting to sync" on the phone.
+    vendor: str = Form(""),
     client_id: str = Form(...),
     notes: str | None = Form(None),
     attachment: UploadFile | None = File(None),
@@ -41,7 +44,7 @@ def create_expense(
     db: Session = Depends(get_db),
 ) -> dict:
     amount = validate_amount(amount)
-    vendor = validate_text(vendor, "Vendor", 200)
+    vendor = validate_text(vendor, "Vendor", 200) if vendor.strip() else ""
     category = validate_text(category, "Category", 60)
     date = validate_date(date, allow_future=False)
     client_id = validate_text(client_id, "Client ID", 80)
