@@ -12,7 +12,7 @@ export interface ReportTxnResult {
   source: 'remote' | 'local';
 }
 
-const PAGE_LIMIT = 500;
+const PAGE_LIMIT = 500; // must stay <= the server cap (transactions.py, le=500)
 const MAX_PAGES = 40; // safety cap: up to 20k rows per export
 
 function baseQuery(from: string, to: string): TransactionQuery {

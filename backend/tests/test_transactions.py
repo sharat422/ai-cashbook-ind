@@ -88,3 +88,19 @@ def test_the_list_carries_each_entrys_attachment_link(user, client):
     row = next(i for i in items if i["id"] == r.json()["id"])
     assert row["attachment_url"] and row["attachment_url"] == r.json()["attachment_url"]
     assert all("attachment_url" in i for i in items)
+
+
+def test_the_reports_export_query_is_accepted(user, client):
+    """Reports → PDF / Excel pages the feed 500 rows at a time (reportTransactions.ts).
+    The cap used to be 100, so every export got a 422 ("Some details aren't right")."""
+    _seed(client, user.headers)
+    r = client.get(
+        "/api/v1/transactions?limit=500&sort_by=date&sort_dir=asc&search="
+        "&date_from=2026-06-01&date_to=2026-06-30",
+        headers=user.headers,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert [row["date"] for row in body["items"]] == ["2026-06-10", "2026-06-11", "2026-06-12", "2026-06-13"]
+    assert body["next_cursor"] is None
+    assert client.get("/api/v1/transactions?limit=501", headers=user.headers).status_code == 422

@@ -4,7 +4,7 @@ import React, {useState} from 'react';
 import {Alert, RefreshControl, ScrollView, View} from 'react-native';
 
 import {downloadAndShare} from '@api/download';
-import {DateField} from '@components/form/DateField';
+import {DateRangeField} from '@components/filters/DateRangeField';
 import {Button, EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import {activityQuery, teamRemote, type AccessEntry} from '@features/team/data/team.remote';
 import {useT, type TKey} from '@/i18n';
@@ -53,20 +53,10 @@ export function AccountantActivityScreen({route}: AppScreenProps<'AccountantActi
         {/* AC5: what this log can and can't see. */}
         <Text testID="audit-scope" variant="caption" className="mt-2">{t('audit.scopeNote')}</Text>
 
-        <View className="mt-4 flex-row" style={{gap: 8}}>
-          <View className="flex-1">
-            <Text variant="caption">{t('common.from')}</Text>
-            <DateField value={from} onChange={setFrom} />
-          </View>
-          <View className="flex-1">
-            <Text variant="caption">{t('common.to')}</Text>
-            <DateField value={to} onChange={setTo} />
-          </View>
+        <View className="mt-4">
+          <DateRangeField from={from || null} to={to || null}
+            onChange={r => { setFrom(r.from ?? ''); setTo(r.to ?? ''); }} />
         </View>
-        {from || to ? (
-          <Button title={t('common.clearDates')} variant="ghost" fullWidth={false} className="mt-1 self-start"
-            onPress={() => { setFrom(''); setTo(''); }} />
-        ) : null}
         <Button testID="audit-export" title={t('audit.exportExcel')} variant="secondary" className="mt-3"
           loading={exporting} disabled={!q.data?.length} onPress={() => void exportExcel()} />
 

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {Pressable, View} from 'react-native';
 
-import {DateField} from '@components/form';
+import {DateField} from '@components/form/DateField';
 import {Text} from '@components/ui';
 import {useT} from '@/i18n';
 
@@ -11,14 +11,29 @@ export interface DateRangeFieldProps {
   onChange: (range: {from: string | null; to: string | null}) => void;
 }
 
-/** Reusable from/to date-range picker built on the native DateField. */
+/**
+ * Reusable from/to date-range picker built on the native DateField. A To date
+ * before the From date is refused with an error; the range stays as it was.
+ */
 export function DateRangeField({
   from,
   to,
   onChange,
 }: DateRangeFieldProps): React.JSX.Element {
   const t = useT();
+  const [bad, setBad] = useState<'from' | 'to' | null>(null);
   const hasValue = !!from || !!to;
+
+  const pick = (which: 'from' | 'to', value: string) => {
+    const next = which === 'from' ? {from: value, to} : {from, to: value};
+    if (next.from && next.to && next.from > next.to) {
+      setBad(which);
+      return;
+    }
+    setBad(null);
+    onChange(next);
+  };
+
   return (
     <View>
       <View className="flex-row" style={{gap: 12}}>
@@ -28,7 +43,8 @@ export function DateRangeField({
           </Text>
           <DateField
             value={from ?? ''}
-            onChange={value => onChange({from: value, to})}
+            error={bad === 'from' ? t('common.toBeforeFrom') : null}
+            onChange={value => pick('from', value)}
           />
         </View>
         <View className="flex-1">
@@ -37,14 +53,23 @@ export function DateRangeField({
           </Text>
           <DateField
             value={to ?? ''}
-            onChange={value => onChange({from, to: value})}
+            error={bad === 'to' ? t('common.toBeforeFrom') : null}
+            onChange={value => pick('to', value)}
           />
         </View>
       </View>
+      {bad ? (
+        <Text testID="date-range-error" className="mt-1 text-sm text-danger">
+          {t('common.toBeforeFrom')}
+        </Text>
+      ) : null}
       {hasValue ? (
         <Pressable
           className="mt-2 self-start"
-          onPress={() => onChange({from: null, to: null})}>
+          onPress={() => {
+            setBad(null);
+            onChange({from: null, to: null});
+          }}>
           <Text className="text-sm font-semibold text-primary">
             {t('common.clearDates')}
           </Text>

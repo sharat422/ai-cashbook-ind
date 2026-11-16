@@ -516,6 +516,7 @@
   "common.selectDate": "તારીખ પસંદ કરો",
   "common.selectOption": "વિકલ્પ પસંદ કરો",
   "common.to": "સુધી",
+  "common.toBeforeFrom": "અંતિમ તારીખ શરૂ તારીખ પહેલાં હોઈ શકતી નથી.",
   "common.tryAgainMsg": "કૃપા કરીને ફરી પ્રયાસ કરો.",
   "common.yes": "હા",
   "consent.agreeContinue": "સંમતિ આપો અને આગળ વધો",

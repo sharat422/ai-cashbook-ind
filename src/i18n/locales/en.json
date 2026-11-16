@@ -1992,5 +1992,6 @@
   "txDetail.title": "Entry details",
   "txDetail.type": "Type",
   "txDetail.status": "Status",
-  "txDetail.openFile": "Open file"
+  "txDetail.openFile": "Open file",
+  "common.toBeforeFrom": "The end date can't be before the start date."
 }

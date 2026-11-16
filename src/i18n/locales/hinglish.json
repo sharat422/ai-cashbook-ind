@@ -516,6 +516,7 @@
   "common.selectDate": "Tarikh select karo",
   "common.selectOption": "Koi option choose karein",
   "common.to": "Tak",
+  "common.toBeforeFrom": "End date start date se pehle nahi ho sakta.",
   "common.tryAgainMsg": "Phir se try karo.",
   "common.yes": "Haan",
   "consent.agreeContinue": "Agree karke aage badho",

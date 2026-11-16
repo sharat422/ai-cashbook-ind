@@ -44,6 +44,26 @@ it('returns remote figures when the backend responds', async () => {
   expect(summary.cashBalance).toBe(3800);
 });
 
+it('adds the entries still waiting to sync to the server figures (Today matches Recent activity)', async () => {
+  const today = todayIST();
+  useExpenseStore.setState({
+    entries: [
+      {id: 'loc_1', amount: 11000, category: 'Rent', date: today, syncStatus: 'pending'},
+      {id: 's1', amount: 1200, category: 'Fuel', date: today, syncStatus: 'synced'}, // already in the server's 1200
+    ] as any,
+  });
+  mockApi.mockResolvedValueOnce({today_income: 5000, today_expense: 1200, cash_balance: 3800,
+    month_revenue: 5000, month_expense: 1200});
+
+  const summary = await dashboardRepository.getSummary();
+
+  expect(summary.source).toBe('remote');
+  expect(summary.todayExpense).toBe(12200);
+  expect(summary.monthExpense).toBe(12200);
+  expect(summary.cashBalance).toBe(3800 - 11000);
+  expect(summary.todayIncome).toBe(5000);
+});
+
 it('falls back to on-device figures on a NetworkError', async () => {
   const today = todayIST(); // the app's 'today' is the Indian day
   useIncomeStore.setState({

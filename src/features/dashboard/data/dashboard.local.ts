@@ -6,6 +6,7 @@ import {todayIST} from '@utils/date';
 interface Dated {
   amount: number;
   date: string;
+  syncStatus?: string;
 }
 
 const sum = (items: Dated[]): number =>
@@ -17,9 +18,9 @@ const sum = (items: Dated[]): number =>
  * unreachable so the dashboard still shows meaningful, on-device figures.
  */
 export const dashboardLocal = {
-  computeSummary(): DashboardSummary {
-    const incomes = useIncomeStore.getState().entries;
-    const expenses = useExpenseStore.getState().entries;
+  computeSummary(only: (e: Dated) => boolean = () => true): DashboardSummary {
+    const incomes = useIncomeStore.getState().entries.filter(only);
+    const expenses = useExpenseStore.getState().entries.filter(only);
 
     const todayKey = todayIST();
     const monthKey = todayKey.slice(0, 7); // YYYY-MM

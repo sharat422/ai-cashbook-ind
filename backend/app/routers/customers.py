@@ -190,6 +190,19 @@ def _assert_mobile_unique(
         )
 
 
+def _search_words(search: str | None) -> list[str]:
+    """Each word must match the name, business name or mobile ("Ramesh Kirana" finds
+    Ramesh Kumar of Sri Lakshmi Kirana). A number typed as the app shows it
+    ("+91 98765 43210", "098765…") is matched on its 10-digit form."""
+    s = (search or "").strip()
+    if not re.fullmatch(r"[+\d\s\-()]+", s):
+        return s.split()
+    digits = re.sub(r"\D", "", s)
+    if s.startswith("+91") or (len(digits) > 10 and digits.startswith("91")):
+        digits = digits[2:]
+    return [digits.lstrip("0")] if digits.lstrip("0") else []  # Indian mobiles never start with 0
+
+
 @router.get("/customers")
 def list_customers(
     limit: int = Query(20, ge=1, le=100),
@@ -199,8 +212,8 @@ def list_customers(
     db: Session = Depends(get_db),
 ) -> dict:
     base = select(Customer).where(Customer.business_id == business.id)
-    if search:
-        like = f"%{search}%"
+    for word in _search_words(search):
+        like = f"%{word}%"
         base = base.where(
             or_(
                 Customer.full_name.ilike(like),

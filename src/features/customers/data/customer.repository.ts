@@ -18,9 +18,13 @@ export const customerRepository: CustomerRepository = {
       return page;
     } catch (error) {
       if (!(error instanceof NetworkError)) { throw error; }
-      const search = query.search.toLowerCase();
+      // Same as the server: every word must match (name, business, mobile as shown).
+      const words = query.search.toLowerCase().split(/\s+/).filter(Boolean);
       const rows = Object.values(usePendingLedgerStore.getState().customers)
-        .filter(c => `${c.fullName} ${c.mobile} ${c.businessName ?? ''}`.toLowerCase().includes(search))
+        .filter(c => {
+          const hay = `${c.fullName} +91 ${c.mobile} ${c.businessName ?? ''}`.toLowerCase();
+          return words.every(w => hay.includes(w));
+        })
         .sort((a, b) => a.fullName.localeCompare(b.fullName));
       const offset = Number(query.cursor ?? 0);
       return {items: rows.slice(offset, offset + query.limit), total: rows.length,

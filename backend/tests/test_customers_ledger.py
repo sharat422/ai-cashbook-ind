@@ -182,3 +182,22 @@ def test_old_outstanding_credit_is_overdue(user, client):
                date=days_ago_iso(45), client_id="led-old")
     refreshed = client.get(f"/api/v1/customers/{c['id']}", headers=user.headers).json()
     assert refreshed["is_overdue"] is True
+
+
+def test_customer_search_finds_what_the_tester_types(user, client):
+    """§9.3: part of a name, a business name, part of a mobile — also typed the way
+    the app shows it (+91, spaces), with a leading 0, or name and business together."""
+    add_customer(client, user.headers, full_name="Ramesh Kumar", mobile="9876543210",
+                 business_name="Sri Lakshmi Kirana")
+    add_customer(client, user.headers, full_name="Suresh Rao", mobile="9123456789")
+
+    def names(q):
+        body = client.get("/api/v1/customers", params={"search": q}, headers=user.headers).json()
+        return [c["full_name"] for c in body["items"]]
+
+    for q in ["rames", "Lakshmi", "kirana", "98765", "43210", "98765 43210", "+91 98765",
+              "+91 9876543210", "+919876543210", "09876543210", "Ramesh Kirana", "ramesh  kumar", " ramesh "]:
+        assert names(q) == ["Ramesh Kumar"], q
+    assert names("zzzz") == []
+    assert names("Ramesh Rao") == []  # every word must match the same customer
+    assert names("+91") == ["Ramesh Kumar", "Suresh Rao"]  # no digits yet: everyone

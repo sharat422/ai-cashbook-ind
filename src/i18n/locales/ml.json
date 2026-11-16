@@ -516,6 +516,7 @@
   "common.selectDate": "തീയതി തിരഞ്ഞെടുക്കുക",
   "common.selectOption": "ഒരു ഓപ്ഷൻ തിരഞ്ഞെടുക്കുക",
   "common.to": "വരെ",
+  "common.toBeforeFrom": "അവസാന തീയതി ആരംഭ തീയതിയ്ക് മുമ്പായിരിക്കാൻ പാടില്ല.",
   "common.tryAgainMsg": "വീണ്ടും ശ്രമിക്കുക.",
   "common.yes": "അതെ",
   "consent.agreeContinue": "സമ്മതിക്കുക & തുടരുക",

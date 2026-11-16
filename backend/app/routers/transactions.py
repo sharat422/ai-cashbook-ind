@@ -12,7 +12,7 @@ router = APIRouter(tags=["transactions"])
 
 @router.get("/transactions")
 def list_transactions(
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),  # Reports PDF/Excel export pages 500 at a time
     sort_by: str = "date",
     sort_dir: str = "desc",
     cursor: str | None = None,
