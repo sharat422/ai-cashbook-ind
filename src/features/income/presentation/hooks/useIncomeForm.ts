@@ -83,6 +83,7 @@ export function useIncomeForm() {
     setField,
     draft,
     errors: visibleErrors,
+    allErrors,
     isValid,
     markSubmitAttempted: () => setSubmitAttempted(true),
     reset,

@@ -1,6 +1,7 @@
 import React from 'react';
 import {Alert, View} from 'react-native';
 
+import {alertFieldErrors} from '@components/form/alertFieldErrors';
 import {Button, Screen, Text} from '@components/ui';
 import {CustomerForm} from '@features/customers/presentation/components';
 import {
@@ -23,7 +24,7 @@ export function CustomerFormScreen({
 
   const onSubmit = () => {
     form.markSubmitAttempted();
-    if (!form.isValid) return;
+    if (alertFieldErrors(form.allErrors)) return;
 
     const onError = (err: Error) => Alert.alert(t('form.couldNotSave'), err.message);
 

@@ -154,7 +154,8 @@ _NAME_STOPWORDS = {
     "rs", "rupees", "rupee", "inr", "money", "amount", "cash",
     "ka", "ki", "ke", "ko", "se", "ne", "ku", "mera", "meri",
     "maal", "saman", "udhaar", "udhar", "credit", "payment", "sale",
-    "today", "yesterday", "tomorrow",
+    "today", "yesterday", "tomorrow", "me", "naku", "naaku", "mujhe", "mujhko",
+    "ichadu", "ichchadu", "icchadu", "ichindi", "ichaaru", "diye", "diya",
     *_NUM_WORDS.keys(),
     *_MULTIPLIERS.keys(),
 }
@@ -209,12 +210,30 @@ def _heuristic_txn_category(text_for_cat: str, kind: str) -> str:
 _EN_PAYMENT_RE = r"\b(paid|pays|received|got\b.*\bfrom)\b"
 _EN_CREDIT_RE = r"\b(gave|give|given|sold|on credit|owes?)\b"
 
+# The money came TO the shopkeeper, so it is a payment even though the verb is
+# "gave": "gave me", Telugu "naku … ichadu" (he gave me), Hindi "mujhe",
+# Hinglish "X ne … diye" (X gave). Checked first, for the model's answer too.
+_RECEIVED_RES = [
+    r"\b(gave|paid|sent|returned|transferred)\s+me\b",
+    r"\b(naku|naaku|nanaku|mujhe|mujhko|enakku|nanage)\b",
+    r"నాకు|मुझे|मुझको|எனக்கு|ನನಗೆ",
+    r"\b(ichadu|ichchadu|icchadu|ichaadu|ichindi|ichchindi|ichaaru|ichcharu)\b|ఇచ్చాడు|ఇచ్చింది|ఇచ్చారు",
+    r"\b(?!maine\b|humne\b|hamne\b)[a-z]+ ne\b.*\b(diye|diya|de diye|bheje|bheja|lautaye)\b",
+]
+
+
+def _received(text: str) -> bool:
+    import re
+
+    low = text.lower()
+    return any(re.search(r, low) for r in _RECEIVED_RES)
+
 
 def _heuristic_parse(text: str, today: str) -> dict:
     import re
 
     low = text.lower()
-    if re.search(_EN_PAYMENT_RE, low):
+    if _received(text) or re.search(_EN_PAYMENT_RE, low):
         is_payment = True
     elif re.search(_EN_CREDIT_RE, low):
         is_payment = False
@@ -239,15 +258,18 @@ def _normalize_parsed(data: dict, text: str, today: str) -> dict:
     kind = str(data.get("type", "")).lower()
     if kind not in ("credit", "payment"):
         kind = "credit"
+    if _received(text):
+        kind = "payment"  # "Naren naku 7000 ichadu": the money came to me
     amount = data.get("amount")
     try:
         amount = float(amount) if amount is not None else None
     except (TypeError, ValueError):
         amount = None
     date = str(data.get("date") or today)[:10]
-    name = data.get("customer_name")
+    name = str(data.get("customer_name") or "").strip()
     return {
-        "customer_name": (str(name).strip() or None) if name else None,
+        # "ramesh" -> "Ramesh" (scripts without capitals are unchanged).
+        "customer_name": (name.title() if name.islower() else name) or None,
         "type": kind,
         "amount": amount,
         # The "for X" item word is unambiguous, so it beats the model's label.
@@ -260,9 +282,19 @@ def _normalize_parsed(data: dict, text: str, today: str) -> dict:
     }
 
 
-def parse_transaction(text: str, today: str) -> dict:
+# The script the customer's name is written in, from the app's language: a name
+# heard in Hindi shows as "Naren" for an English user, not "नरेन".
+_NAME_SCRIPT = {
+    "en": "English (Latin)", "hinglish": "English (Latin)", "hi": "Hindi (Devanagari)",
+    "mr": "Marathi (Devanagari)", "te": "Telugu", "ta": "Tamil", "kn": "Kannada",
+    "ml": "Malayalam", "bn": "Bengali", "gu": "Gujarati", "pa": "Punjabi (Gurmukhi)",
+}
+
+
+def parse_transaction(text: str, today: str, language: str | None = None) -> dict:
     """Extract a structured transaction from a natural-language sentence in any
-    of several Indian languages. Falls back to a heuristic parser without a key."""
+    of several Indian languages. Falls back to a heuristic parser without a key.
+    `language` is the app's language: the customer's name comes back in its script."""
     if not settings.openai_api_key:
         return _heuristic_parse(text, today)
 
@@ -275,7 +307,7 @@ def parse_transaction(text: str, today: str) -> dict:
             "sentence, which may be in English, Hindi, Hinglish (Roman Hindi), "
             "Telugu, Tamil, Kannada, Marathi, Gujarati, Bengali, Malayalam or "
             "Punjabi.\n\n"
-            "Return ONLY JSON with keys: customer_name (party name as written, or "
+            "Return ONLY JSON with keys: customer_name (party name, or "
             "null), type ('credit' or 'payment'), amount (number in INR; convert "
             "words e.g. 'teen hazaar'=3000, 'do sau'=200, 'ek lakh'=100000; null "
             "if none), category (the item word after 'for', capitalized, e.g. "
@@ -286,9 +318,13 @@ def parse_transaction(text: str, today: str) -> dict:
             "now OWES. English: 'gave X', 'give X', 'sold to X', 'on credit', "
             "'X owes'. Hinglish: 'X ko ... maal diya', 'udhaar diya'.\n"
             "'payment' = the shopkeeper RECEIVED money from the customer. English: "
-            "'X paid', 'received from X', 'got from X'. Hinglish: 'X se ... mile', "
-            "'paisa aaya'.\n"
-            "'gave X <amount>' is ALWAYS credit, never payment.\n\n"
+            "'X paid', 'received from X', 'got from X', 'X gave me'. Hinglish: "
+            "'X se ... mile', 'paisa aaya', 'X ne mujhe ... diye'. Telugu: "
+            "'X naku ... ichadu/ichindi' (X gave me).\n"
+            "'gave X <amount>' (the shopkeeper gave the customer X) is ALWAYS credit. "
+            "But if the money or goods came TO the shopkeeper ('me', 'naku', "
+            "'mujhe', 'enakku', 'nanage') it is ALWAYS payment, even with "
+            "'gave'/'diya'/'ichadu'. Telugu 'X ki ... ichanu' (I gave X) is credit.\n\n"
             "Examples:\n"
             '"gave ramesh 500 for groceries" -> {"customer_name": "Ramesh", '
             '"type": "credit", "amount": 500, "category": "Groceries"}\n'
@@ -301,8 +337,19 @@ def parse_transaction(text: str, today: str) -> dict:
             '"Ramesh ko 2500 ka maal diya" -> {"customer_name": "Ramesh", '
             '"type": "credit", "amount": 2500, "category": "Sale"}\n'
             '"Suresh se teen hazaar mile" -> {"customer_name": "Suresh", '
-            '"type": "payment", "amount": 3000, "category": "Payment"}\n\n'
-            f"If no date is stated, use {today}.\n\n"
+            '"type": "payment", "amount": 3000, "category": "Payment"}\n'
+            '"Naren naku 7000 ichadu" -> {"customer_name": "Naren", '
+            '"type": "payment", "amount": 7000, "category": "Payment"}\n'
+            '"Naren ki 3000 ichanu" -> {"customer_name": "Naren", '
+            '"type": "credit", "amount": 3000, "category": "Sale"}\n'
+            '"Ramesh gave me 500" -> {"customer_name": "Ramesh", '
+            '"type": "payment", "amount": 500, "category": "Payment"}\n\n'
+            + (f"Write customer_name in {_NAME_SCRIPT[language]} script whatever "
+               "the sentence's script: spell the same sound, never translate the "
+               "name (नरेन, Naren and నరేన్ are one name).\n"
+               if language in _NAME_SCRIPT else
+               "Write customer_name in the sentence's script, capitalized like a name.\n")
+            + f"If no date is stated, use {today}.\n\n"
             f'Sentence: "{text}"'
         )
         resp = client.chat.completions.create(

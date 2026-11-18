@@ -7,6 +7,7 @@ import {
   DateField,
   FormField,
   NotesInput,
+  alertFieldErrors,
 } from '@components/form';
 import {Button, Screen, Select, Text} from '@components/ui';
 import {INCOME_CATEGORIES} from '@features/income/domain/entities';
@@ -33,7 +34,7 @@ export function AddIncomeScreen({
 
   const onSubmit = () => {
     form.markSubmitAttempted();
-    if (!form.isValid) return;
+    if (alertFieldErrors(form.allErrors)) return;
 
     createIncome.mutate(form.draft, {
       onSuccess: income => {

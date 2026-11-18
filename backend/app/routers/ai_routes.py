@@ -93,6 +93,8 @@ class ParseTransactionBody(BaseModel):
     text: str = Field(min_length=1, max_length=5000)
     # Client's local date (YYYY-MM-DD); defaults to server UTC today.
     today: str | None = None
+    # The app's language: the customer's name comes back in its script.
+    language: str | None = Field(default=None, max_length=20)
 
 
 @router.post("/parse-transaction")
@@ -105,7 +107,7 @@ def parse_transaction_route(
     """Turn a spoken/typed sentence (any of several Indian languages) into a
     structured transaction: {customer_name, type, amount, category, date}."""
     today = body.today or today_iso()
-    result = parse_transaction(body.text, today)
+    result = parse_transaction(body.text, today, body.language)
 
     db.add(AiDecision(
         business_id=business.id,

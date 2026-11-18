@@ -71,6 +71,8 @@ export function AITransactionScreen({
   const [name, setName] = useState('');
   const [type, setType] = useState<ParsedType>('credit');
   const [amount, setAmount] = useState<number>(NaN);
+  // The item ("for groceries" → Groceries); saved at the start of the entry's note.
+  const [category, setCategory] = useState('');
   const [date, setDate] = useState<string>(todayIST());
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [utr, setUtr] = useState('');
@@ -93,6 +95,8 @@ export function AITransactionScreen({
     setName(result.customerName ?? '');
     setType(result.type);
     setAmount(result.amount ?? NaN);
+    // "Sale" / "Payment" are only the server's defaults, not an item that was said.
+    setCategory(result.category && !['Sale', 'Payment'].includes(result.category) ? result.category : '');
     setDate(result.date || todayIST());
   };
 
@@ -149,7 +153,7 @@ export function AITransactionScreen({
         date,
         paymentMethod: method,
         referenceNumber: type === 'payment' ? utr.trim() || undefined : undefined,
-        notes: parsed ? `Voice/AI: ${parsed.rawText}` : undefined,
+        notes: [category.trim(), parsed ? `Voice/AI: ${parsed.rawText}` : ''].filter(Boolean).join(' · ') || undefined,
       });
       setBusy(false);
       Alert.alert(
@@ -254,7 +258,7 @@ export function AITransactionScreen({
                   recording ? 'bg-danger' : 'bg-primary'
                 }`}
                 style={{gap: 10, opacity: voiceBusy ? 0.6 : 1}}>
-                <Text className="text-2xl">{recording ? '⏹' : '🎤'}</Text>
+                {recording ? <Text className="text-2xl">⏹</Text> : null}
                 <Text className="text-base font-semibold text-white">
                   {voice.state === 'connecting'
                     ? t('common.loading')
@@ -353,6 +357,10 @@ export function AITransactionScreen({
                     }}
                     error={errorField === 'amount' ? error : null}
                   />
+                </FormField>
+
+                <FormField label={t('form.category')}>
+                  <TextField testID="ai-category" value={category} onChangeText={setCategory} />
                 </FormField>
 
                 {type === 'payment' ? (

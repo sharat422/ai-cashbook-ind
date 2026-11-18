@@ -10,6 +10,7 @@ import {
   FormField,
   NotesInput,
   TextField,
+  alertFieldErrors,
 } from '@components/form';
 import {Button, Screen, Text} from '@components/ui';
 import type {ParsedExpense} from '@features/expense/data/expenseParse.remote';
@@ -133,7 +134,7 @@ export function AddExpenseScreen({
 
   const onSubmit = () => {
     form.markSubmitAttempted();
-    if (!form.isValid) return;
+    if (alertFieldErrors(form.allErrors)) return;
 
     createExpense.mutate(form.draft, {
       onSuccess: expense => {

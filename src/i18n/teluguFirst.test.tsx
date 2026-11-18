@@ -170,7 +170,7 @@ describe('2. a Telugu-only user: first entry, reminder, daily close', () => {
     await act(async () => { r = create(<QuickAddScreen navigation={nav} route={{params: {type: 'expense'}} as any} />); });
     await pressText(r, translate('te', 'txn.saveExpense')); // no amount yet
     expect(englishOnly(visible(r))).toEqual([]);
-    expect(visible(r)).toContain(translate('te', 'ai.enterAmount'));
+    expect(visible(r)).toContain(translate('te', 'errors.amountRequired'));
     await act(async () => { r.root.findAllByType(TextInput)[0].props.onChangeText('500'); });
     await pressText(r, translate('te', 'txn.saveExpense'));
     expect(mockCreateExpense).toHaveBeenCalledWith(expect.objectContaining({amount: 500}), expect.anything());

@@ -10,18 +10,21 @@ import {
   FormField,
   NotesInput,
   TextField,
+  alertFieldErrors,
 } from '@components/form';
 import {Button, Screen, SegmentedControl, Select, Text} from '@components/ui';
 import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
 } from '@features/expense/domain/entities';
+import {validateExpenseDraft} from '@features/expense/domain/validation';
 import {useCreateExpense} from '@features/expense/presentation/hooks';
 import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {
   INCOME_CATEGORIES,
   type IncomeCategory,
 } from '@features/income/domain/entities';
+import {validateIncomeDraft} from '@features/income/domain/validation';
 import {useConnectivity, useCreateIncome} from '@features/income/presentation/hooks';
 import {useIncomeStore} from '@features/income/presentation/store/income.store';
 import {
@@ -152,10 +155,14 @@ export function QuickAddScreen({
   };
 
   const onSubmit = () => {
-    if (Number.isNaN(amount) || amount <= 0) {
-      return setAmountError(t('ai.enterAmount'));
-    }
-    setAmountError(null);
+    // The same checks as the full forms (incl. "Amount looks too large").
+    const notes = note.trim() || undefined;
+    const chosen = category ?? defaultCategory;
+    const problems = type === 'income'
+      ? validateIncomeDraft({amount, category: chosen as IncomeCategory, date, notes, attachment})
+      : validateExpenseDraft({amount, category: chosen as ExpenseCategory, date, vendor: vendor.trim(), notes, attachment});
+    setAmountError(problems.amount ?? null);
+    if (alertFieldErrors(problems)) return;
 
     // Gentle anomaly check against recent entries of the SAME kind. Never blocks
     // — if something looks off we ask the user to confirm; they decide.

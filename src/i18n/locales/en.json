@@ -47,7 +47,7 @@
   "ai.savedPaymentMsg": "Payment of {amount} saved for {customer}.",
   "ai.sourceAI": "AI",
   "ai.sourceBasic": "Basic",
-  "ai.speak": "🎤 Speak (any language)",
+  "ai.speak": "Speak (any language)",
   "ai.subtitle": "Speak or type a transaction in your language — we’ll fill it in.",
   "ai.title": "🎤 AI Entry",
   "ai.tooShortMsg": "Tap the mic, speak your entry, then tap again to stop. Or type it below.",
@@ -1993,5 +1993,6 @@
   "txDetail.type": "Type",
   "txDetail.status": "Status",
   "txDetail.openFile": "Open file",
-  "common.toBeforeFrom": "The end date can't be before the start date."
+  "common.toBeforeFrom": "The end date can't be before the start date.",
+  "form.checkTitle": "Please check"
 }

@@ -95,6 +95,7 @@ export function useExpenseForm(seed?: ExpenseFormSeed) {
     setField,
     draft,
     errors: visibleErrors,
+    allErrors,
     isValid,
     markSubmitAttempted: () => setSubmitAttempted(true),
     reset,

@@ -49,7 +49,7 @@ def test_ai_prompt_has_rules_and_for_item_wins(monkeypatch):
         out = parse_transaction("gave ramesh 500 for groceries", "2026-01-01")
     assert out["category"] == "Groceries" and out["source"] == "ai"
     prompt = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
-    assert "'gave X <amount>' is ALWAYS credit" in prompt
+    assert "'gave X <amount>' (the shopkeeper gave the customer X) is ALWAYS credit" in prompt
     assert '"gave ramesh 500 for groceries" -> {"customer_name": "Ramesh", ' \
            '"type": "credit"' in prompt
 
@@ -120,3 +120,56 @@ def test_parse_english_paid(user, client):
     assert r["type"] == "payment"
     assert r["amount"] == 2000.0
     assert r["customer_name"] == "Ramesh"
+
+
+# MANUAL_TESTING §17.5a: who gave to whom. "naku/mujhe/me" = the money came to me.
+@pytest.mark.parametrize("text,kind", [
+    ("Naren naku 7000 Ichadu", "payment"),       # Telugu: Naren gave me 7000
+    ("Naren naaku 7000 ichindi", "payment"),
+    ("నరేన్ నాకు 7000 ఇచ్చాడు", "payment"),
+    ("Naren 7000 ichadu", "payment"),            # Naren gave 7000
+    ("Naren ki 3000 ichanu", "credit"),          # I gave Naren 3000
+    ("Ramesh gave me 500", "payment"),
+    ("Suresh ne mujhe 2000 diye", "payment"),
+    ("Suresh ne 2000 diye", "payment"),
+    ("maine Suresh ko 2000 diye", "credit"),
+    ("Ramesh ko dukaan me 500 ka maal diya", "credit"),  # Hinglish "me" = "in"
+    ("Ramesh ne 500 ka maal liya", "credit"),    # took goods
+])
+def test_who_gave_to_whom(text, kind):
+    assert _heuristic_parse(text, "2026-01-01")["type"] == kind
+
+
+def _model_says(reply, text, language=None):
+    client = MagicMock()
+    client.chat.completions.create.return_value = SimpleNamespace(choices=[
+        SimpleNamespace(message=SimpleNamespace(content=json.dumps(reply)))])
+    with patch("openai.OpenAI", return_value=client):
+        out = parse_transaction(text, "2026-01-01", language)
+    return out, client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+
+
+def test_money_to_me_wins_over_the_model(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+    out, prompt = _model_says({"customer_name": "Naren", "type": "credit", "amount": 7000},
+                              "Naren naku 7000 Ichadu")
+    assert out["type"] == "payment"
+    assert '"Naren naku 7000 ichadu" -> {"customer_name": "Naren", "type": "payment"' in prompt
+
+
+def test_the_name_comes_back_in_the_app_languages_script(monkeypatch, user, client):
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+    _, prompt = _model_says({"customer_name": "Naren", "type": "credit", "amount": 500},
+                            "नरेन को 500 का माल दिया", "en")
+    assert "Write customer_name in English (Latin) script" in prompt
+    _, prompt = _model_says({"customer_name": "నరేన్", "type": "credit", "amount": 500},
+                            "Naren ko 500 ka maal diya", "te")
+    assert "Write customer_name in Telugu script" in prompt
+    _, prompt = _model_says({"customer_name": "Naren", "type": "credit", "amount": 500}, "x")
+    assert "Write customer_name in the sentence's script, capitalized like a name." in prompt
+    # The route passes the app's language through.
+    monkeypatch.setattr(settings, "openai_api_key", "")
+    with patch("app.routers.ai_routes.parse_transaction", return_value={"type": "credit"}) as pt:
+        client.post("/api/v1/parse-transaction", headers=user.headers,
+                    json={"text": "Naren ko 500", "language": "hinglish"})
+    assert pt.call_args.args[2] == "hinglish"

@@ -1,5 +1,5 @@
 import React from 'react';
-import {Modal, Pressable, View} from 'react-native';
+import {KeyboardAvoidingView, Modal, Platform, Pressable, View} from 'react-native';
 
 import {Text} from './Text';
 
@@ -30,6 +30,9 @@ export function BottomSheet({
       animationType="slide"
       onRequestClose={onClose}
       statusBarTranslucent>
+      {/* iOS: lift the sheet above the keyboard. A sheet that opens with the
+          keyboard up (credit limit) was hidden behind it — a blank screen. */}
+      <KeyboardAvoidingView style={{flex: 1}} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable className="flex-1 justify-end bg-black/40" onPress={onClose}>
         <Pressable
           className={`rounded-t-3xl bg-white ${maxHeightClassName}`}
@@ -50,6 +53,7 @@ export function BottomSheet({
           {children}
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

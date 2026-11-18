@@ -1,5 +1,6 @@
 import {apiRequest} from '@api/client';
 import type {ParsedTransaction} from '@features/ai-entry/domain/entities';
+import {useAuthStore} from '@store/auth.store';
 import type {RecordedAudio} from './voiceRecorder';
 
 interface ParsedDto {
@@ -41,7 +42,9 @@ export const aiEntryRemote = {
   async parse(text: string, today: string): Promise<ParsedTransaction> {
     const dto = await apiRequest<ParsedDto>('/parse-transaction', {
       method: 'POST',
-      body: {text, today},
+      // The app's language: the customer's name comes back in its script
+      // ("Naren", not "नरेन", for an English user who spoke Hindi).
+      body: {text, today, language: useAuthStore.getState().preferredLanguage},
     });
     return toParsed(dto);
   },

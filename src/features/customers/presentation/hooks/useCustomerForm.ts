@@ -51,6 +51,7 @@ export function useCustomerForm(seed?: Partial<CustomerDraft>) {
     setField,
     draft: values,
     errors,
+    allErrors,
     isValid,
     markSubmitAttempted: () => setSubmitAttempted(true),
   };
