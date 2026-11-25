@@ -15,7 +15,7 @@ from ..calc import today_iso
 from ..database import get_db
 from ..deps import accountant_read_only, get_current_membership, require
 from ..models import AccessLog, Business, User
-from ..rbac import DATA_VIEW, ENTRY_EDIT
+from ..rbac import DATA_VIEW, ENTRY_DELETE, ENTRY_EDIT
 from ..security import get_current_user
 from ..validation import validate_date
 
@@ -237,6 +237,13 @@ class CashCountBody(BaseModel):
     user_id: str | None = Field(default=None, alias="userId", max_length=40)  # None = the whole beat
 
 
+class CloseBody(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    beat_id: str = Field(alias="beatId", max_length=40)
+    date: str
+    cash_counted: Decimal = Field(alias="cashCounted")
+
+
 class DepositBody(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     date: str
@@ -307,6 +314,30 @@ def match_deposit(
 ) -> dict:
     """A deposit to its bank line; undo is the bank line's Undo (§37K.3)."""
     return svc.match_deposit(db, business, user, deposit_id, body.bank_line_id)
+
+
+@router.post("/daily-close")
+def close_day(
+    body: CloseBody,
+    membership: tuple[Business, str] = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Close a beat's day with the cash counted. The server works the figures
+    out again; the beat's entries for that day lock until the owner reopens
+    it. Staff close their own beat; accountants can't (read-only)."""
+    business, role = membership
+    return svc.close_day(db, business, user, role, body.beat_id, validate_date(body.date), body.cash_counted)
+
+
+@router.post("/daily-close/{close_id}/reopen")
+def reopen_day(
+    close_id: str,
+    business: Business = Depends(require(ENTRY_DELETE)),  # owner only: staff and accountants get 403
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    return svc.reopen_day(db, business, user, close_id)
 
 
 @router.post("/daily-close/cash-count")

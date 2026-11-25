@@ -532,6 +532,83 @@ def render_bill(business: Business, customer: Customer, bill, lines: list, schem
     return bytes(pdf.output())
 
 
+INVOICE_COLS = (("#", 8, "L"), ("Item · HSN", 52, "L"), ("Qty", 20, "R"), ("GST %", 14, "R"),
+                ("Taxable", 26, "R"), ("CGST", 22, "R"), ("SGST", 22, "R"), ("IGST", 22, "R"))
+
+
+def render_invoice(business: Business, customer: Customer, entry: LedgerEntry) -> bytes:
+    """A GST tax invoice, as saved (Rule 46 fields Bolcash keeps): seller and
+    GSTIN, invoice number and date, buyer, GSTIN and place of supply, one row
+    per item with its tax, and the totals. Every figure is the stored one —
+    nothing is worked out again here. Not an e-invoice (no IRN/QR)."""
+    from .gst import STATE_NAMES, lines_of, place_label, state_code
+
+    def amt(x) -> str:
+        return inr(money(x or 0))
+
+    pdf = _Pdf()
+    pdf.add_page()
+    pdf.set_font("Noto", "B", 14)
+    pdf.cell(0, 7, business.business_name, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Noto", "", 9)
+    seller_state = state_code(business.state)
+    pdf.cell(0, 5, f"GSTIN: {business.gstin or '—'} · State: {business.state}"
+                   + (f" ({seller_state})" if seller_state else ""), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+    pdf.set_font("Noto", "B", 13)
+    title = "Tax Invoice" + (" — CANCELLED" if entry.gst_status == "cancelled" else "")
+    pdf.cell(0, 7, title, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Noto", "", 10)
+    pdf.cell(0, 6, f"Invoice no. {entry.invoice_number} · Date {dmy(entry.date)}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(1)
+    pdf.set_font("Noto", "B", 10)
+    party = customer.full_name + (f" ({customer.business_name})" if customer.business_name else "")
+    pdf.cell(0, 6, f"Bill to: {party}", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Noto", "", 9)
+    pos = entry.place_of_supply
+    pdf.cell(0, 5, f"GSTIN: {entry.customer_gstin or 'Unregistered'} · Place of supply: "
+                   + (place_label(pos) if pos and pos in STATE_NAMES else (pos or "—")),
+             new_x="LMARGIN", new_y="NEXT")
+    if customer.address:
+        pdf.multi_cell(0, 5, f"Address: {customer.address}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+
+    def row(cells, bold=False, fill=False):
+        pdf.set_font("Noto", "B" if bold else "", 8)
+        if fill:
+            pdf.set_fill_color(241, 245, 249)
+        for (_, w, align), text in zip(INVOICE_COLS, cells):
+            pdf.cell(w, 6, text, border="B", align=align, fill=fill)
+        pdf.ln(6)
+
+    row([c[0] for c in INVOICE_COLS], bold=True, fill=True)
+    for n, ln in enumerate(lines_of(entry), 1):
+        name = (ln.item_name if ln is not entry else entry.gst_item_name) or ""
+        what = f"{name} · {ln.hsn_code}" if name else f"HSN {ln.hsn_code}"
+        qty = "" if ln.gst_quantity is None else f"{Decimal(ln.gst_quantity).normalize():f} {ln.gst_uqc or ''}".strip()
+        row([str(n), what[:34], qty, f"{Decimal(ln.gst_rate).normalize():f}", amt(ln.taxable_value),
+             amt(ln.cgst), amt(ln.sgst), amt(ln.igst)])
+    pdf.ln(1)
+    for label, value in (("Taxable value", entry.taxable_value), ("CGST", entry.cgst), ("SGST", entry.sgst),
+                         ("IGST", entry.igst), ("Invoice total", entry.amount)):
+        pdf.set_font("Noto", "B" if label == "Invoice total" else "", 10)
+        pdf.cell(135, 6, label, align="R")
+        pdf.cell(51, 6, amt(value), align="R", new_x="LMARGIN", new_y="NEXT")
+    if entry.price_includes_gst:
+        pdf.set_font("Noto", "", 8)
+        pdf.cell(0, 5, "Prices include GST.", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(8)
+    pdf.set_font("Noto", "", 9)
+    pdf.cell(0, 5, f"For {business.business_name}", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(8)
+    pdf.cell(0, 5, "Authorised signatory", align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_y(-14)
+    pdf.set_font("Noto", "", 7)
+    pdf.cell(0, 4, f"Generated {dmy(today_iso())} by {business.business_name} with Bolcash. "
+                   "Not an e-invoice.", align="C")
+    return bytes(pdf.output())
+
+
 # --------------------------------------------------------------------- HTML
 
 def page_html(business: Business, customer: Customer, st: Statement, consent_status: str,

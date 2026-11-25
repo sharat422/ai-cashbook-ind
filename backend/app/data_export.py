@@ -23,7 +23,7 @@ from . import gst_reports as gr
 from .calc import today_iso
 from .models import (
     AccessLog, BankImport, BankLine, BankMatch, Beat, BeatAssignment, BeatRetailer, Bill, BillLine, BillSeries, Business,
-    BusinessMember, CaTestResult, CashCount, CashDeposit, CreditNote, Customer, DiscardedEntry, TeamInvite, Supplier, Expense, GstInvoiceLine, GstInvoiceNumber, GstRateChangeLog, ImportLog,
+    BusinessMember, CaTestResult, CashCount, CashDeposit, CreditNote, DailyClose, Customer, DiscardedEntry, TeamInvite, Supplier, Expense, GstInvoiceLine, GstInvoiceNumber, GstRateChangeLog, ImportLog,
     Income, Item, ItemUnit, LedgerEntry, StockMonthLock, RecurringExpense, Scheme, SchemeApplication, SchemeItem,
     StatementEvent, StatementSchedule, StockLevel, StockMove, Visit,
 )
@@ -111,6 +111,7 @@ def sections(db: Session, business: Business) -> dict[str, list[dict]]:
         "bank_matches": by_business(BankMatch, BankMatch.confirmed_at),
         "cash_counts": by_business(CashCount, CashCount.created_at),
         "cash_deposits": by_business(CashDeposit, CashDeposit.created_at),
+        "daily_closes": by_business(DailyClose, DailyClose.date),
         "credit_notes": by_business(CreditNote, CreditNote.created_at),
         "ca_test_results": by_business(CaTestResult, CaTestResult.tested_at),
         "suppliers": by_business(Supplier, Supplier.created_at),

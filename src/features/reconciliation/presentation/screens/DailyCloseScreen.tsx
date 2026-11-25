@@ -15,7 +15,7 @@ import {useDailyClose} from '@features/reconciliation/presentation/hooks';
 import {useT} from '@/i18n';
 import {paymentMethodLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
-import {todayIST} from '@utils/date';
+import {formatTimestamp, todayIST} from '@utils/date';
 import {useAuthStore} from '@store/auth.store';
 
 /**
@@ -94,6 +94,42 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
       setSaving(false);
     }
   };
+  // Closing the beat's day: the server works the figures out again and locks the day's entries.
+  const canReopen = can(PERMISSIONS.ENTRY_DELETE); // owner only
+  const [closeCounted, setCloseCounted] = useState('');
+  const paise = (v: string) => Math.round(Number(v) * 100);
+  /** Counted − cash expected, as you type (the server stores its own on closing). */
+  const closePreview = data && closeCounted
+    ? ((paise(closeCounted) - paise(data.cashInHand)) / 100).toFixed(2) : null;
+  const run = async (action: () => Promise<unknown>) => {
+    setSaving(true);
+    try {
+      await action();
+      await close.refetch();
+    } catch (e) {
+      Alert.alert(t('form.couldNotSave'), e instanceof Error ? e.message : t('common.tryAgainMsg'));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const beatName = beats.find(b => b.id === beatId)?.name ?? '';
+  const closeDay = () => {
+    if (!beatId || !data || !closeCounted) return;
+    Alert.alert(t('close.closeConfirmTitle', {beat: beatName}), t('close.closeConfirmMsg', {
+      counted: formatMoney(closeCounted), expected: formatMoney(data.cashInHand)}), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('close.closeDay'), onPress: () => run(async () => {
+        await reconciliationRemote.closeDay(beatId, date, closeCounted);
+        setCloseCounted('');
+      })},
+    ]);
+  };
+  const reopenDay = (closeId: string) =>
+    Alert.alert(t('close.reopenTitle', {beat: beatName}), t('close.reopenMsg'), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('close.reopen'), onPress: () => run(() => reconciliationRemote.reopenDay(closeId))},
+    ]);
+
   const removeDeposit = (d: CashDeposit) =>
     Alert.alert(t('deposit.removeTitle'), t('deposit.removeMsg'), [
       {text: t('common.cancel'), style: 'cancel'},
@@ -235,6 +271,45 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
               ) : null}
               <Text variant="caption">{t('close.countNote')}</Text>
             </View>
+
+            {/* Close the beat's day: counted cash vs cash expected, then the day's entries lock. */}
+            {beatId ? (
+              <View testID="day-close" className="mt-3 rounded-2xl border border-border bg-white p-4" style={{gap: 8}}>
+                <Text className="text-sm font-semibold">{t('close.closeHeading')}</Text>
+                {data.close?.status === 'closed' ? (
+                  <>
+                    <Row label={t('close.cashInHand')} value={formatMoney(data.close.cashExpected)} />
+                    <Row label={t('close.cashCounted')} value={formatMoney(data.close.cashCounted)} />
+                    <Row label={t('close.countDifference')} value={formatMoney(data.close.difference)} bold />
+                    <Text testID="day-closed" variant="caption">
+                      {t('close.closedBy', {
+                        name: personLabel(data.close.closedByName, data.close.closedByMobile),
+                        when: data.close.closedAt ? formatTimestamp(data.close.closedAt) : '',
+                      })}
+                    </Text>
+                    {canReopen ? (
+                      <Button testID="day-reopen" title={t('close.reopen')} variant="secondary" loading={saving}
+                        disabled={saving} onPress={() => reopenDay(data.close!.id)} />
+                    ) : null}
+                  </>
+                ) : canCount ? (
+                  <>
+                    <Input testID="day-close-counted" placeholder={t('close.countPlaceholder')} keyboardType="decimal-pad"
+                      value={closeCounted} onChangeText={v => setCloseCounted(v.replace(/[^0-9.]/g, ''))} />
+                    {closePreview != null ? (
+                      <View testID="day-close-difference">
+                        <Row label={t('close.countDifference')} value={formatMoney(closePreview)} bold />
+                      </View>
+                    ) : null}
+                    <Button testID="day-close-save" title={t('close.closeDay')} loading={saving}
+                      disabled={!closeCounted || saving} onPress={closeDay} />
+                    <Text variant="caption">{t('close.closeHint')}</Text>
+                  </>
+                ) : (
+                  <Text variant="caption">{t('close.notClosed')}</Text>
+                )}
+              </View>
+            ) : null}
 
             {/* Cash deposits: a record of cash already taken to the bank (or kept back). */}
             {data.deposits ? (

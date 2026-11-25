@@ -357,6 +357,7 @@ export function SettingsScreen({
           rows={[
             can(PERMISSIONS.TEAM_MANAGE) && {title: t('settings.team'), onPress: () => navigation.navigate('Team')},
             can(PERMISSIONS.BEATS_MANAGE) && {title: t('beats.planTitle'), onPress: () => navigation.navigate('BeatPlan')},
+            can(PERMISSIONS.DATA_VIEW) && {title: t('beats.ledgerTitle'), onPress: () => navigation.navigate('BeatLedger')},
           ]}
         />
 

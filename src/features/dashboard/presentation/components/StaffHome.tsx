@@ -44,6 +44,11 @@ export function StaffHome({
             onPress={() => navigation.navigate('BeatDayList')}
           />
           <Button
+            title={t('beats.ledgerTitle')}
+            variant="secondary"
+            onPress={() => navigation.navigate('BeatLedger')}
+          />
+          <Button
             title={t('close.title')}
             variant="secondary"
             onPress={() => navigation.navigate('DailyClose')}

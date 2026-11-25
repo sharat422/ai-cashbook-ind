@@ -11,6 +11,7 @@ import {
 } from '@components/form';
 import {Button, SegmentedControl, Screen, SuccessOverlay, Text} from '@components/ui';
 import type {Attachment} from '@/shared/types/attachment';
+import {BeatPicker} from '@features/beats/presentation/components/BeatPicker';
 import {creditLimitStatus} from '@features/customer-intel/store/creditLimit.store';
 import {useLedgerMutations} from '@features/customers/presentation/hooks';
 import {useCreditDraftStore} from '@features/customers/presentation/store/creditDraft.store';
@@ -39,7 +40,9 @@ export function AddCreditScreen({
   route,
 }: AppScreenProps<'AddCredit'>): React.JSX.Element {
   const t = useT();
-  const {customer, beatId} = route.params;
+  const {customer} = route.params;
+  // From a beat day-list it's that beat; otherwise picked below (staff: their beat).
+  const [beatId, setBeatId] = useState(route.params.beatId);
   const online = useConnectivity();
   const creditLimit = customer.creditLimit;
   const {addCredit} = useLedgerMutations(customer.id);
@@ -124,13 +127,16 @@ export function AddCreditScreen({
     const gstin = gst ? cleanGstin(gst.customerGstin) : '';
     const extra = gst?.extra ?? [];
     const lines = gst && extra.length
-      ? [{amount: String(amount), rate: gst.rate, hsn: gst.hsn, quantity: gst.quantity, uqc: gst.uqc ?? ''},
-         ...extra.map(l => ({amount: l.amount, rate: l.rate, hsn: l.hsn, quantity: l.quantity, uqc: l.uqc ?? ''}))]
+      ? [{amount: String(amount), rate: gst.rate, hsn: gst.hsn, quantity: gst.quantity, uqc: gst.uqc ?? '',
+          item_id: gst.itemId ?? undefined},
+         ...extra.map(l => ({amount: l.amount, rate: l.rate, hsn: l.hsn, quantity: l.quantity, uqc: l.uqc ?? '',
+           item_id: l.itemId ?? undefined}))]
       : undefined;
     const gstInput = gst
       ? {
           rate: gst.rate,
           hsn: gst.hsn,
+          itemId: gst.itemId ?? undefined,
           quantity: gst.quantity,
           uqc: gst.uqc ?? '',
           priceIncludesGst: gst.priceIncludesGst,
@@ -268,6 +274,8 @@ export function AddCreditScreen({
           <FormField label={t('form.date')} required>
             <DateField value={date} onChange={setDate} />
           </FormField>
+
+          <BeatPicker customerId={customer.id} value={beatId} onChange={setBeatId} />
 
           {gstRegistered && !hasSellerGstin ? (
             <Text testID="gst-needs-gstin" variant="caption">{t('gst.needsSellerGstin')}</Text>

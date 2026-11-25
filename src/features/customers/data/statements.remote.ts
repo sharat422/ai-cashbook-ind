@@ -132,6 +132,10 @@ export const statementsRemote = {
   /** The check before any statement / ledger file is shared (sharePdf only):
    *  409 without consent for WhatsApp or the open share sheet; always logged.
    *  The printable ledger comes back as a short-lived `pdfUrl`. */
+  /** A GST tax invoice: the same consent check and log as a statement; the PDF comes from `pdfUrl`. */
+  invoiceShare: (customerId: string, entryId: string, channel: string) =>
+    apiRequest<{mobile?: string | null; pdfUrl?: string | null}>(
+      `/customers/${customerId}/ledger/${entryId}/invoice/share`, {method: 'POST', body: {channel}}),
   pdfShare: (customerId: string, document: 'statement' | 'statement_csv' | 'ledger', channel: string,
     from?: string, to?: string, detailed = false) =>
     apiRequest<{status: 'ok'; channel: string; mobile: string | null; pdfUrl: string | null}>(

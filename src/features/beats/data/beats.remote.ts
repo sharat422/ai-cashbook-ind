@@ -225,4 +225,22 @@ export const beatsRemote = {
   async recordVisit(input: VisitInput): Promise<Visit> {
     return toVisit(await apiRequest<VisitDto>('/visits', {method: 'POST', body: input}));
   },
+  /** One beat's khata entries, newest first (staff: their own beats only, else 403). */
+  async ledger(beatId: string): Promise<BeatLedgerEntry[]> {
+    const rows = await apiRequest<Array<{id: string; customer_name: string; type: 'credit' | 'payment';
+      amount: number; date: string; invoice_number: string | null; payment_method: string | null}>>(
+      `/ledger?beat_id=${encodeURIComponent(beatId)}`, {method: 'GET'});
+    return rows.map(r => ({id: r.id, customerName: r.customer_name, type: r.type, amount: Number(r.amount),
+      date: r.date, invoiceNumber: r.invoice_number, paymentMethod: r.payment_method}));
+  },
 };
+
+export interface BeatLedgerEntry {
+  id: string;
+  customerName: string;
+  type: 'credit' | 'payment';
+  amount: number;
+  date: string;
+  invoiceNumber: string | null;
+  paymentMethod: string | null;
+}

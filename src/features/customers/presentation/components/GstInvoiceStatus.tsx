@@ -11,7 +11,12 @@ import {useT} from '@/i18n';
  * or deleted; an issued invoice is locked, shows its number and can only be
  * cancelled (or corrected with a credit note); a cancelled one says so.
  */
-export function GstInvoiceStatus({customerId, entry}: {customerId: string; entry: LedgerEntry}): React.JSX.Element | null {
+export function GstInvoiceStatus({customerId, entry, onView}: {
+  customerId: string;
+  entry: LedgerEntry;
+  /** Opens the tax invoice (view and share its PDF); issued or cancelled only. */
+  onView?: () => void;
+}): React.JSX.Element | null {
   const t = useT();
   const {issueInvoice, cancelInvoice, deleteDraft} = useLedgerMutations(customerId);
   if (!entry.gstStatus || entry.syncStatus === 'pending') return null;
@@ -37,14 +42,18 @@ export function GstInvoiceStatus({customerId, entry}: {customerId: string; entry
   }
   if (entry.gstStatus === 'cancelled') {
     return (
-      <Text testID={`gst-cancelled-${entry.id}`} variant="caption" className="mt-1">
-        {t('gst.cancelledLabel', {number: entry.invoiceNumber ?? ''})}
-      </Text>
+      <View className="mt-1 flex-row items-center justify-between" style={{gap: 8}}>
+        <Text testID={`gst-cancelled-${entry.id}`} variant="caption" className="flex-1">
+          {t('gst.cancelledLabel', {number: entry.invoiceNumber ?? ''})}
+        </Text>
+        {onView ? <Button testID={`gst-view-${entry.id}`} title={t('gst.viewInvoice')} variant="ghost" onPress={onView} /> : null}
+      </View>
     );
   }
   return (
     <View testID={`gst-issued-${entry.id}`} className="mt-1 flex-row items-center justify-between" style={{gap: 8}}>
       <Text variant="caption" className="flex-1">🔒 {t('gst.issuedLabel', {number: entry.invoiceNumber ?? ''})}</Text>
+      {onView ? <Button testID={`gst-view-${entry.id}`} title={t('gst.viewInvoice')} variant="ghost" onPress={onView} /> : null}
       <Button testID={`gst-cancel-${entry.id}`} title={t('gst.cancelInvoice')} variant="ghost" disabled={busy}
         onPress={() => Alert.alert(t('gst.cancelTitle'), t('gst.cancelMsg', {number: entry.invoiceNumber ?? ''}), [
           {text: t('common.cancel'), style: 'cancel'},

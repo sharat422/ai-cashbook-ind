@@ -40,6 +40,7 @@ def run_startup_migrations(engine) -> None:
     _add_bank_import_restore(engine, inspector, tables)
     _add_cash_count_user(engine, inspector, tables)
     _add_cash_deposit_user(engine, inspector, tables)
+    _add_invoice_item_names(engine, inspector, tables)
     _backfill_payment_utrs(engine)
     _backfill_beat_assignments(engine)
     _backfill_owner_memberships(engine, tables)
@@ -237,6 +238,19 @@ def _add_cash_deposit_user(engine, inspector, tables: set[str]) -> None:
             conn.execute(text("ALTER TABLE cash_deposits ADD COLUMN user_id VARCHAR(40)"))
     except Exception:  # noqa: BLE001 — never let a migration crash boot
         log.exception("migration: failed adding cash_deposits.user_id")
+
+
+def _add_invoice_item_names(engine, inspector, tables: set[str]) -> None:
+    """The product's name on a GST invoice (its description of goods). Old
+    invoices stay NULL: their PDF shows the HSN only, as before."""
+    for table, column in (("ledger_entries", "gst_item_name"), ("gst_invoice_lines", "item_name")):
+        if table not in tables or column in {c["name"] for c in inspector.get_columns(table)}:
+            continue
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} VARCHAR(100)"))
+        except Exception:  # noqa: BLE001 — never let a migration crash boot
+            log.exception("migration: failed adding %s.%s", table, column)
 
 
 def _add_cash_count_user(engine, inspector, tables: set[str]) -> None:

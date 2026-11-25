@@ -85,7 +85,7 @@ test('two items: both sent, the amount is their sum, the split is per item', asy
     expect(sent.amount).toBe(1200);
     expect(sent.gst.lines).toEqual([
       {amount: '1000', rate: '18', hsn: '1006', quantity: '10', uqc: 'BAG'},
-      {amount: '200', rate: '18', hsn: '3401', quantity: '4', uqc: 'PCS'},
+      {amount: '200', rate: '18', hsn: '3401', quantity: '4', uqc: 'PCS', item_id: 'soap'}, // picked: its name goes on the invoice
     ]);
     // Offline balance: what the server will save.
     expect(invoiceTotal({type: 'credit', amount: 1200, date: '2026-11-13', gst: sent.gst})).toBe(1416);

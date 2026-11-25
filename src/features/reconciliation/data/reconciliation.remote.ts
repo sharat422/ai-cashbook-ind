@@ -9,6 +9,8 @@ import {apiRequest} from '@api/client';
  *   POST /api/v1/reconciliation/confirm      {bankLineId, entryId} -> {bankLine, collection}
  *   GET  /api/v1/reconciliation/exceptions   -> Exceptions
  *   GET  /api/v1/daily-close?beat_id=&date=  -> DailyClose
+ *   POST /api/v1/daily-close                  -> DailyClose (close a beat's day; it locks)
+ *   POST /api/v1/daily-close/{id}/reopen      -> DayClose (owner)
  *
  * Money comes back as exact decimal strings ("1234.50"), not floats.
  */
@@ -143,6 +145,25 @@ export interface DailyClose {
     cashDeposited?: Money | null}[];
   /** True when cash is counted per salesperson (the beat figure is their sum). */
   cashCountByPerson?: boolean;
+  /** The beat's day, closed or reopened; null until closed (and for "All beats"). */
+  close?: DayClose | null;
+}
+
+/** A closed beat-day: the server's figures at close time. While closed, that day's entries are locked. */
+export interface DayClose {
+  id: string;
+  status: 'open' | 'closed';
+  cashExpected: Money;
+  cashCounted: Money;
+  upiTotal: Money;
+  creditGiven: Money;
+  creditCollected: Money;
+  /** cashCounted − cashExpected (negative = short). */
+  difference: Money;
+  closedBy: string | null;
+  closedByName: string | null;
+  closedByMobile: string | null;
+  closedAt: string | null;
 }
 
 export interface StatementFile {
@@ -219,6 +240,11 @@ export const reconciliationRemote = {
     apiRequest<DailyClose>('/daily-close/cash-count', {
       method: 'POST', body: {date, beatId: beatId ?? null, counted, userId: userId ?? null},
     }),
+  /** The server works the figures out again; only the counted cash is sent. */
+  closeDay: (beatId: string, date: string, cashCounted: string) =>
+    apiRequest<DailyClose>('/daily-close', {method: 'POST', body: {beatId, date, cashCounted}}),
+  reopenDay: (closeId: string) =>
+    apiRequest<DayClose>(`/daily-close/${encodeURIComponent(closeId)}/reopen`, {method: 'POST'}),
   dailyClose(date: string, beatId?: string): Promise<DailyClose> {
     const q = `date=${encodeURIComponent(date)}${beatId ? `&beat_id=${encodeURIComponent(beatId)}` : ''}`;
     return apiRequest<DailyClose>(`/daily-close?${q}`, {method: 'GET'});

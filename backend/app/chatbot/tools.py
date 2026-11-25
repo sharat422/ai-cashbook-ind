@@ -21,6 +21,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from difflib import SequenceMatcher
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -28,6 +29,7 @@ from sqlalchemy.orm import Session, selectinload
 from ..calc import IST
 from ..models import Business, Customer, Expense, Income, LedgerEntry, in_books
 from ..monitoring import _mask as mask_mobile
+from ..names import contains, loose, same_name
 from . import help_search
 
 audit_log = logging.getLogger("cashbook.chatbot.audit")
@@ -78,6 +80,32 @@ def _period_range(period: str) -> tuple[str, str]:
 
 def _norm(text: str) -> str:
     return " ".join(str(text or "").lower().split())
+
+
+SIMILAR = 0.8  # "Rakesh" ~ "Ramesh" is 83%; "Mahesh" ~ "Ramesh" (60%) is not offered
+
+
+def _similarity(query: str, c: Customer) -> float:
+    """How alike (0-1) the asked name is to this customer: the whole name or
+    business name, or one word of it ("Narendar" ~ "Narender Reddy"), or one
+    word of the question ("Ramesh Kumar" ~ "Ramesh"). Word-to-word pairs are
+    left out so a shared surname alone ("Reddy") doesn't count. Compared as
+    loose keys: any script, Laxmi = Lakshmi."""
+    pairs = []
+    for name in (_norm(c.full_name), _norm(c.business_name)):
+        if name:
+            pairs += [(query, name)] + [(query, w) for w in name.split() if len(w) >= 3]
+            pairs += [(w, name) for w in query.split() if len(w) >= 3]
+    return max((SequenceMatcher(None, loose(a), loose(b)).ratio() for a, b in pairs), default=0.0)
+
+
+def _close_matches(customers: list[Customer], query: str) -> list[dict]:
+    """No name contains the query: the (at most 5) customers at least 80% alike,
+    closest first, as "did you mean" briefs. No balances, so the model can't
+    answer for a guessed customer (it did, for a single close match)."""
+    scored = sorted(((_similarity(query, c), c) for c in customers), key=lambda sc: -sc[0])
+    return [{k: v for k, v in _customer_brief(c).items() if k != "balance"}
+            for score, c in scored if score >= SIMILAR][:5]
 
 
 def _mask_name(name) -> str:
@@ -245,12 +273,17 @@ def get_customer_balance(db: Session, merchant_id: str, customer_name: str | Non
     query = _norm(customer_name)
     if not query:
         raise ToolError("customer_name or customer_id is required")
-    matches = [c for c in _customers(db, merchant_id) if query in _norm(c.full_name)]
+    customers = _customers(db, merchant_id)
+    matches = [c for c in customers if contains(_norm(c.full_name), query)]  # also across scripts
     if not matches:
-        return {"status": "not_found", "customer": None}
+        # No exact name: offer the close ones as "did you mean" (never picks one).
+        close = _close_matches(customers, query)
+        if not close:
+            return {"status": "not_found", "customer": None}
+        return {"status": "ambiguous", "similar": True, "customer": None, "matches": close}
     # A single EXACT full-name match wins ("Ramesh" when "Ramesh Traders" also
     # exists). Two customers with the same exact name are still ambiguous.
-    exact = [c for c in matches if _norm(c.full_name) == query]
+    exact = [c for c in matches if same_name(_norm(c.full_name), query)]
     if len(exact) == 1:
         matches = exact
     if len(matches) > 1:
@@ -349,12 +382,17 @@ def get_collections_summary(db: Session, merchant_id: str, period: str | None = 
 
 @tool(empty={"matches": []})
 def search_customer(db: Session, merchant_id: str, name: str | None = None) -> dict:
-    """Every customer whose name contains `name` (case/space-insensitive), with ids."""
+    """Every customer whose name contains `name` (case/space-insensitive), with
+    ids; if none does, the close names (similar: true)."""
     query = _norm(name)
     if not query:
         raise ToolError("name is required")
-    return {"matches": [_customer_brief(c) for c in _customers(db, merchant_id)
-                        if query in _norm(c.full_name)]}
+    customers = _customers(db, merchant_id)
+    found = [c for c in customers if contains(_norm(c.full_name), query)]
+    if found:
+        return {"matches": [_customer_brief(c) for c in found]}
+    close = _close_matches(customers, query)
+    return {"matches": close, **({"similar": True} if close else {})}
 
 
 @tool(empty={"income_total": 0.0, "expense_total": 0.0, "from": None, "to": None})

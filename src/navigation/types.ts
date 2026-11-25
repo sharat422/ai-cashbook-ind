@@ -3,6 +3,7 @@ import type {Scheme} from '@features/schemes/data/schemes.remote';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import type {Customer} from '@features/customers/domain/entities';
+import type {LedgerEntry} from '@features/customers/domain/ledger';
 import type {ExpenseCategory} from '@features/expense/domain/entities';
 import type {Item} from '@features/items/domain/entities';
 import type {EntryDetail} from '@features/transactions/domain/entities';
@@ -62,6 +63,8 @@ export type AppStackParamList = {
   BeatPlan: undefined;
   /** No beatId = today's beat(s) for the signed-in user. */
   BeatDayList: {beatId?: string} | undefined;
+  /** No beatId = the first beat the caller may see (staff: their own). */
+  BeatLedger: {beatId?: string} | undefined;
   Reconciliation: undefined;
   DailyClose: {beatId?: string} | undefined;
   GstReports: undefined;
@@ -98,6 +101,8 @@ export type AppStackParamList = {
   CustomerForm: {customer?: Customer} | undefined;
   /** beatId: recorded from a beat day-list, for that beat's daily close. */
   AddCredit: {customer: Customer; beatId?: string};
+  /** A saved GST invoice: view it and share its PDF. */
+  GstInvoice: {customer: Customer; entry: LedgerEntry};
   CustomerStatement: {customer: Customer};
   RequestPayment: {customer: Customer};
   CollectionAssistant: {

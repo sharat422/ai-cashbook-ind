@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import day_lock  # noqa: F401  (registers the closed-day lock on every session)
 from .config import settings
 from .database import Base, SessionLocal, engine
 from .errors import error_body, install_error_handlers

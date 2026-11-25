@@ -17,6 +17,7 @@ function TimelineItemBase({
   isLast,
   customerId,
   onOpenBill,
+  onOpenInvoice,
 }: {
   entry: LedgerEntryView;
   isLast: boolean;
@@ -24,6 +25,8 @@ function TimelineItemBase({
   customerId?: string;
   /** Opens an item bill (or its return) from its entry. */
   onOpenBill?: (billId: string) => void;
+  /** Opens a GST invoice's tax invoice screen. */
+  onOpenInvoice?: (entry: LedgerEntryView) => void;
 }): React.JSX.Element {
   const isCredit = entry.type === 'credit';
   return (
@@ -44,7 +47,8 @@ function TimelineItemBase({
       <View className="flex-1 pb-3 pl-2">
         <TransactionCard entry={entry} />
         {onOpenBill ? <BillLink entry={entry} onOpen={onOpenBill} /> : null}
-        {customerId ? <GstInvoiceStatus customerId={customerId} entry={entry} /> : null}
+        {customerId ? <GstInvoiceStatus customerId={customerId} entry={entry}
+          onView={onOpenInvoice && entry.gst ? () => onOpenInvoice(entry) : undefined} /> : null}
       </View>
     </View>
   );

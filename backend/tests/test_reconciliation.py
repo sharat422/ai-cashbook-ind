@@ -174,7 +174,7 @@ def test_daily_close_is_zero_when_reconciled_else_exact_difference(make_user, cl
         "creditGiven": "750.00", "difference": "1200.60",  # ₹0.30 cash not yet deposited
         "cashDeposited": "0.00", "cashDepositPending": "0.00", "cashKeptBack": "0.00", "deposits": [],
         "cashCounted": None, "cashOverShort": None, "cashCountedAt": None, "cashCountByPerson": False,
-        "members": None}
+        "members": None, "close": None}  # not closed yet
     assert Decimal(c["difference"]) == Decimal("1200.60")  # exact, no float drift
 
     stmt = f"Date,Narration,Credit,Debit\n{day},UPI/123412341234,1000.10,\n{day},NEFT BANKREF001,200.20,\n"

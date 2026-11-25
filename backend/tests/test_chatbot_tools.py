@@ -142,6 +142,32 @@ def test_two_customers_with_the_same_exact_name_stay_ambiguous(make_user, client
     assert out["status"] == "ambiguous" and len(out["matches"]) == 2
 
 
+def test_a_close_spelling_offers_the_customers_it_could_be(make_user, client):
+    u = make_user()
+    mid = u.business["id"]
+    ids = {n: add_customer(client, u.headers, full_name=n)["id"] for n in
+           ("Ramesh", "Lakshmi Devi", "Narender Reddy", "Venkat Reddy", "Mahesh")}
+    biz = add_customer(client, u.headers, full_name="Ravi", business_name="Sai Traders")["id"]
+
+    def offered(name):
+        out = _call(get_customer_balance, mid, customer_name=name)
+        if out["status"] == "not_found":
+            return []
+        assert out["status"] == "ambiguous" and out["similar"] and out["customer"] is None
+        assert all("balance" not in m for m in out["matches"])  # nothing to answer with until one is picked
+        return [m["customer_id"] for m in out["matches"]]
+
+    assert offered("Rakesh") == [ids["Ramesh"]]                   # 83% alike; Mahesh (60%) isn't
+    assert offered("Laxmi") == [ids["Lakshmi Devi"]]              # spelling variant
+    assert offered("Narendar") == [ids["Narender Reddy"]]         # one word of the name
+    assert offered("Mahesh Reddy") == [ids["Mahesh"]]             # surname alone doesn't pull Venkat Reddy in
+    assert offered("Ramesh Kumar") == [ids["Ramesh"]]             # saved without the surname
+    assert offered("Sai Trader") == [biz]                         # business name
+    assert offered("Gopal") == []
+    found = _call(search_customer, mid, name="Rakesh")
+    assert found["similar"] and [m["customer_id"] for m in found["matches"]] == [ids["Ramesh"]]
+
+
 def test_missing_customer_is_empty(merchant):
     mid, _ = merchant
     assert _call(search_customer, mid, name="Mahesh") == {"matches": []}

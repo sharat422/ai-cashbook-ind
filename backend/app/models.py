@@ -251,6 +251,9 @@ class LedgerEntry(Base):
     # `amount` is then the invoice total (taxable + taxes).
     customer_gstin: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     hsn_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # The product sold (a one-item invoice), as named when the invoice was saved:
+    # the invoice's description of goods. None = typed with no product picked.
+    gst_item_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     place_of_supply: Mapped[str | None] = mapped_column(String(2), nullable=True)  # state code
     gst_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
     price_includes_gst: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
@@ -286,6 +289,7 @@ class GstInvoiceLine(Base):
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
     entry_id: Mapped[str] = mapped_column(ForeignKey("ledger_entries.id", ondelete="CASCADE"), index=True)
     position: Mapped[int] = mapped_column(Integer)  # 1, 2, 3… as on the invoice
+    item_name: Mapped[str | None] = mapped_column(String(100), nullable=True)  # as named when saved
     hsn_code: Mapped[str] = mapped_column(String(8))
     gst_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2))
     gst_quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3))
@@ -497,6 +501,39 @@ class CashDeposit(Base):
     __table_args__ = (
         CheckConstraint("kind IN ('deposit', 'float')", name="ck_cash_deposit_kind"),
         CheckConstraint("amount_paise > 0", name="ck_cash_deposit_amount"),
+    )
+
+
+class DailyClose(Base):
+    """A beat's day, closed: the figures the server worked out at close time
+    (never sent by the app) and the cash counted. While closed, that beat's
+    entries for the day can't be added, changed or deleted (app/day_lock.py)
+    until the owner reopens it. One row per beat per day: closing again after
+    a reopen updates it."""
+
+    __tablename__ = "daily_closes"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    beat_id: Mapped[str] = mapped_column(ForeignKey("beats.id", ondelete="CASCADE"), index=True)
+    date: Mapped[str] = mapped_column(String(10))
+    cash_expected_paise: Mapped[int] = mapped_column(Integer)  # cash payments recorded
+    cash_counted_paise: Mapped[int] = mapped_column(Integer)
+    upi_total_paise: Mapped[int] = mapped_column(Integer)
+    credit_given_paise: Mapped[int] = mapped_column(Integer)
+    credit_collected_paise: Mapped[int] = mapped_column(Integer)  # every payment
+    difference_paise: Mapped[int] = mapped_column(Integer)  # counted - expected
+    status: Mapped[str] = mapped_column(String(10), default="closed")  # open | closed
+    closed_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    closed_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    reopened_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    reopened_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("beat_id", "date", name="uq_daily_close_beat_day"),
+        CheckConstraint("status IN ('open', 'closed')", name="ck_daily_close_status"),
     )
 
 

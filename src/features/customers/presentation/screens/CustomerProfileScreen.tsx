@@ -394,7 +394,8 @@ export function CustomerProfileScreen({
         keyExtractor={item => item.id}
         renderItem={({item, index}) => (
           <TimelineItem entry={item} isLast={index === entries.length - 1} customerId={customer.id}
-            onOpenBill={billId => navigation.navigate('BillDetail', {billId})} />
+            onOpenBill={billId => navigation.navigate('BillDetail', {billId})}
+            onOpenInvoice={entry => navigation.navigate('GstInvoice', {customer, entry})} />
         )}
         ListHeaderComponent={ListHeader}
         showsVerticalScrollIndicator={false}
@@ -426,6 +427,7 @@ export function CustomerProfileScreen({
         offline={!online}
         onClose={() => setPaymentOpen(false)}
         onSubmit={onReceivePayment}
+        customerId={customer.id}
       />
 
       <SuccessOverlay

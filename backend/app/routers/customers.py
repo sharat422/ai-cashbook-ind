@@ -2,13 +2,14 @@ import json
 import logging
 import re
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field, ConfigDict
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from ..discards import refuse_if_discarded
+from ..names import contains
 from .. import gst
 from ..calc import recompute_customer
 from ..crypto import blind_index
@@ -16,8 +17,8 @@ from ..database import get_db
 from ..errors import AppError
 from ..beats import assert_beat_access
 from ..deps import get_current_membership, require
-from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
-from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, CreditNote, Customer, GstInvoiceNumber, LedgerEntry, PaymentUtr, User, Visit, now_iso, GstInvoiceLine
+from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT, role_can
+from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, CreditNote, Customer, GstInvoiceNumber, Item, LedgerEntry, PaymentUtr, User, Visit, now_iso, GstInvoiceLine, in_books
 from ..security import get_current_user
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
@@ -60,15 +61,26 @@ def _gst_columns(tax: dict) -> dict:
     (several items: those are on gst_invoice_lines; the entry keeps the first
     item's rate, which marks it a GST invoice)."""
     cols = {k: tax[k] for k in _GST_COLUMNS}
+    cols["gst_item_name"] = tax["lines"][0].get("item_name")
     if len(tax["lines"]) > 1:
-        cols.update(hsn_code=None, gst_quantity=None, gst_uqc=None)
+        cols.update(hsn_code=None, gst_quantity=None, gst_uqc=None, gst_item_name=None)
     return cols
+
+
+def _name_items(db: Session, business: Business, raw: list[dict], tax: dict) -> dict:
+    """Each item's product name (the invoice's description of goods), looked
+    up here in the business's own catalogue from the item id the app sends —
+    never a name typed into the request. No item picked: no name (HSN only)."""
+    for ln, t in zip(raw, tax["lines"]):
+        item = db.get(Item, str(ln.get("item_id"))) if ln.get("item_id") else None
+        t["item_name"] = item.name[:100] if item is not None and item.business_id == business.id else None
+    return tax
 
 
 def _line_rows(tax: dict) -> list[GstInvoiceLine]:
     if len(tax["lines"]) == 1:
         return []
-    return [GstInvoiceLine(position=n, **{k: t[k] for k in gst.LINE_COLUMNS})
+    return [GstInvoiceLine(position=n, item_name=t.get("item_name"), **{k: t[k] for k in gst.LINE_COLUMNS})
             for n, t in enumerate(tax["lines"], 1)]
 
 
@@ -211,27 +223,21 @@ def list_customers(
     business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> dict:
-    base = select(Customer).where(Customer.business_id == business.id)
-    for word in _search_words(search):
-        like = f"%{word}%"
-        base = base.where(
-            or_(
-                Customer.full_name.ilike(like),
-                Customer.mobile.ilike(like),
-                Customer.business_name.ilike(like),
-            )
-        )
-
-    total = len(db.scalars(base).all())
-    offset = int(cursor) if (cursor and cursor.isdigit()) else 0
-
     rows = db.scalars(
-        base.order_by(Customer.full_name.asc()).offset(offset).limit(limit + 1)
+        select(Customer).where(Customer.business_id == business.id).order_by(Customer.full_name.asc())
     ).all()
+    # Matched here, not in SQL, so a name in another script counts ("Naren"
+    # finds నరేన్: AI Entry saves names in the app's language).
+    # ponytail: loads the business's customers per search, a stored romanized column if lists grow huge
+    words = _search_words(search)
+    if words:
+        rows = [c for c in rows
+                if all(contains(f"{c.full_name} {c.mobile or ''} {c.business_name or ''}", w) for w in words)]
 
-    has_more = len(rows) > limit
-    items = rows[:limit]
-    next_cursor = str(offset + limit) if has_more else None
+    total = len(rows)
+    offset = int(cursor) if (cursor and cursor.isdigit()) else 0
+    items = rows[offset:offset + limit]
+    next_cursor = str(offset + limit) if offset + limit < total else None
 
     return {
         "items": [customer_dto(c) for c in items],
@@ -408,6 +414,33 @@ def list_ledger(
     return [ledger_dto(r) for r in rows]
 
 
+@router.get("/ledger")
+def list_business_ledger(
+    beat_id: str | None = Query(None, max_length=40),
+    limit: int = Query(200, ge=1, le=1000),
+    membership: tuple[Business, str] = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Khata entries of the whole business, newest first, with the customer's
+    name; `beat_id` keeps one beat's (the beat ledger). Staff only ever get a
+    beat of their own: they must name it, and another beat answers 403."""
+    business, role = membership
+    if beat_id:
+        assert_beat_access(db, business, user, role, beat_id)
+    elif not role_can(role, DATA_VIEW):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Pick your beat to see its entries.")
+    q = (select(LedgerEntry, Customer.full_name)
+         .join(Customer, LedgerEntry.customer_id == Customer.id)
+         .where(Customer.business_id == business.id, in_books())
+         .options(selectinload(LedgerEntry.gst_lines))
+         .order_by(LedgerEntry.date.desc(), LedgerEntry.created_at.desc())
+         .limit(limit))
+    if beat_id:
+        q = q.where(LedgerEntry.beat_id == beat_id)
+    return [{**ledger_dto(e), "customer_name": name} for e, name in db.execute(q).all()]
+
+
 @router.post("/customers/{customer_id}/ledger")
 def add_ledger_entry(
     customer_id: str,
@@ -427,7 +460,8 @@ def add_ledger_entry(
     hsn_code: str | None = Form(None),
     quantity: str | None = Form(None),  # GST invoice: quantity and unit (UQC), both required
     uqc: str | None = Form(None),
-    # Several items: a JSON list of {amount, rate, hsn, quantity, uqc} (then the
+    item_id: str | None = Form(None),  # the catalogue product: its name goes on the invoice
+    # Several items: a JSON list of {amount, rate, hsn, quantity, uqc, item_id} (then the
     # single-item fields above are ignored, and `amount` is their sum).
     lines: str | None = Form(None),
     customer_gstin: str | None = Form(None),
@@ -465,10 +499,11 @@ def add_ledger_entry(
     if gst_rate not in (None, "") or lines:
         if type != "credit":
             raise HTTPException(422, "GST applies to a sale (credit), not a payment.")
-        tax = gst.invoice_lines(business, _read_lines(lines, amount=amount, rate=gst_rate, hsn=hsn_code,
-                                                      quantity=quantity, uqc=uqc),
-                                inclusive=price_includes_gst, customer_gstin=customer_gstin,
-                                place_of_supply=place_of_supply, day=date)
+        raw = _read_lines(lines, amount=amount, rate=gst_rate, hsn=hsn_code, quantity=quantity, uqc=uqc,
+                          item_id=item_id)
+        tax = _name_items(db, business, raw, gst.invoice_lines(
+            business, raw, inclusive=price_includes_gst, customer_gstin=customer_gstin,
+            place_of_supply=place_of_supply, day=date))
         amount = float(tax["total"])
     if paid_now and not tax:
         raise HTTPException(422, "Only a GST invoice can be marked paid now (a cash GST sale).")
@@ -595,6 +630,7 @@ def edit_draft(
     hsn_code: str = Form(""),
     quantity: str | None = Form(None),
     uqc: str | None = Form(None),
+    item_id: str | None = Form(None),
     lines: str | None = Form(None),  # several items, as when adding
     customer_gstin: str | None = Form(None),
     price_includes_gst: bool = Form(False),
@@ -610,10 +646,11 @@ def edit_draft(
     amount, date = validate_amount(amount), validate_date(date)
     if notes is not None and len(notes) > 5000:
         raise HTTPException(422, "Notes must not exceed 5000 characters.")
-    tax = gst.invoice_lines(business, _read_lines(lines, amount=amount, rate=gst_rate, hsn=hsn_code,
-                                                  quantity=quantity, uqc=uqc),
-                            inclusive=price_includes_gst, customer_gstin=customer_gstin,
-                            place_of_supply=place_of_supply, day=date)
+    raw = _read_lines(lines, amount=amount, rate=gst_rate, hsn=hsn_code, quantity=quantity, uqc=uqc,
+                      item_id=item_id)
+    tax = _name_items(db, business, raw, gst.invoice_lines(
+        business, raw, inclusive=price_includes_gst, customer_gstin=customer_gstin,
+        place_of_supply=place_of_supply, day=date))
     for k, v in _gst_columns(tax).items():
         setattr(entry, k, v)
     entry.gst_lines = _line_rows(tax)
@@ -637,6 +674,64 @@ def delete_draft(
         raise _locked(entry)
     db.delete(entry)
     db.commit()
+
+
+# --- GST tax invoice PDF: the statements' one door (share_statement_pdf, ST3) ---
+
+class InvoiceShareBody(BaseModel):
+    channel: str = "whatsapp"
+
+
+def _issued_invoice(db: Session, business: Business, customer_id: str, entry_id: str) -> tuple[LedgerEntry, Customer]:
+    entry, customer = _gst_entry(db, business, customer_id, entry_id)
+    if entry.gst_rate is None:
+        raise HTTPException(422, "This entry isn't a GST invoice.")
+    if entry.gst_status == "draft":
+        raise HTTPException(422, "Issue the invoice first: a draft has no invoice number yet.")
+    return entry, customer
+
+
+@router.post("/customers/{customer_id}/ledger/{entry_id}/invoice/share")
+def share_invoice(
+    customer_id: str,
+    entry_id: str,
+    body: InvoiceShareBody | None = None,
+    business: Business = Depends(require(DATA_VIEW)),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Share or save the tax invoice PDF. WhatsApp (and the open share sheet)
+    only with the retailer's opt-in; email and save always, logged. The PDF
+    itself comes from `pdfUrl`, valid a few minutes — nothing else issues it."""
+    from .. import statements as st
+    channel = (body or InvoiceShareBody()).channel
+    entry, customer = _issued_invoice(db, business, customer_id, entry_id)
+    token = st.share_statement_pdf(db, business, customer, channel, user, f"Invoice {entry.invoice_number}",
+                                   subject=f"invoice:{entry.id}")
+    return {"status": "ready", "channel": channel, "mobile": customer.mobile,
+            "pdfUrl": f"/customers/{customer.id}/ledger/{entry.id}/invoice.pdf?share={token}"}
+
+
+@router.get("/customers/{customer_id}/ledger/{entry_id}/invoice.pdf")
+def invoice_pdf(
+    customer_id: str,
+    entry_id: str,
+    share: str | None = Query(None),
+    business: Business = Depends(require(DATA_VIEW)),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The tax invoice as a PDF — only through the share above (its token)."""
+    from .. import statements as st
+    entry, customer = _issued_invoice(db, business, customer_id, entry_id)
+    if not st.pdf_token_ok(f"invoice:{entry.id}", share):
+        st.log(db, business.id, customer.id, "blocked", "system", channel="invoice_pdf",
+               note=f"Invoice {entry.invoice_number}: PDF asked for without the consent-checked share", user=user)
+        db.commit()
+        raise HTTPException(403, "Share the invoice from the invoice screen: it checks the retailer's consent first.")
+    name = f"Invoice_{entry.invoice_number}".replace("/", "-")
+    return Response(st.render_invoice(business, customer, entry), media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{name}.pdf"'})
 
 
 @router.post("/customers/{customer_id}/ledger/{entry_id}/issue")

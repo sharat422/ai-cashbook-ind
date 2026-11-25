@@ -11,7 +11,7 @@
     "type": "function",
     "function": {
       "name": "get_customer_balance",
-      "description": "Balance for ONE customer. Pass customer_name as the user said it, or customer_id if the user already picked one. Returns status found / ambiguous (several matches: ask the user which one) / not_found.",
+      "description": "Balance for ONE customer. Pass customer_name as the user said it, or customer_id if the user already picked one. Returns status found / ambiguous (several matches, or with similar: true close spellings of a name not found: ask the user which one) / not_found.",
       "parameters": {
         "type": "object",
         "properties": {

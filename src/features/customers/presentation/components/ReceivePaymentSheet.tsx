@@ -4,6 +4,7 @@ import {Pressable, ScrollView, View} from 'react-native';
 import {FilterChip} from '@components/filters';
 import {AmountInput, DateField, FormField, NotesInput, TextField} from '@components/form';
 import {BottomSheet, Button, Text} from '@components/ui';
+import {BeatPicker} from '@features/beats/presentation/components/BeatPicker';
 import {
   isUtrMissing,
   PAYMENT_METHODS,
@@ -22,6 +23,8 @@ export interface ReceivePaymentInput {
   chequeBank?: string;
   chequeAccount?: string;
   notes?: string;
+  /** The beat it counts for (its ledger and daily close). */
+  beatId?: string;
 }
 
 export interface ReceivePaymentSheetProps {
@@ -32,6 +35,8 @@ export interface ReceivePaymentSheetProps {
   offline?: boolean;
   onClose: () => void;
   onSubmit: (input: ReceivePaymentInput) => void;
+  /** Set to offer a beat picker (the customer's beats); unset on a beat day-list, which knows its beat. */
+  customerId?: string;
 }
 
 const METHODS = PAYMENT_METHODS;
@@ -58,6 +63,7 @@ export function ReceivePaymentSheet({
   offline,
   onClose,
   onSubmit,
+  customerId,
 }: ReceivePaymentSheetProps): React.JSX.Element {
   const [amount, setAmount] = useState<number>(NaN);
   const [method, setMethod] = useState<PaymentMethod>('upi');
@@ -66,6 +72,7 @@ export function ReceivePaymentSheet({
   const [chequeBank, setChequeBank] = useState('');
   const [chequeAccount, setChequeAccount] = useState('');
   const [notes, setNotes] = useState('');
+  const [beatId, setBeatId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [refError, setRefError] = useState<string | null>(null);
   const t = useT();
@@ -79,6 +86,7 @@ export function ReceivePaymentSheet({
       setChequeBank('');
       setChequeAccount('');
       setNotes('');
+      setBeatId(undefined);
       setError(null);
       setRefError(null);
     }
@@ -108,6 +116,7 @@ export function ReceivePaymentSheet({
       chequeBank: method === 'cheque' ? chequeBank.trim() || undefined : undefined,
       chequeAccount: method === 'cheque' ? chequeAccount.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
+      beatId,
     });
   };
 
@@ -203,6 +212,8 @@ export function ReceivePaymentSheet({
           <FormField label={t('form.date')} required>
             <DateField value={date} onChange={setDate} />
           </FormField>
+
+          {customerId ? <BeatPicker customerId={customerId} value={beatId} onChange={setBeatId} /> : null}
 
           <FormField
             label={method === 'upi' ? t('payments.utrLabel') : t('payments.reference')}

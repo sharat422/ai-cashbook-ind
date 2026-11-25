@@ -53,6 +53,8 @@ export interface LedgerEntry {
   /** GST invoices only: a draft has no number and doesn't count yet; a
    *  cancelled one no longer counts; an issued one is locked. */
   gstStatus?: GstStatus;
+  /** A saved GST invoice's tax, as the server worked it out (exact money strings). */
+  gst?: SavedGst;
   notes?: string;
   /** Payment-only: how it was received and any reference (UPI ref / cheque no). */
   paymentMethod?: PaymentMethod;
@@ -83,6 +85,30 @@ export interface DuplicateReference {
 }
 
 /** A ledger entry with the running outstanding balance after it. */
+export interface SavedGstLine {
+  /** The product's name when one was picked; null = HSN only. */
+  itemName: string | null;
+  hsn: string;
+  rate: string;
+  quantity: string | null;
+  uqc: string | null;
+  taxableValue: string;
+  cgst: string;
+  sgst: string;
+  igst: string;
+}
+
+export interface SavedGst {
+  customerGstin: string | null;
+  /** State code, e.g. "29". */
+  placeOfSupply: string | null;
+  taxableValue: string;
+  cgst: string;
+  sgst: string;
+  igst: string;
+  lines: SavedGstLine[];
+}
+
 export interface LedgerEntryView extends LedgerEntry {
   balance: number;
 }
@@ -119,6 +145,8 @@ export interface LedgerEntryDraft {
 export interface GstInvoiceInput {
   rate: string;
   hsn: string;
+  /** The catalogue product picked: the server puts its name on the invoice. */
+  itemId?: string;
   /** Quantity and unit (UQC) of the line — required on a GST invoice. */
   quantity: string;
   uqc: string;
@@ -141,6 +169,7 @@ export interface GstLineInput {
   hsn: string;
   quantity: string;
   uqc: string;
+  item_id?: string;
 }
 
 export type GstStatus = 'draft' | 'issued' | 'cancelled';

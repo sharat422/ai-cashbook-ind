@@ -32,10 +32,12 @@ import {ItemFormScreen} from '@features/items/presentation/screens/ItemFormScree
 import {RecurringListScreen} from '@features/recurring/presentation/screens/RecurringListScreen';
 import {RecurringFormScreen} from '@features/recurring/presentation/screens/RecurringFormScreen';
 import {BeatDayListScreen} from '@features/beats/presentation/screens/BeatDayListScreen';
+import {BeatLedgerScreen} from '@features/beats/presentation/screens/BeatLedgerScreen';
 import {VisitHistoryScreen} from '@features/beats/presentation/screens/VisitHistoryScreen';
 import {BeatPlanScreen} from '@features/beats/presentation/screens/BeatPlanScreen';
 import {BillScreen} from '@features/schemes/presentation/screens/BillScreen';
 import {BillDetailScreen} from '@features/schemes/presentation/screens/BillDetailScreen';
+import {GstInvoiceScreen} from '@features/gst/presentation/GstInvoiceScreen';
 import {SchemeFormScreen} from '@features/schemes/presentation/screens/SchemeFormScreen';
 import {SchemeReportScreen} from '@features/schemes/presentation/screens/SchemeReportScreen';
 import {SchemesScreen} from '@features/schemes/presentation/screens/SchemesScreen';
@@ -144,6 +146,8 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="AccountantActivity" component={Guarded.AccountantActivityScreen} />
       <Stack.Screen name="BeatPlan" component={Guarded.BeatPlanScreen} />
       <Stack.Screen name="BeatDayList" component={BeatDayListScreen} />
+      {/* Staff too (their own beats only — the server decides) */}
+      <Stack.Screen name="BeatLedger" component={BeatLedgerScreen} />
       <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
       <Stack.Screen name="DailyClose" component={DailyCloseScreen} />
       <Stack.Screen name="GstReports" component={GstReportsScreen} />
@@ -153,6 +157,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="VanStock" component={VanStockScreen} />
       <Stack.Screen name="Bill" component={Guarded.BillScreen} />
       <Stack.Screen name="BillDetail" component={BillDetailScreen} />
+      <Stack.Screen name="GstInvoice" component={GstInvoiceScreen} />
       <Stack.Screen name="Schemes" component={SchemesScreen} />
       <Stack.Screen name="BulkStatements" component={BulkStatementsScreen} />
       <Stack.Screen name="SchemeForm" component={Guarded.SchemeFormScreen} />

@@ -23,8 +23,9 @@ from sqlalchemy.orm import Session
 from .bank_statement import parse_statement, preview_statement
 from .beats import assert_beat_access
 from .calc import NOT_MONEY, paid_at_sale
+from .errors import AppError
 from .models import (BankImport, BankLine, BankMatch, Business, BusinessMember, CashCount, CashDeposit, Customer,
-                     LedgerEntry, User, gen_id, in_books, now_iso)
+                     DailyClose, LedgerEntry, User, gen_id, in_books, now_iso)
 from .rbac import DATA_VIEW, role_can
 
 MATCH_DAYS = 3  # UPI/NEFT can land a day or two after it was recorded
@@ -716,7 +717,71 @@ def daily_close(db: Session, business: Business, user: User, role: str,
         # One close per beat: every member's collections, with each one's
         # subtotal and (per-person counts) their counted cash and over/short.
         "members": members,
+        # The beat's day, closed (or reopened) — None until someone closes it.
+        "close": close_dto(db, _close_row(db, beat_id, day)) if beat_id else None,
     }
+
+
+def _close_row(db: Session, beat_id: str, day: str) -> DailyClose | None:
+    return db.scalars(select(DailyClose).where(DailyClose.beat_id == beat_id, DailyClose.date == day)).first()
+
+
+def close_dto(db: Session, c: DailyClose | None) -> dict | None:
+    if c is None:
+        return None
+    who = db.execute(select(BusinessMember.display_name, User.mobile).join(
+        User, User.id == BusinessMember.user_id).where(
+        BusinessMember.business_id == c.business_id, BusinessMember.user_id == c.closed_by)).first()
+    return {"id": c.id, "beatId": c.beat_id, "date": c.date, "status": c.status,
+            "cashExpected": rupees(c.cash_expected_paise), "cashCounted": rupees(c.cash_counted_paise),
+            "upiTotal": rupees(c.upi_total_paise), "creditGiven": rupees(c.credit_given_paise),
+            "creditCollected": rupees(c.credit_collected_paise), "difference": rupees(c.difference_paise),
+            "closedBy": c.closed_by, "closedByName": who[0] if who else None, "closedByMobile": who[1] if who else None,
+            "closedAt": c.closed_at, "reopenedAt": c.reopened_at}
+
+
+def close_day(db: Session, business: Business, user: User, role: str, beat_id: str, day: str,
+              counted: Decimal) -> dict:
+    """Close a beat's day. The figures are worked out again here from the
+    entries (never taken from the app); difference = counted - cash expected.
+    Staff close only their own beat. A day already closed is refused until the
+    owner reopens it; then closing again updates the same record."""
+    beat = assert_beat_access(db, business, user, role, beat_id)
+    if counted < 0 or counted > Decimal("100000000"):
+        raise HTTPException(422, "Enter the cash counted.")
+    row = _close_row(db, beat_id, day)
+    if row is not None and row.status == "closed":
+        raise AppError(400, "day_already_closed", f"{beat.name} is already closed for {day}.",
+                       beat=beat.name, date=day)
+    figures = daily_close(db, business, user, role, beat_id, day)
+    paise = {k: to_paise(Decimal(figures[k])) for k in ("cashInHand", "upiClaimed", "creditGiven", "creditCollected")}
+    if row is None:
+        row = DailyClose(business_id=business.id, beat_id=beat_id, date=day)
+        db.add(row)
+    row.cash_expected_paise, row.upi_total_paise = paise["cashInHand"], paise["upiClaimed"]
+    row.credit_given_paise, row.credit_collected_paise = paise["creditGiven"], paise["creditCollected"]
+    row.cash_counted_paise = to_paise(counted)
+    row.difference_paise = row.cash_counted_paise - row.cash_expected_paise
+    row.status, row.closed_by, row.closed_at = "closed", user.id, now_iso()
+    try:
+        db.commit()
+    except IntegrityError:  # closed on another phone at the same moment
+        db.rollback()
+        raise AppError(400, "day_already_closed", f"{beat.name} is already closed for {day}.",
+                       beat=beat.name, date=day)
+    return daily_close(db, business, user, role, beat_id, day)
+
+
+def reopen_day(db: Session, business: Business, user: User, close_id: str) -> dict:
+    """Owner: unlock a closed beat-day so its entries can be fixed. Its
+    figures stay as they were until it is closed again."""
+    row = db.get(DailyClose, close_id)
+    if row is None or row.business_id != business.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Daily close not found")
+    if row.status == "closed":
+        row.status, row.reopened_by, row.reopened_at = "open", user.id, now_iso()
+        db.commit()
+    return close_dto(db, row)
 
 
 def _counts(business: Business, day: str, beat_id: str | None):

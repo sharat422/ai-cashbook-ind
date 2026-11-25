@@ -64,6 +64,7 @@ const GROUPS: Record<string, string[]> = {
   // TE4, in the order they were audited.
   beats: [
     'features/beats/presentation/screens/BeatDayListScreen.tsx',
+    'features/beats/presentation/screens/BeatLedgerScreen.tsx',
     'features/beats/presentation/screens/BeatPlanScreen.tsx',
     'features/beats/presentation/screens/VisitHistoryScreen.tsx',
   ],
@@ -82,6 +83,7 @@ const GROUPS: Record<string, string[]> = {
   ],
   GST: [
     'features/gst/presentation/GstReportsScreen.tsx',
+    'features/gst/presentation/GstInvoiceScreen.tsx',
     'features/gst/presentation/GstInvoiceSection.tsx',
   ],
   stock: [

@@ -44,6 +44,7 @@ export const ledgerRemote = {
     if (draft.gst) {
       form.append('gst_rate', draft.gst.rate);
       form.append('hsn_code', draft.gst.hsn);
+      if (draft.gst.itemId) form.append('item_id', draft.gst.itemId);
       form.append('quantity', draft.gst.quantity);
       form.append('uqc', draft.gst.uqc);
       form.append('price_includes_gst', String(draft.gst.priceIncludesGst));

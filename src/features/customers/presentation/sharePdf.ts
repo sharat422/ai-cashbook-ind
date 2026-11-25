@@ -21,7 +21,8 @@ export type PdfDoc =
   | {kind: 'statement'; format: 'pdf' | 'csv'; customer: Customer; statement: CustomerStatement;
       businessName?: string; from?: string; to?: string}
   | {kind: 'ledger'; customer: Customer; from: string; to: string; detailed?: boolean}
-  | {kind: 'bill'; bill: Bill};
+  | {kind: 'bill'; bill: Bill}
+  | {kind: 'invoice'; customer: Customer; entryId: string; invoiceNumber: string};
 
 interface File {
   path: string;
@@ -44,6 +45,8 @@ export async function sharePdf(doc: PdfDoc, channel: PdfChannel): Promise<'share
   try {
     check = doc.kind === 'bill'
       ? await schemesRemote.shareBill(doc.bill.id, channel)
+      : doc.kind === 'invoice'
+      ? await statementsRemote.invoiceShare(doc.customer.id, doc.entryId, channel)
       : await statementsRemote.pdfShare(doc.customer.id,
         doc.kind === 'ledger' ? 'ledger' : doc.format === 'csv' ? 'statement_csv' : 'statement',
         channel, doc.from, doc.to, doc.kind === 'ledger' && !!doc.detailed);
@@ -62,6 +65,10 @@ export async function sharePdf(doc: PdfDoc, channel: PdfChannel): Promise<'share
 async function makeFile(doc: PdfDoc, pdfUrl: string | null): Promise<File> {
   if (doc.kind === 'bill') {
     const name = `Bill_${doc.bill.billNumber}.pdf`;
+    return {path: await downloadFile(pdfUrl!, name), mime: 'application/pdf', name};
+  }
+  if (doc.kind === 'invoice') {
+    const name = `Invoice_${safeName(doc.invoiceNumber)}.pdf`;
     return {path: await downloadFile(pdfUrl!, name), mime: 'application/pdf', name};
   }
   const who = safeName(doc.customer.fullName);
