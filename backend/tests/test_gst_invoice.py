@@ -120,6 +120,29 @@ def test_a_two_item_invoice_with_a_telugu_name_renders(make_user, client):
     assert client.get(f"{API}{url}", headers=owner.headers).content.startswith(b"%PDF")
 
 
+def test_the_business_address_is_saved_and_goes_on_the_invoice(make_user, client):
+    owner = _gst_owner(make_user, client)
+    me = f"{API}/businesses/me"
+    r = client.patch(me, headers=owner.headers, json={"address": "  14 Market Road, Mysuru 570001  "})
+    assert r.status_code == 200 and r.json()["address"] == "14 Market Road, Mysuru 570001"
+    # Changing something else leaves it; too long is refused; "" clears it.
+    assert client.patch(me, headers=owner.headers, json={"ownerName": "Ravi"}).json()["address"] == \
+        "14 Market Road, Mysuru 570001"
+    assert client.patch(me, headers=owner.headers, json={"address": "x" * 301}).status_code == 422
+    # Staff can't change it (business settings are the owner's).
+    staff_mobile = "7" + owner.mobile[1:]
+    assert client.post(f"{API}/team", headers=owner.headers, json={"mobile": staff_mobile, "role": "staff"}).status_code == 200
+    from conftest import _login
+    assert client.patch(me, headers=_login(client, staff_mobile), json={"address": "x"}).status_code == 403
+
+    cid = add_customer(client, owner.headers, full_name="Gupta Stores")["id"]
+    entry = _sale(client, owner.headers, cid, "addr-1", customer_gstin=KA).json()
+    url = client.post(f"{API}/customers/{cid}/ledger/{entry['id']}/invoice/share", headers=owner.headers,
+                      json={"channel": "save"}).json()["pdfUrl"]
+    assert client.get(f"{API}{url}", headers=owner.headers).content.startswith(b"%PDF")
+    assert client.patch(me, headers=owner.headers, json={"address": ""}).json()["address"] is None
+
+
 def test_a_draft_has_no_invoice_pdf(make_user, client):
     owner = _gst_owner(make_user, client)
     cid = add_customer(client, owner.headers)["id"]

@@ -89,6 +89,8 @@ class Business(Base):
     # The seller's own GSTIN, printed on every GST invoice; its first two
     # digits are the seller's state for CGST/SGST vs IGST.
     gstin: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    # The seller's address, printed on GST invoices (Rule 46).
+    address: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     user: Mapped[User] = relationship(back_populates="businesses")

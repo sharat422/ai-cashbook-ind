@@ -186,6 +186,7 @@ class UpdateBusinessInput(BaseModel):
     state: str | None = Field(default=None, min_length=1, max_length=80)
     gstRegistered: bool | None = None
     gstin: str | None = Field(default=None, max_length=20)  # "" clears it
+    address: str | None = Field(default=None, max_length=300)  # printed on GST invoices; "" clears it
 
 
 @router.patch("/businesses/me")
@@ -206,6 +207,8 @@ def update_business(
         business.state = body.state
     if body.gstRegistered is not None:
         business.gst_registered = body.gstRegistered
+    if body.address is not None:
+        business.address = body.address or None
     if body.gstin is not None or body.state is not None:
         # Re-check on a state change too: the GSTIN's state must still match.
         business.gstin = gst.seller_gstin(

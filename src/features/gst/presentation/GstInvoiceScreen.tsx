@@ -66,6 +66,7 @@ export function GstInvoiceScreen({route}: AppScreenProps<'GstInvoice'>): React.J
 
         <View className="mt-5 rounded-2xl border border-border bg-white p-4" style={{gap: 4}}>
           <Text className="text-sm font-semibold">{business?.businessName}</Text>
+          {business?.address ? <Text variant="caption">{business.address}</Text> : null}
           <Text variant="caption">GSTIN {business?.gstin ?? '—'} · {business?.state}</Text>
           <Text className="mt-3 text-sm font-semibold">{t('gst.billTo', {name: customer.fullName})}</Text>
           <Text variant="caption">GSTIN {gst.customerGstin ?? t('gst.unregistered')}</Text>

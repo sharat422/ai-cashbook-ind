@@ -3,6 +3,8 @@
   "access.readOnlyMsg": "आपकी भूमिका देख और निर्यात कर सकती है, लेकिन जोड़, बदल या हटा नहीं सकती। अगर कुछ बदलना हो तो मालिक से पूछें।",
   "access.readOnlyTitle": "केवल देखने का अधिकार",
   "access.revokedNotice": "मालिक ने उस व्यवसाय तक आपकी पहुँच हटा दी है। कोई दूसरा व्यवसाय खोलने के लिए फिर से लॉगिन करें।",
+  "account.addressLabel": "व्यवसाय का पता (आपके GST इनवॉइस पर छपेगा)",
+  "account.addressPlaceholder": "दुकान नंबर, गली, शहर, पिन कोड",
   "account.deleteAccount": "🗑️ अपना खाता हटाएं",
   "account.deleteButton": "अपना खाता हमेशा के लिए हटाएं",
   "account.deleteErrorTitle": "आपका खाता नहीं हटाया जा सका",

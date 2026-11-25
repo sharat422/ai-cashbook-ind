@@ -32,6 +32,7 @@ export function BusinessEditScreen({
     business?.gstRegistered ?? false,
   );
   const [gstin, setGstin] = useState(business?.gstin ?? '');
+  const [address, setAddress] = useState(business?.address ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +56,8 @@ export function BusinessEditScreen({
         gstRegistered,
         // Printed on every GST invoice; the server checks it matches the state.
         gstin: gstRegistered ? cleanGstin(gstin) : undefined,
+        // The seller's address on GST invoices (Rule 46).
+        address: gstRegistered ? address.trim() : undefined,
       });
       setBusiness(updated);
       navigation.goBack();
@@ -130,6 +133,17 @@ export function BusinessEditScreen({
               if (error) setError(null);
             }}
             error={error && gstin && !isValidGstin(gstin) ? error : null}
+          />
+        ) : null}
+        {gstRegistered ? (
+          <Input
+            testID="business-address"
+            label={t('account.addressLabel')}
+            placeholder={t('account.addressPlaceholder')}
+            value={address}
+            multiline
+            maxLength={300}
+            onChangeText={setAddress}
           />
         ) : null}
 

@@ -2024,7 +2024,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "gu": {
     "account.deleteAccount": "5b4180f40b06",
@@ -4051,7 +4053,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "hi": {
     "account.deleteAccount": "5b4180f40b06",
@@ -6078,7 +6082,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "hinglish": {
     "account.deleteAccount": "5b4180f40b06",
@@ -8105,7 +8111,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "kn": {
     "account.deleteAccount": "5b4180f40b06",
@@ -10132,7 +10140,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "ml": {
     "account.deleteAccount": "5b4180f40b06",
@@ -12159,7 +12169,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "mr": {
     "account.deleteAccount": "5b4180f40b06",
@@ -14186,7 +14198,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "pa": {
     "account.deleteAccount": "5b4180f40b06",
@@ -16213,7 +16227,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "ta": {
     "account.deleteAccount": "5b4180f40b06",
@@ -18240,7 +18256,9 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   },
   "te": {
     "account.deleteAccount": "5b4180f40b06",
@@ -20267,6 +20285,8 @@
     "gst.notEInvoice": "ccd3a21cd484",
     "gst.sharePdf": "5189eb5c3891",
     "gst.shareFailed": "1c1f8ca63bfd",
-    "gst.notAnInvoice": "5ee520f58ea2"
+    "gst.notAnInvoice": "5ee520f58ea2",
+    "account.addressLabel": "c4d5e0d62cf7",
+    "account.addressPlaceholder": "59b7cc93761e"
   }
 }

@@ -32,6 +32,7 @@ def run_startup_migrations(engine) -> None:
     _widen_encrypted_columns(engine, inspector, tables)
     _add_client_id_unique_indexes(engine, tables)
     _add_business_gstin(engine, inspector, tables)
+    _add_business_address(engine, inspector, tables)
     _backfill_stock_levels(engine)
     _add_bank_soft_delete_columns(engine, inspector, tables)
     _move_bank_matches(engine)
@@ -83,6 +84,18 @@ def _add_business_gstin(engine, inspector, tables: set[str]) -> None:
         log.info("migration: added businesses.gstin")
     except Exception:  # noqa: BLE001 — never let a migration crash boot
         log.exception("migration: failed adding businesses.gstin")
+
+
+def _add_business_address(engine, inspector, tables: set[str]) -> None:
+    """Business.address: the seller's address on GST invoices. Old rows stay NULL."""
+    if "businesses" not in tables or "address" in {c["name"] for c in inspector.get_columns("businesses")}:
+        return
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE businesses ADD COLUMN address TEXT"))
+        log.info("migration: added businesses.address")
+    except Exception:  # noqa: BLE001 — never let a migration crash boot
+        log.exception("migration: failed adding businesses.address")
 
 
 def _backfill_stock_levels(engine) -> None:

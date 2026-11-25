@@ -162,4 +162,5 @@ def business_dto(m: Business) -> dict:
         "state": m.state,
         "gstRegistered": m.gst_registered,
         "gstin": m.gstin,
+        "address": m.address,
     }

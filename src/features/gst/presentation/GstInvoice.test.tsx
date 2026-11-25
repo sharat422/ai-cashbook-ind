@@ -57,14 +57,16 @@ const entry: LedgerEntry = {
 };
 
 test('the invoice screen shows the server figures and shares the PDF', async () => {
-  useAuthStore.setState({business: {businessName: 'Test Traders', gstin: '29AAACS1234B1ZW', state: 'Karnataka'}} as never);
+  useAuthStore.setState({business: {businessName: 'Test Traders', gstin: '29AAACS1234B1ZW', state: 'Karnataka',
+    address: '14 Market Road, Mysuru 570001'}} as never);
   let r!: ReactTestRenderer;
   await act(async () => {
     r = create(wrap(<GstInvoiceScreen navigation={{} as never} route={{params: {customer, entry}} as never} />));
   });
   await settle();
   const text = textOf(r);
-  for (const s of ['Tax invoice', 'Invoice 26-27/00001', 'Bill to: Gupta Stores', 'GSTIN 29AAPFU0939F1ZR',
+  for (const s of ['Tax invoice', 'Invoice 26-27/00001', '14 Market Road, Mysuru 570001', 'Bill to: Gupta Stores',
+    'GSTIN 29AAPFU0939F1ZR',
     'Sona Masoori Rice 25kg · 1006', '10 BAG · 18%', 'Place of supply: 29-Karnataka']) expect(text).toContain(s);
   // Totals: taxable 1,000 + CGST 90 + SGST 90 = 1,180; no IGST inside the state.
   const totals = r.root.findAllByProps({testID: 'invoice-totals'})[0];

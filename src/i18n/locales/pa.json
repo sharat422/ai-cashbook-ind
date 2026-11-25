@@ -3,6 +3,8 @@
   "access.readOnlyMsg": "ਤੁਹਾਡੀ ਭੂਮਿਕਾ ਵੇਖ ਅਤੇ ਬਾਹਰ ਕਰ ਸਕਦੀ ਹੈ, ਪਰ ਜੋੜ, ਬਦਲ ਜਾਂ ਮਿਟਾ ਨਹੀਂ ਸਕਦੀ। ਮਾਲਕ ਨੂੰ ਕਹੋ ਜੇ ਕੁਝ ਬਦਲਣ ਦੀ ਲੋੜ ਹੈ।",
   "access.readOnlyTitle": "ਸਿਰਫ ਦੇਖਣ ਦੀ ਪਹੁੰਚ",
   "access.revokedNotice": "ਮਾਲਕ ਨੇ ਉਸ ਕਾਰੋਬਾਰ ਵਿੱਚ ਤੁਹਾਡੀ ਪਹੁੰਚ ਹਟਾ ਦਿੱਤੀ ਹੈ। ਦੁਬਾਰਾ ਲਾਗ ਇਨ ਕਰੋ ਤਾਂ ਕਿ ਕੋਈ ਹੋਰ ਕਾਰੋਬਾਰ ਖੋਲ ਸਕੋ।",
+  "account.addressLabel": "ਕਾਰੋਬਾਰ ਦਾ ਪਤਾ (ਤੁਹਾਡੇ GST ਇਨਵੌਇਸਾਂ 'ਤੇ ਛਪੇਗਾ)",
+  "account.addressPlaceholder": "ਦੁਕਾਨ ਨੰਬਰ, ਗਲੀ, ਸ਼ਹਿਰ, ਪਿੰਨ ਕੋਡ",
   "account.deleteAccount": "🗑️ ਆਪਣਾ ਖਾਤਾ ਹਟਾਓ",
   "account.deleteButton": "ਆਪਣਾ ਖਾਤਾ ਸਥਾਈ ਤੌਰ 'ਤੇ ਹਟਾਓ",
   "account.deleteErrorTitle": "ਤੁਹਾਡਾ ਖਾਤਾ ਹਟਾਇਆ ਨਹੀਂ ਜਾ ਸਕਿਆ",

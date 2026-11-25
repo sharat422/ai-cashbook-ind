@@ -537,8 +537,8 @@ INVOICE_COLS = (("#", 8, "L"), ("Item · HSN", 52, "L"), ("Qty", 20, "R"), ("GST
 
 
 def render_invoice(business: Business, customer: Customer, entry: LedgerEntry) -> bytes:
-    """A GST tax invoice, as saved (Rule 46 fields Bolcash keeps): seller and
-    GSTIN, invoice number and date, buyer, GSTIN and place of supply, one row
+    """A GST tax invoice, as saved (Rule 46 fields Bolcash keeps): seller,
+    address and GSTIN, invoice number and date, buyer, GSTIN and place of supply, one row
     per item with its tax, and the totals. Every figure is the stored one —
     nothing is worked out again here. Not an e-invoice (no IRN/QR)."""
     from .gst import STATE_NAMES, lines_of, place_label, state_code
@@ -552,6 +552,8 @@ def render_invoice(business: Business, customer: Customer, entry: LedgerEntry) -
     pdf.cell(0, 7, business.business_name, new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Noto", "", 9)
     seller_state = state_code(business.state)
+    if business.address:
+        pdf.multi_cell(0, 5, business.address, new_x="LMARGIN", new_y="NEXT")
     pdf.cell(0, 5, f"GSTIN: {business.gstin or '—'} · State: {business.state}"
                    + (f" ({seller_state})" if seller_state else ""), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)

@@ -9,6 +9,8 @@ export interface BusinessUpdate {
   state?: string;
   gstRegistered?: boolean;
   gstin?: string;
+  /** "" clears it. */
+  address?: string;
 }
 
 export interface DeleteResult {

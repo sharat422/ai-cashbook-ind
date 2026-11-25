@@ -18,6 +18,8 @@
   "account.exportReadyMsg": "Your data file was created — save or share it from the sheet.",
   "account.exportReadyTitle": "Your data is ready",
   "account.section": "Your data & privacy",
+  "account.addressLabel": "Business address (printed on your GST invoices)",
+  "account.addressPlaceholder": "Shop no., street, town, PIN code",
   "ai.checkConnection": "Check your connection.",
   "ai.confirmHeader": "I understood — confirm",
   "ai.confirmSave": "Confirm & save",

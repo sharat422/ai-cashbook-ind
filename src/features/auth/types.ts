@@ -17,6 +17,8 @@ export interface Business {
   gstRegistered: boolean;
   /** The business's own GSTIN (needed for GST invoices). */
   gstin?: string | null;
+  /** The seller's address, printed on GST invoices. */
+  address?: string | null;
   /** The caller's role in this business (from /businesses/me). Absent for the
    *  local create response; defaults to owner (the creator). */
   role?: Role;

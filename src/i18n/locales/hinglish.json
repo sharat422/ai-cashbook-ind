@@ -3,6 +3,8 @@
   "access.readOnlyMsg": "Aapka role sirf dekh aur export kar sakta hai, add, change ya delete nahi kar sakta. Kisi cheez ke liye owner se pooch lo.",
   "access.readOnlyTitle": "Read-only access",
   "access.revokedNotice": "Owner ne aapko is business ke liye access hata diya hai. Doosra business open karne ke liye phir se login karein.",
+  "account.addressLabel": "Business ka address (aapke GST invoice par print hoga)",
+  "account.addressPlaceholder": "Dukaan no., gali/street, sheher, PIN code",
   "account.deleteAccount": "🗑️ Mera account delete karein",
   "account.deleteButton": "Account ko permanently delete karein",
   "account.deleteErrorTitle": "Account delete nahi ho saka",
