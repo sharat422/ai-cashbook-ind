@@ -916,6 +916,7 @@
   "errors.code.no_consent": "ਕੋਈ ਸਹਮਤੀ ਨਹੀਂ — ਖੁਦਰਾ ਵਿਕ੍ਰੇਤਾ ਨੂੰ ਕਹੋ ਕਿ ਆਪਟ-ਇਨ ਕਰੇ।",
   "errors.code.recurring_duplicate": "ਇਹ ਖਰਚ ਪਹਿਲਾਂ ਹੀ ਸੈੱਟ ਹੈ: {name}, {amount}।",
   "errors.code.scheme_ended": "ਸਕੀਮ '{scheme}' {date} ਨੂੰ ਖਤਮ ਹੋ ਗਈ, ਇਸ ਬਿਲ ਤੋਂ ਬਾਅਦ ਜੋ ਆਫਲਾਈਨ ਬਣਾਇਆ ਗਿਆ ਸੀ।",
+  "errors.code.stock_not_tracked": "{item} ਦਾ ਸਟਾਕ ਟ੍ਰੈਕ ਨਹੀਂ ਹੁੰਦਾ। ਪਹਿਲਾਂ ਆਈਟਮ ਕੈਟਾਲਾਗ ਵਿੱਚ ਇਸ ਲਈ ਸਟਾਕ ਟ੍ਰੈਕ ਚਾਲੂ ਕਰੋ।",
   "errors.code.stock_short_godown": "ਗੋਡਾਉਨ ਵਿੱਚ ਸਿਰਫ {qty} {unit} {item} ਹੈ।",
   "errors.code.stock_short_van": "ਇਸ ਵੈਨ ਵਿੱਚ ਸਿਰਫ {qty} {unit} {item} ਹੈ।",
   "errors.conflict": "ਇਹ ਪਹਿਲਾਂ ਤੋਂ ਸੇਵ ਕੀਤੀ ਚੀਜ਼ ਨਾਲ ਟਕਰਾ ਰਹੀ ਹੈ (ਕਦੀ ਇਹ ਡੁਪਲਿਕੇਟ ਹੋ ਸਕਦੀ ਹੈ)। ਚੈਕ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ ਕਰੋ।",

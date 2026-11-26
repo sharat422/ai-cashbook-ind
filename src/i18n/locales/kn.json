@@ -916,6 +916,7 @@
   "errors.code.no_consent": "ಅನುಮತಿ ಇಲ್ಲ — ಪುಟ್ಠೇಲರನ್ನು ಆಪ್ಟ್ ಇನ್ ಮಾಡಲು ಕೇಳಿ.",
   "errors.code.recurring_duplicate": "ಈ ಹೆಸರಿನ ಖರ್ಚು ಈಗಾಗಲೇ ಸೆಟ್ ಆಗಿದೆ: {name}, {amount}.",
   "errors.code.scheme_ended": "ಸ್ಕೀಮ್ '{scheme}' {date} ಕ್ಕೆ ಕೊನೆಗೊಂಡಿದೆ, ಈ ಬಿಲ್ ಆಫ್‍ಲೈನ್‍ನಲ್ಲಿ ಮಾಡಿದ ನಂತರ.",
+  "errors.code.stock_not_tracked": "{item} ಗೆ ಸ್ಟಾಕ್ ಟ್ರ್ಯಾಕ್ ಆಗುತ್ತಿಲ್ಲ. ಮೊದಲು ಐಟಂ ಕ್ಯಾಟಲಾಗ್‌ನಲ್ಲಿ ಅದಕ್ಕೆ ಸ್ಟಾಕ್ ಟ್ರ್ಯಾಕ್ ಆನ್ ಮಾಡಿ.",
   "errors.code.stock_short_godown": "ಗೋಡೌನ್‍ನಲ್ಲಿ {item} ಇನ್ನು {qty} {unit} ಮಾತ್ರ ಇದೆ.",
   "errors.code.stock_short_van": "ಈ ವ್ಯಾನ್‍ನಲ್ಲಿ {item} ಇನ್ನು {qty} {unit} ಮಾತ್ರ ಇದೆ.",
   "errors.conflict": "ಇದು ಈಗಾಗಲೇ ಉಳಿಸಿದ್ದೇ ಯಾವುದೋ ವಿಷಯದ ಜೊತೆ ಸಂಘರ್ಷ ಹೊಂದಿದೆ (ನಕಲು ಆಗಿರಬಹುದು). ಪರೀಕ್ಷಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",

@@ -916,6 +916,7 @@
   "errors.code.no_consent": "सहमती नाही — दुकानदार ला ऑप्ट इन करायला सांगा.",
   "errors.code.recurring_duplicate": "हा खर्च आधीच सेट आहे: {name}, {amount}.",
   "errors.code.scheme_ended": "'{scheme}' योजना {date} ला संपली, या बिल बनवल्यानंतर ऑफलाइन.",
+  "errors.code.stock_not_tracked": "{item} चा स्टॉक ट्रॅक केला जात नाही. आधी आयटम कॅटलॉगमध्ये त्यासाठी स्टॉक ट्रॅक करा सुरू करा.",
   "errors.code.stock_short_godown": "{item} च्या गोदाम मध्ये फक्त {qty} {unit} आहे.",
   "errors.code.stock_short_van": "या व्हॅन मध्ये {item} च्या फक्त {qty} {unit} आहे.",
   "errors.conflict": "हे आधीच सेव केलेल्या गोष्टीशी टकराते (डुप्लिकेट असू शकते). तपासून पुन्हा करा.",

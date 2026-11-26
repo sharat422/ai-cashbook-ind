@@ -60,6 +60,22 @@ def owned_item(db: Session, business: Business, item_id: str) -> Item:
     return item
 
 
+def stock_item(db: Session, business: Business, item_id: str) -> Item:
+    """A product whose stock may move: Track stock must be on. Every movement
+    (purchase, sale, van load, count, reversal) comes through here; nothing
+    turns tracking on by itself."""
+    item = owned_item(db, business, item_id)
+    _require_tracked(item)
+    return item
+
+
+def _require_tracked(item: Item) -> None:
+    if not item.track_stock:
+        raise AppError(422, "stock_not_tracked",
+                       f"{item.name} doesn't track stock. Turn on Track stock for it in the Item catalog first.",
+                       item=item.name)
+
+
 def place(db: Session, business: Business, user: User, role: str,
           location: str, van_user_id: str | None) -> Place:
     """Validate a stock place. Staff may only use their own van."""
@@ -211,7 +227,6 @@ def set_count(db: Session, business: Business, item: Item, where: Place, counted
 def _sync_total(db: Session, business: Business, item: Item) -> None:
     db.flush()
     item.stock_qty = float(sum(levels(db, business, [item.id]).get(item.id, {}).values(), ZERO))
-    item.track_stock = True
 
 
 def _move(business: Business, item: Item, where: Place, kind: str, qty: Decimal, day: str,
@@ -347,7 +362,7 @@ def record(db: Session, business: Business, user: User, role: str, *, kind: str,
         return group(db, first)
     refuse_if_discarded(db, business.id, client_id)  # IM5: discarded by the owner on the phone
     assert_open(db, business, day)
-    item = owned_item(db, business, item_id)
+    item = stock_item(db, business, item_id)
     entered = quantity(qty)
     q, entered_unit = to_base(db, item, entered, unit)  # stock is held in base units
     extra: dict = {"entered_unit": entered_unit, "entered_qty": entered if entered_unit else None}
@@ -400,7 +415,7 @@ def reverse(db: Session, business: Business, user: User, role: str, move_id: str
     assert_open(db, business, day)         # and the reversal's
     if any(m.reversed_at for m in rows):
         raise _reject("This entry has already been reversed.")
-    item = owned_item(db, business, first.item_id)
+    item = stock_item(db, business, first.item_id)
     for m in rows:  # staff only on their own van; only the owner touches the godown
         place(db, business, user, role, m.location, m.van_user_id)
     stamp = datetime.now(timezone.utc).isoformat()
@@ -436,7 +451,7 @@ def transfer(db: Session, business: Business, user: User, role: str, *, item_id:
         return group(db, first)
     refuse_if_discarded(db, business.id, client_id)  # IM5: discarded by the owner on the phone
     assert_open(db, business, day)
-    item = owned_item(db, business, item_id)
+    item = stock_item(db, business, item_id)
     entered = quantity(qty)
     q, entered_unit = to_base(db, item, entered, unit)
     src = place(db, business, user, role, from_location, from_van_user_id)
@@ -470,7 +485,7 @@ def count(db: Session, business: Business, user: User, role: str, *, location: s
         if len({i for i, _ in lines}) != len(lines):
             raise _reject("Each item can be counted once per count.")
         where = place(db, business, user, role, location, van_user_id)
-        items = [owned_item(db, business, i) for i, _ in lines]
+        items = [stock_item(db, business, i) for i, _ in lines]
         gid = gen_id()
         moves = []
         for item, (_, counted) in zip(items, lines):
@@ -499,6 +514,7 @@ def count_line(m: StockMove) -> dict:
 def opening(db: Session, business: Business, user: User | None, item: Item, qty: float) -> None:
     """Opening stock entered on the item form goes into the godown."""
     if qty:
+        _require_tracked(item)
         db.flush()  # the item row must exist before its stock level
         put(db, business, item, GODOWN, quantity(qty))
         db.add(StockMove(business_id=business.id, item_id=item.id, location="godown",

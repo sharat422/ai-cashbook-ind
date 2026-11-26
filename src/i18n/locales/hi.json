@@ -916,6 +916,7 @@
   "errors.code.no_consent": "अनुमति नहीं है — retailer को opt in करने के लिए कहें।",
   "errors.code.recurring_duplicate": "इस नाम का खर्च पहले से सेट है: {name}, {amount}।",
   "errors.code.scheme_ended": "Scheme '{scheme}' {date} को खत्म हो गया, इस offline bill के बाद।",
+  "errors.code.stock_not_tracked": "{item} का स्टॉक ट्रैक नहीं होता। पहले आइटम कैटलॉग में इसके लिए \"स्टॉक ट्रैक करें\" चालू करें।",
   "errors.code.stock_short_godown": "Godown में सिर्फ {qty} {unit} {item} का बचा है।",
   "errors.code.stock_short_van": "इस van में सिर्फ {qty} {unit} {item} का बचा है।",
   "errors.conflict": "यह पहले से सेव किए हुए के साथ टकराता है (यह डुप्लिकेट हो सकता है)। जांचें और फिर से कोशिश करें।",

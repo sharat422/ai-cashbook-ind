@@ -916,6 +916,7 @@
   "errors.code.no_consent": "Consent nahi mila — retailer se opt in karane ko kahna.",
   "errors.code.recurring_duplicate": "Iska khata pehle se bana hai: {name}, {amount}",
   "errors.code.scheme_ended": "Scheme '{scheme}' {date} ko khatam ho gaya, iss bill ke baad offline tha.",
+  "errors.code.stock_not_tracked": "{item} ka stock track nahi hota. Pehle Item catalog mein jaakar uske liye Track stock on karein.",
   "errors.code.stock_short_godown": "Godown mein sirf {qty} {unit} {item} ka available hai.",
   "errors.code.stock_short_van": "Is van mein sirf {qty} {unit} {item} ka available hai.",
   "errors.conflict": "Yeh kisi aur cheez se clash kar raha hai jo pehle se save hai (duplicate ho sakta hai). Check karke dobara try karein.",

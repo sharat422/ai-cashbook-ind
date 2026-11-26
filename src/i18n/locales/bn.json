@@ -916,6 +916,7 @@
   "errors.code.no_consent": "কোনো অনুমতি নেই — খুচরা বিক্রেতাকে অপ্ট ইন করতে বলুন।",
   "errors.code.recurring_duplicate": "এই খাতে ইতিমধ্যে একটি খরচ সেট করা আছে: {name}, {amount}।",
   "errors.code.scheme_ended": "'{scheme}' স্কিম {date} তারিখে শেষ হয়েছে, এই বিল অফলাইনে তৈরি হওয়ার পরে।",
+  "errors.code.stock_not_tracked": "{item} এর স্টক ট্র্যাক করা হয় না। আগে আইটেম ক্যাটালগে গিয়ে এর জন্য \"স্টক ট্র্যাক করুন\" চালু করুন।",
   "errors.code.stock_short_godown": "গোডাউনে {item} এর মাত্র {qty} {unit} আছে।",
   "errors.code.stock_short_van": "এই ভ্যানে {item} এর মাত্র {qty} {unit} আছে।",
   "errors.conflict": "এটা আগে থেকে সেভ করা কিছুর সাথে মিল খাচ্ছে (হতে পারে ডুপ্লিকেট)। দেখে নিয়ে আবার চেষ্টা করুন।",

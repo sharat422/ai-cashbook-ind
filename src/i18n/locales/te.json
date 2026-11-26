@@ -916,6 +916,7 @@
   "errors.code.no_consent": "సమ్మతి లేదు — రిటेయిలర్‌ను ఆప్ట్ ఇన్ చేయమని అడగండి.",
   "errors.code.recurring_duplicate": "ఈ పేరు ఇప్పటికే సెట్ చేయబడింది: {name}, {amount}.",
   "errors.code.scheme_ended": "స్కీమ్ '{scheme}' {date} న ముగిసింది, ఈ బిల్లు ఆఫ్‌లైన్‌లో చేయబడిన తర్వాత.",
+  "errors.code.stock_not_tracked": "{item} స్టాక్‌ను ట్రాక్ చేయదు. ముందుగా ఐటెమ్ కేటలాగ్‌లో దానికి స్టాక్ ట్రాక్ ఆన్ చేయండి.",
   "errors.code.stock_short_godown": "గోడౌన్‌లో {item} లో కేవలం {qty} {unit} ఉంది.",
   "errors.code.stock_short_van": "ఈ వ్యాన్‌లో {item} లో కేవలం {qty} {unit} ఉంది.",
   "errors.conflict": "ఇది ఇప్పటికే సేవ్ చేసిన దానికి సంఘర్షణ కలిగిస్తుంది (ఇది నకిలు కావచ్చు). తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.",
