@@ -12,6 +12,7 @@ import {
   type ItemType,
 } from '@features/items/domain/entities';
 import {useItemMutations} from '@features/items/presentation/hooks/useItems';
+import {ItemStockCard} from '@features/stock/presentation/ItemStockCard';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
@@ -207,10 +208,10 @@ export function ItemFormScreen({
               />
             </FormField>
           ) : null}
-          {trackStock && editing ? (
-            <Text variant="caption">
-              {t('items.stockNow', {qty: editing.stockQty, unit: editing.unit ?? ''})}
-            </Text>
+          {/* Stock in / out and the item's movements, right here (and on 📦 Stock). */}
+          {editing?.trackStock && type === 'product' ? (
+            <ItemStockCard itemId={editing.id}
+              onHistory={() => navigation.navigate('StockHistory', {itemId: editing.id, name: editing.name})} />
           ) : null}
           {trackStock ? (
             <FormField label={t('items.lowStockThreshold')} hint={t('items.lowStockHint')}>

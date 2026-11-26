@@ -67,6 +67,7 @@ export function StockHistoryScreen({route}: AppScreenProps<'StockHistory'>): Rea
               </Text>
               <Text variant="caption">
                 {formatDisplayDate(m.date)} · {place(m.location, m.vanUserId)}
+                {m.billRef ? ` · ${t('stock.billNo', {ref: m.billRef})}` : ''}
                 {m.counted !== null ? ` · ${t('stock.countedQty', {qty: formatQty(m.counted)})}` : ''}
                 {m.note && m.kind !== 'count' && !m.reversesId ? ` · ${m.note}` : ''}
               </Text>

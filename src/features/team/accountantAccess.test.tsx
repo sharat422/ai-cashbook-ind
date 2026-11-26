@@ -66,8 +66,10 @@ it('every screen that writes is wrapped in the guard', () => {
   const src = readFileSync(join(__dirname, '../../navigation/AppNavigator.tsx'), 'utf8');
   const WRITE = ['AITransaction', 'QuickAdd', 'AddIncome', 'AddExpense', 'ReceiptCapture', 'ReceiptReview',
     'AddCredit', 'CustomerForm', 'Bill', 'RequestPayment', 'CollectionAssistant', 'CashCounter', 'Categorize',
-    'StockCount', 'KhataImport', 'BusinessEdit', 'ItemForm', 'RecurringForm', 'SchemeForm', 'Team', 'BeatPlan',
+    'StockCount', 'KhataImport', 'BusinessEdit', 'ItemForm', 'RecurringForm', 'SchemeForm', 'Team',
     'AccountantActivity'];
+  // BeatPlan is the beat list for every role (Settings -> Beats); its create / edit /
+  // delete controls are the owner's only, in the screen (BeatList.test.tsx) and on the server.
   for (const name of WRITE) {
     expect(src).toMatch(new RegExp(`name="${name}"\\s+component=\\{Guarded\\.`));
   }

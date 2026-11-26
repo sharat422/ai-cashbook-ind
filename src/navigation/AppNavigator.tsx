@@ -97,7 +97,6 @@ const Guarded = {
   SchemeFormScreen: withPermission(SchemeFormScreen, PERMISSIONS.SETTINGS_MANAGE),
   TeamScreen: withPermission(TeamScreen, PERMISSIONS.TEAM_MANAGE),
   AccountantActivityScreen: withPermission(AccountantActivityScreen, PERMISSIONS.TEAM_MANAGE),
-  BeatPlanScreen: withPermission(BeatPlanScreen, PERMISSIONS.BEATS_MANAGE),
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -144,7 +143,8 @@ export function AppNavigator(): React.JSX.Element {
       />
       <Stack.Screen name="Team" component={Guarded.TeamScreen} />
       <Stack.Screen name="AccountantActivity" component={Guarded.AccountantActivityScreen} />
-      <Stack.Screen name="BeatPlan" component={Guarded.BeatPlanScreen} />
+      {/* Every role: the server sends staff only their own beats, and only the owner may change one */}
+      <Stack.Screen name="BeatPlan" component={BeatPlanScreen} />
       <Stack.Screen name="BeatDayList" component={BeatDayListScreen} />
       {/* Staff too (their own beats only — the server decides) */}
       <Stack.Screen name="BeatLedger" component={BeatLedgerScreen} />

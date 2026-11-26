@@ -29,7 +29,7 @@ export interface ItemDraft {
   unit?: string | null;
   /** HSN (goods) or SAC (services) code. */
   hsnSac?: string | null;
-  /** GST rate percentage (0/5/12/18/28). */
+  /** GST rate percentage (0, 5, 18 or 40; 12 only for the brick/tile HSNs, gst.ts keeps12Percent). */
   gstRate: number;
   trackStock: boolean;
   /** Opening stock when creating (goes into the godown). After that the

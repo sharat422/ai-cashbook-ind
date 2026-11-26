@@ -53,13 +53,30 @@ test('the owner sees every group; a row opens its screen', async () => {
   expect(shown).toContain('bill-prefix-card'); // the setting cards sit in their group
   await act(async () => { r.root.findByProps({testID: 'settings-sync'}).props.onPress(); });
   expect(navigate).toHaveBeenCalledWith('SyncStatus');
+  // Beats: one row that opens the beat list.
+  const beats = r.root.findAll(n => typeof n.props.onPress === 'function' && texts({root: n} as never).includes('🗺️ Beats'))[0];
+  await act(async () => { beats.props.onPress(); });
+  expect(navigate).toHaveBeenCalledWith('BeatPlan');
+  // Daily close: its own row beside the Cash counter (a separate flow, not the calculator).
+  const row = (label: string) =>
+    r.root.findAll(n => typeof n.props.onPress === 'function' && texts({root: n} as never).includes(label))[0];
+  expect(row('🪙 Cash counter')).toBeTruthy();
+  await act(async () => { row('📋 Daily close').props.onPress(); });
+  expect(navigate).toHaveBeenCalledWith('DailyClose');
+  // GST invoices & CA export: the export screen (an invoice itself opens from its sale).
+  await act(async () => { row('🧾 GST invoices & CA export').props.onPress(); });
+  expect(navigate).toHaveBeenCalledWith('GstReports');
+  // Stock is reached from the Item catalog: an item's detail has stock in / out and its history.
+  await act(async () => { row('🏷️ Item catalog').props.onPress(); });
+  expect(navigate).toHaveBeenCalledWith('Items');
   act(() => r.unmount());
 });
 
 test('staff see no owner-only group or row', async () => {
   const {r} = await render('staff');
   const shown = texts(r);
-  expect(shown).not.toContain('Team & beats');
+  expect(shown).toContain('🗺️ Beats'); // every role: staff see only their own beat there
+  expect(shown).not.toContain('👥 Team & roles');
   expect(shown).not.toContain('Customers & statements');
   expect(shown).not.toContain('🏷️ Item catalog');
   expect(shown).not.toContain('bill-prefix-card');

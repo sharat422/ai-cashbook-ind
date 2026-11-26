@@ -3,8 +3,9 @@ import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import type {Role} from '@features/auth/rbac';
 import {teamRemote} from '@features/team/data/team.remote';
 
-export function useTeam() {
-  return useQuery({queryKey: ['team'], queryFn: teamRemote.list});
+/** `enabled` false: don't ask (only the owner may list the team). */
+export function useTeam(enabled = true) {
+  return useQuery({queryKey: ['team'], queryFn: teamRemote.list, enabled});
 }
 
 export function useTeamMutations() {

@@ -356,8 +356,8 @@ export function SettingsScreen({
           title={t('settings.group.team')}
           rows={[
             can(PERMISSIONS.TEAM_MANAGE) && {title: t('settings.team'), onPress: () => navigation.navigate('Team')},
-            can(PERMISSIONS.BEATS_MANAGE) && {title: t('beats.planTitle'), onPress: () => navigation.navigate('BeatPlan')},
-            can(PERMISSIONS.DATA_VIEW) && {title: t('beats.ledgerTitle'), onPress: () => navigation.navigate('BeatLedger')},
+            // Every role: staff see only their own beat; only the owner creates or changes one.
+            {title: t('beats.listTitle'), onPress: () => navigation.navigate('BeatPlan')},
           ]}
         />
 

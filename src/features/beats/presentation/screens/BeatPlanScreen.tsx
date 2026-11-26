@@ -5,6 +5,8 @@ import {Alert, Pressable, View} from 'react-native';
 import {FilterChip} from '@components/filters';
 import {DateField, FormField, TextField} from '@components/form';
 import {Button, EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
+import {usePermissions} from '@features/auth/hooks';
+import {PERMISSIONS} from '@features/auth/rbac';
 import {isBeatChanged, type Beat, type BeatAssignment} from '@features/beats/data/beats.remote';
 import {useBeatMutations, useBeats, useDeletedBeats} from '@features/beats/presentation/hooks';
 import {useCustomers} from '@features/customers/presentation/hooks/useCustomers';
@@ -20,11 +22,18 @@ const PLAN_AHEAD = () => new Date(Date.now() + 365 * 24 * 3600 * 1000);
 
 type Picked = Array<{id: string; name: string}>;
 
-/** Owner: create, edit and delete beats (name, days, salesperson, retailers) and set visit order. */
+/**
+ * The beats list, for every role: each beat's days, salesperson and shops, with
+ * its day-list, ledger and visit history. The server sends staff only their own
+ * beats. The owner also creates, edits and deletes beats (name, days,
+ * salesperson, retailers), sets the visit order and restores deleted ones.
+ */
 export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.JSX.Element {
   const t = useT();
+  const {can} = usePermissions();
+  const manage = can(PERMISSIONS.BEATS_MANAGE);
   const beats = useBeats();
-  const team = useTeam();
+  const team = useTeam(manage); // the team list is the owner's
   const members: TeamMember[] = team.data ?? [];
   const list: Beat[] = beats.data ?? [];
   const {create, setRetailers, edit, remove, assign, unassign, restore} = useBeatMutations();
@@ -56,9 +65,12 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
     return dates ? `${who} — ${dates}` : who;
   };
   const dayNames = (ds: number[]) => ds.map(d => t(`beats.day${d}` as TKey)).join(', ');
-  const memberLabel = (userId: string | null) => {
+  const memberLabel = (userId: string | null, beat?: Beat) => {
     const m = members.find(x => x.userId === userId);
-    return m ? `${personLabel(m.name, m.mobile)} · ${t(`team.role.${m.role}` as TKey)}` : t('beats.unassigned');
+    if (m) return `${personLabel(m.name, m.mobile)} · ${t(`team.role.${m.role}` as TKey)}`;
+    // Without the team list (accountant, staff): the name the beat itself carries.
+    const a = beat?.assignments.find(x => x.role === 'primary' && x.userId === userId);
+    return a ? personLabel(a.name, a.mobile) : t('beats.unassigned');
   };
 
   const startCreate = () => {
@@ -145,10 +157,12 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
 
   return (
     <Screen className="py-6">
-      <Text variant="title">{t('beats.planTitle')}</Text>
-      <Text variant="subtitle" className="mt-1">
-        {t('beats.planSubtitle')}
-      </Text>
+      <Text variant="title">{t('beats.listTitle')}</Text>
+      {manage ? (
+        <Text variant="subtitle" className="mt-1">
+          {t('beats.planSubtitle')}
+        </Text>
+      ) : null}
 
       {creating ? (
         <View className="mt-6 rounded-2xl border border-border bg-white p-4" style={{gap: 14}}>
@@ -184,9 +198,9 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
             loading={create.isPending || edit.isPending} onPress={saveNew} />
           <Button title={t('common.cancel')} variant="ghost" onPress={() => setForm(null)} />
         </View>
-      ) : (
+      ) : manage ? (
         <Button title={t('beats.newBeat')} className="mt-6" onPress={startCreate} />
-      )}
+      ) : null}
 
       {list.length === 0 && !creating ? (
         <EmptyState icon="🗺️" title={t('beats.noBeats')} message={t('beats.noBeatsMsg')} />
@@ -197,7 +211,7 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
           <Text className="text-base font-semibold text-slate-900">{beat.name}</Text>
           <Text variant="caption">{dayNames(beat.weekdays)}</Text>
           <Text variant="caption">
-            {beat.assignedUserId ? memberLabel(beat.assignedUserId) : t('beats.pickSalesperson')} ·{' '}
+            {beat.assignedUserId ? memberLabel(beat.assignedUserId, beat) : t('beats.pickSalesperson')} ·{' '}
             {t('beats.retailerCount', {count: beat.retailers.length})}
           </Text>
           {helpers(beat).length ? (
@@ -256,29 +270,44 @@ export function BeatPlanScreen({navigation}: AppScreenProps<'BeatPlan'>): React.
                 onPress={() => navigation.navigate('BeatDayList', {beatId: beat.id})}
               />
               <Button
-                title={t('beats.editRetailers')}
+                testID={`beat-ledger-${beat.id}`}
+                title={t('beats.ledgerShort')}
                 variant="secondary"
                 className="flex-1"
-                onPress={() => startEdit(beat)}
+                onPress={() => navigation.navigate('BeatLedger', {beatId: beat.id})}
               />
+              {manage ? (
+                <Button
+                  title={t('beats.editRetailers')}
+                  variant="secondary"
+                  className="flex-1"
+                  onPress={() => startEdit(beat)}
+                />
+              ) : null}
             </View>
           )}
           {editing !== beat.id ? (
             <View className="mt-2 flex-row" style={{gap: 8}}>
-              <Button testID={`beat-edit-${beat.id}`} title={t('beats.editDetails')} variant="ghost"
-                className="flex-1" onPress={() => startDetails(beat)} />
+              {manage ? (
+                <Button testID={`beat-edit-${beat.id}`} title={t('beats.editDetails')} variant="ghost"
+                  className="flex-1" onPress={() => startDetails(beat)} />
+              ) : null}
               <Button testID={`beat-history-${beat.id}`} title={t('visits.open')} variant="ghost" className="flex-1"
                 onPress={() => navigation.navigate('VisitHistory', {beatId: beat.id, title: beat.name})} />
-              <Button testID={`beat-delete-${beat.id}`} title={t('beats.delete')} variant="ghost" className="flex-1"
-                onPress={() => confirmDelete(beat)} />
+              {manage ? (
+                <Button testID={`beat-delete-${beat.id}`} title={t('beats.delete')} variant="ghost" className="flex-1"
+                  onPress={() => confirmDelete(beat)} />
+              ) : null}
             </View>
           ) : null}
         </View>
       ))}
 
       {/* Deleted beats: an owner's undo. They come back as they were. */}
-      <Button testID="beats-show-deleted" title={t('beats.deletedBeats')} variant="ghost" className="mt-6"
-        onPress={() => setShowDeleted(v => !v)} />
+      {manage ? (
+        <Button testID="beats-show-deleted" title={t('beats.deletedBeats')} variant="ghost" className="mt-6"
+          onPress={() => setShowDeleted(v => !v)} />
+      ) : null}
       {showDeleted ? (
         deleted.isLoading ? (
           <Skeleton className="mt-2 h-16 w-full" />

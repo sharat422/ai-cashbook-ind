@@ -649,7 +649,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -2026,7 +2026,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "gu": {
     "account.deleteAccount": "5b4180f40b06",
@@ -2678,7 +2681,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -4055,7 +4058,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "hi": {
     "account.deleteAccount": "5b4180f40b06",
@@ -4707,7 +4713,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -6084,7 +6090,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "hinglish": {
     "account.deleteAccount": "5b4180f40b06",
@@ -6736,7 +6745,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -8113,7 +8122,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "kn": {
     "account.deleteAccount": "5b4180f40b06",
@@ -8765,7 +8777,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -10142,7 +10154,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "ml": {
     "account.deleteAccount": "5b4180f40b06",
@@ -10794,7 +10809,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -12171,7 +12186,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "mr": {
     "account.deleteAccount": "5b4180f40b06",
@@ -12823,7 +12841,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -14200,7 +14218,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "pa": {
     "account.deleteAccount": "5b4180f40b06",
@@ -14852,7 +14873,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -16229,7 +16250,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "ta": {
     "account.deleteAccount": "5b4180f40b06",
@@ -16881,7 +16905,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -18258,7 +18282,10 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   },
   "te": {
     "account.deleteAccount": "5b4180f40b06",
@@ -18910,7 +18937,7 @@
     "gst.rate": "c7ad86d0d158",
     "gst.rateChanges": "89d8eac994f4",
     "gst.reportsSubtitle": "6cfc75a4d669",
-    "gst.reportsTitle": "0c682f271fc8",
+    "gst.reportsTitle": "4d8a0d817d21",
     "gst.sgst": "6b1e3b6e5586",
     "gst.taxableValue": "bf12f675ab75",
     "gst.verdict.fail": "11d1ec797a01",
@@ -20287,6 +20314,9 @@
     "gst.shareFailed": "1c1f8ca63bfd",
     "gst.notAnInvoice": "5ee520f58ea2",
     "account.addressLabel": "c4d5e0d62cf7",
-    "account.addressPlaceholder": "59b7cc93761e"
+    "account.addressPlaceholder": "59b7cc93761e",
+    "beats.listTitle": "3fbb09ba25bb",
+    "beats.ledgerShort": "1aa2f31ee7cc",
+    "stock.billNo": "e767292c8d78"
   }
 }
