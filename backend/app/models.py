@@ -506,6 +506,23 @@ class CashDeposit(Base):
     )
 
 
+class PaymentAllocation(Base):
+    """Part of a payment paid against one bill (a credit entry: its id is the
+    bill's identity). A payment may be split over several bills. A payment with
+    none is "not linked to a bill" (every payment from before this) and is used
+    up on the oldest bills (app/allocation.py)."""
+
+    __tablename__ = "payment_allocations"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
+    customer_id: Mapped[str] = mapped_column(ForeignKey("customers.id", ondelete="CASCADE"), index=True)
+    payment_id: Mapped[str] = mapped_column(ForeignKey("ledger_entries.id", ondelete="CASCADE"), index=True)
+    bill_id: Mapped[str] = mapped_column(ForeignKey("ledger_entries.id", ondelete="CASCADE"), index=True)
+    amount_paise: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
 class DailyClose(Base):
     """A beat's day, closed: the figures the server worked out at close time
     (never sent by the app) and the cash counted. While closed, that beat's
@@ -1196,6 +1213,11 @@ def in_books():
     and the daily close — everything but draft and cancelled GST invoices."""
     from sqlalchemy import or_
     return or_(LedgerEntry.gst_status.is_(None), LedgerEntry.gst_status == "issued")
+
+
+def booked(entry: "LedgerEntry") -> bool:
+    """in_books() for an entry already loaded."""
+    return entry.gst_status in (None, "issued")
 
 
 class GstInvoiceNumber(Base):

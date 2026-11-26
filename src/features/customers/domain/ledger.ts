@@ -2,6 +2,7 @@
  * Customer ledger domain — credit (customer owes more) and payment (received,
  * reduces dues) entries, plus the running-balance computation. Pure types/logic.
  */
+import type {BillAllocation, PaidBill} from './bills';
 import type {Attachment} from '@/shared/types/attachment';
 
 export type {Attachment};
@@ -73,6 +74,8 @@ export interface LedgerEntry {
   syncStatus?: LedgerSyncStatus;
   /** An item bill waiting in the offline queue (its line count): no amount yet. */
   queuedBillLines?: number;
+  /** A saved payment: the bills it paid ([] = not linked to a bill). Unset when unknown. */
+  bills?: PaidBill[];
 }
 
 export interface DuplicateReference {
@@ -140,6 +143,8 @@ export interface LedgerEntryDraft {
   /** Credit only: a GST invoice. The server computes and saves the tax split;
    *  `amount` is then the price (with or without GST, per `priceIncludesGst`). */
   gst?: GstInvoiceInput;
+  /** Payment only: the bills it pays (none = not linked; it pays the oldest). */
+  allocations?: BillAllocation[];
 }
 
 export interface GstInvoiceInput {

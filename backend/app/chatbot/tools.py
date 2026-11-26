@@ -26,8 +26,9 @@ from difflib import SequenceMatcher
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from .. import allocation
 from ..calc import IST
-from ..models import Business, Customer, Expense, Income, LedgerEntry, in_books
+from ..models import Business, Customer, Expense, Income, LedgerEntry, booked, in_books
 from ..monitoring import _mask as mask_mobile
 from ..names import contains, loose, same_name
 from . import help_search
@@ -171,16 +172,11 @@ def _customer_brief(c: Customer) -> dict:
 
 
 def _owing_since(db: Session, customer: Customer) -> str | None:
-    """Date of the oldest credit not yet covered, applying payments oldest-first."""
-    entries = sorted(customer.ledger, key=lambda e: (e.date, e.created_at))
-    paid = sum((Decimal(str(e.amount)) for e in entries if e.type == "payment"), Decimal("0"))
-    for e in entries:
-        if e.type != "credit":
-            continue
-        paid -= Decimal(str(e.amount))
-        if paid < 0:
-            return e.date
-    return None
+    """Date of the oldest bill still open (payments linked to bills pay those,
+    the rest pays the oldest first: app/allocation.py)."""
+    entries = [e for e in customer.ledger if booked(e)]
+    v = allocation.view(entries, allocation.links(db, customer.business_id, customer.id))
+    return next((b.entry.date for b in v.bills if b.left > 0), None)
 
 
 # ---------------------------------------------------------------------------

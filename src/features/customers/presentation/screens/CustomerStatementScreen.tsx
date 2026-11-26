@@ -9,6 +9,7 @@ import {statementsRemote} from '@features/customers/data/statements.remote';
 import {StatementDocument} from '@features/customers/presentation/components';
 import {StatementConsentCard, consentKey} from '@features/customers/presentation/components/StatementConsentCard';
 import {PdfShareSheet} from '@features/customers/presentation/components/PdfShareSheet';
+import {StatementBillsCard} from '@features/customers/presentation/components/StatementBillsCard';
 import {StatementLinksCard, linksKey} from '@features/customers/presentation/components/StatementLinksCard';
 import {
   shareStatementLinkBySms,
@@ -210,6 +211,7 @@ export function CustomerStatementScreen({
         <PdfShareSheet visible={fileAction !== null} onClose={() => setFileAction(null)}
           optedIn={consent.data ? consent.data.status === 'opted_in' : undefined}
           onPick={channel => fileAction && shareFile(fileAction, channel)} />
+        <StatementBillsCard customerId={customer.id} from={from} to={to} />
 
         {/* Preview */}
         <Text variant="label" className="mt-6 mb-2">

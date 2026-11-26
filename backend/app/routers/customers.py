@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..discards import refuse_if_discarded
 from ..names import contains
-from .. import gst
+from .. import allocation, gst
 from ..calc import recompute_customer
 from ..crypto import blind_index
 from ..database import get_db
@@ -18,7 +18,7 @@ from ..errors import AppError
 from ..beats import assert_beat_access
 from ..deps import get_current_membership, require
 from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT, role_can
-from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, CreditNote, Customer, GstInvoiceNumber, Item, LedgerEntry, PaymentUtr, User, Visit, now_iso, GstInvoiceLine, in_books
+from ..models import BankLine, BankMatch, BeatRetailer, Bill, BillLine, SchemeApplication, StatementEvent, StatementLink, Business, CreditNote, Customer, GstInvoiceNumber, Item, LedgerEntry, PaymentAllocation, PaymentUtr, User, Visit, now_iso, GstInvoiceLine, booked, in_books
 from ..security import get_current_user
 from ..serializers import customer_dto, ledger_dto
 from ..storage import save_upload
@@ -325,6 +325,7 @@ def delete_customer(
             db.query(model).filter(model.bill_id.in_(bill_ids)).delete(synchronize_session=False)
         db.query(Bill).filter(Bill.id.in_(bill_ids)).delete(synchronize_session=False)
     db.query(BeatRetailer).filter(BeatRetailer.customer_id == customer_id).delete(synchronize_session=False)
+    db.query(PaymentAllocation).filter(PaymentAllocation.customer_id == customer_id).delete(synchronize_session=False)
     # A bank line matched to one of these entries goes back to unmatched.
     entry_ids = select(LedgerEntry.id).where(LedgerEntry.customer_id == customer_id)
     db.query(PaymentUtr).filter(PaymentUtr.ledger_entry_id.in_(entry_ids)).delete(synchronize_session=False)
@@ -398,20 +399,98 @@ def _validate_payment(
             raise HTTPException(422, "The UTR should be 6 to 40 letters or digits.")
     return method, reference
 
+# --- Bills: what each credit sale has been paid, and what each payment paid ---
+
+def _bill_view(db: Session, business: Business, customer: Customer,
+               entries: list[LedgerEntry] | None = None) -> allocation.View:
+    if entries is None:
+        entries = db.scalars(select(LedgerEntry).where(LedgerEntry.customer_id == customer.id, in_books())).all()
+    return allocation.view([e for e in entries if booked(e)], allocation.links(db, business.id, customer.id))
+
+
+def _with_bills(v: allocation.View, e: LedgerEntry) -> dict:
+    """A payment in the books also lists the bills it paid ([] = not linked to a bill)."""
+    if e.type != "payment" or not booked(e):
+        return ledger_dto(e)
+    return {**ledger_dto(e), "bills": allocation.paid_bills(v, e.id)}
+
+
+def _read_allocations(raw: str | None, entry_type: str, amount: float) -> list[tuple[str, int]]:
+    """The bills a payment is for: a JSON list of {bill_id, amount}, in the order picked."""
+    if not raw:
+        return []
+    if entry_type != "payment":
+        raise HTTPException(422, "Only a payment can be linked to bills.")
+    try:
+        items = json.loads(raw)
+        if not isinstance(items, list) or len(items) > 500:
+            raise ValueError
+        wanted = [(str(i["bill_id"]), allocation.paise(i["amount"])) for i in items]
+    except (ValueError, TypeError, KeyError, ArithmeticError):
+        raise HTTPException(422, "Bills must be a list of {bill_id, amount}.") from None
+    if len({b for b, _ in wanted}) != len(wanted) or any(p <= 0 for _, p in wanted):
+        raise HTTPException(422, "Pick each bill once, each with an amount above zero.")
+    if sum(p for _, p in wanted) > allocation.paise(amount):
+        raise HTTPException(422, "The bills add up to more than the payment.")
+    return wanted
+
+
+def _allocate(v: allocation.View, wanted: list[tuple[str, int]]) -> list[tuple[str, int]]:
+    """Never more on a bill than is left on it now. A bill that isn't this
+    customer's or has been paid or cancelled since (a payment queued offline)
+    takes nothing: the payment is still saved, and that part isn't linked."""
+    out = []
+    for bill_id, p in wanted:
+        b = v.by_id.get(bill_id)
+        take = min(p, max(b.left, 0)) if b else 0
+        if take > 0:
+            b.paid += take
+            out.append((bill_id, take))
+    return out
+
+
+@router.get("/customers/{customer_id}/bills")
+def list_bills(
+    customer_id: str,
+    beat_id: str | None = Query(None, max_length=40),
+    membership: tuple[Business, str] = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Every bill (credit sale) of the retailer, oldest first: amount, paid, left
+    and status (paid only when nothing is left). The bills' `left` adds up to the
+    balance; `advance` is paid beyond every bill; `unlinked` is what was paid
+    without picking a bill (used up on the oldest). Staff: a retailer on their beat."""
+    business, role = membership
+    customer = _owned_customer(db, business, customer_id)
+    if not role_can(role, DATA_VIEW):
+        if not beat_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Pick your beat to see its bills.")
+        assert_beat_access(db, business, user, role, beat_id)
+        if db.scalars(select(BeatRetailer).where(BeatRetailer.beat_id == beat_id,
+                                                 BeatRetailer.customer_id == customer.id)).first() is None:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "This customer isn't on your beat.")
+    v = _bill_view(db, business, customer)
+    return {"bills": [allocation.bill_dto(b) for b in v.bills],
+            "left": allocation.rupees(sum(max(b.left, 0) for b in v.bills)),
+            "advance": allocation.rupees(v.advance), "unlinked": allocation.rupees(v.unlinked)}
+
+
 @router.get("/customers/{customer_id}/ledger")
 def list_ledger(
     customer_id: str,
     business: Business = Depends(require(DATA_VIEW)),
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    _owned_customer(db, business, customer_id)
+    customer = _owned_customer(db, business, customer_id)
     rows = db.scalars(
         select(LedgerEntry)
         .where(LedgerEntry.customer_id == customer_id)
         .options(selectinload(LedgerEntry.gst_lines))
         .order_by(LedgerEntry.date.desc(), LedgerEntry.created_at.desc())
     ).all()
-    return [ledger_dto(r) for r in rows]
+    v = _bill_view(db, business, customer, list(rows))
+    return [_with_bills(v, r) for r in rows]
 
 
 @router.get("/ledger")
@@ -472,6 +551,9 @@ def add_ledger_entry(
     # A GST invoice saved as a draft: no number, editable, not in the books
     # until issued (POST .../ledger/{id}/issue).
     draft: bool = Form(False),
+    # A payment: the bills it pays, a JSON list of {bill_id, amount} (none = not
+    # linked to a bill; it then pays the oldest bills).
+    allocations: str | None = Form(None),
     attachment: UploadFile | None = File(None),
     # Sent by app versions that enforce the UTR rule. Older apps don't send it;
     # their UTR-less UPI payments (queued offline before the update) are kept.
@@ -509,6 +591,7 @@ def add_ledger_entry(
         raise HTTPException(422, "Only a GST invoice can be marked paid now (a cash GST sale).")
     if draft and (not tax or paid_now):
         raise HTTPException(422, "Only a GST invoice on credit can be saved as a draft.")
+    wanted = _read_allocations(allocations, type, amount)
 
     find = select(LedgerEntry).where(
         LedgerEntry.customer_id == customer_id, LedgerEntry.client_id == client_id)
@@ -545,6 +628,7 @@ def add_ledger_entry(
         invoice_number = issued.number  # never the app's own number for a GST invoice
     elif tax:
         invoice_number = None  # a draft gets its number when it's issued
+    before = _bill_view(db, business, customer) if wanted else None  # the bills as they are without this payment
     row = LedgerEntry(
         customer_id=customer_id,
         type=type,
@@ -578,6 +662,11 @@ def add_ledger_entry(
         return ledger_dto(existing)
     if issued is not None:
         issued.ledger_entry_id = row.id
+    if wanted:
+        for bill_id, p in _allocate(before, wanted):
+            db.add(PaymentAllocation(business_id=business.id, customer_id=customer.id, payment_id=row.id,
+                                     bill_id=bill_id, amount_paise=p))
+        db.flush()
     if paid_now:  # the same sale, paid on the spot: one payment for the invoice total
         db.add(LedgerEntry(customer_id=customer_id, type="payment", amount=row.amount, date=date,
                            payment_method="cash", client_id=f"{client_id}:paid"[:80], salesman_id=user.id,
@@ -594,10 +683,11 @@ def add_ledger_entry(
     recompute_customer(db, customer)
     db.commit()
     db.refresh(row)
+    saved = _with_bills(_bill_view(db, business, customer), row) if row.type == "payment" else ledger_dto(row)
     if repeat is None:
-        return ledger_dto(row)
+        return saved
     log.info("duplicate %s reference: entry %s repeats %s", payment_method, row.id, repeat[0].id)
-    return {**ledger_dto(row), "warning": _ref_warning(payment_method, *repeat, number_only=number_only)}
+    return {**saved, "warning": _ref_warning(payment_method, *repeat, number_only=number_only)}
 
 
 # --- GST invoice drafts: editable until issued; issued ones are locked ---------

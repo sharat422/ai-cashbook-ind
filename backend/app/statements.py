@@ -23,7 +23,8 @@ from fpdf import FPDF
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .calc import days_since, paid_at_sale, today_iso
+from . import allocation
+from .calc import days_since, today_iso
 from .doc_i18n import ENGLISH, Tr, translator
 from .errors import AppError
 from .doc_i18n import date as ldate
@@ -283,20 +284,16 @@ def bill_details(db: Session, entry_ids: list[str], t: Tr) -> dict[str, BillDeta
     return out
 
 
-def ageing(entries: list[LedgerEntry]) -> dict[str, Decimal]:
-    """Oldest credits are paid first; the unpaid rest is bucketed by age.
-    Cash GST sales (an invoice paid at once) aren't debt and are left out."""
-    settled = paid_at_sale(entries)
-    entries = [e for e in entries if e.id not in settled]
-    pool = sum((money(e.amount) for e in entries if e.type == "payment"), ZERO)
+def ageing(entries: list[LedgerEntry], links: allocation.Links | None = None) -> dict[str, Decimal]:
+    """What is left on each bill, bucketed by the bill's age. Payments linked to
+    bills pay those; the rest pays the oldest first (app/allocation.py). A cash
+    GST sale (an invoice paid at once) is a paid bill, not debt."""
     buckets = {k: ZERO for k in AGEING}
-    for c in sorted((e for e in entries if e.type == "credit"), key=lambda e: (e.date, e.created_at)):
-        applied = min(pool, money(c.amount))
-        pool -= applied
-        unpaid = money(c.amount) - applied
+    for b in allocation.view(entries, links).bills:
+        unpaid = money(Decimal(b.left) / 100)
         if unpaid <= 0:
             continue
-        age = days_since(c.date)
+        age = days_since(b.entry.date)
         key = ("current" if age <= 0 else "d1_30" if age <= 30 else "d31_60" if age <= 60
                else "d61_90" if age <= 90 else "d90_plus")
         buckets[key] += unpaid
@@ -327,7 +324,7 @@ def build(db: Session, customer: Customer, start: str | None, end: str | None = 
         row.detail = details.get(e.id)
     return Statement(start=start, end=end, opening=opening, rows=rows, total_debit=debit,
                      total_credit=credit, closing=opening + debit - credit,
-                     current=sum((signed(e) for e in entries), ZERO), ageing=ageing(entries))
+                     current=sum((signed(e) for e in entries), ZERO), ageing=ageing(entries, allocation.links(db, customer.business_id, customer.id)))
 
 
 @dataclass

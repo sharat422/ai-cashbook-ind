@@ -3,6 +3,7 @@ import {View} from 'react-native';
 
 import {Text} from '@components/ui';
 import type {LedgerEntryView} from '@features/customers/domain/ledger';
+import {billLabel} from '@features/customers/presentation/hooks/useCustomerBills';
 import {useT} from '@/i18n';
 import {paymentMethodLabel} from '@/i18n/labels';
 import {formatINR} from '@utils/currency';
@@ -47,6 +48,15 @@ function TransactionCardBase({
           {entry.queuedBillLines ? (
             <Text testID="bill-waiting" className="mt-1 text-sm text-slate-700">
               {t('bill.waitingToSync', {count: entry.queuedBillLines})}
+            </Text>
+          ) : null}
+          {!isCredit && entry.bills ? (
+            <Text testID={`paid-bills-${entry.id}`} variant="caption" className="mt-1">
+              {entry.bills.length
+                ? t('ledger.forBills', {
+                    bills: entry.bills.map(b => `${billLabel(t, b)} (${formatINR(b.amount)})`).join(', '),
+                  })
+                : t('ledger.notLinked')}
             </Text>
           ) : null}
           {entry.notes ? (

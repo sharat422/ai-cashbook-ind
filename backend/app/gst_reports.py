@@ -35,14 +35,23 @@ TALLY_HEADER = [
 ]
 
 
+def credit_sales(business: Business, start: str, end: str):
+    """Every sale on credit (khata) dated start..end that is in the books: GST
+    invoices and plain credit entries alike, never drafts or cancelled invoices.
+    The one source of ledger sales: the GST reports take the GST invoices from
+    it, Reports P&L and the Business summary take all of it. A sale counts at
+    its invoice value (`amount`, with GST): for a GST invoice that is the GST
+    reports' "total" (taxable value + tax), so the two agree."""
+    return (select(LedgerEntry).join(Customer, Customer.id == LedgerEntry.customer_id)
+            .where(Customer.business_id == business.id, LedgerEntry.type == "credit", in_books(),
+                   LedgerEntry.date >= start, LedgerEntry.date <= end))
+
+
 def invoices(db: Session, business: Business, start: str, end: str) -> list[tuple]:
     """(entry, customer) for every GST invoice dated start..end, oldest first."""
     return db.execute(
-        select(LedgerEntry, Customer)
-        .join(Customer, Customer.id == LedgerEntry.customer_id)
-        .where(Customer.business_id == business.id, LedgerEntry.type == "credit",
-               LedgerEntry.gst_rate.is_not(None), in_books(),
-               LedgerEntry.date >= start, LedgerEntry.date <= end)
+        credit_sales(business, start, end).add_columns(Customer)
+        .where(LedgerEntry.gst_rate.is_not(None))
         .options(selectinload(LedgerEntry.gst_lines))
         .order_by(LedgerEntry.date, LedgerEntry.invoice_number)
     ).all()

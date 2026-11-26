@@ -13,6 +13,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import allocation
 from .calc import IST, today_iso
 from .models import (Beat, BeatAssignment, BeatRetailer, Business, BusinessMember, Customer, in_books,
                      LedgerEntry, User, Visit)
@@ -199,8 +200,9 @@ def day_list(db: Session, beat: Beat) -> list[dict]:
             today_visit[v.customer_id] = v
 
     out = []
+    links = allocation.links(db, beat.business_id)
     for r, c in rows:
-        aging = _customer_aging(ledger[c.id])
+        aging = _customer_aging(ledger[c.id], links)
         out.append({
             "customer_id": c.id,
             "full_name": c.full_name,

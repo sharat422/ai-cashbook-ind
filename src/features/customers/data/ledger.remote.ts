@@ -41,6 +41,9 @@ export const ledgerRemote = {
     if (draft.chequeBank) form.append('cheque_bank', draft.chequeBank);
     if (draft.chequeAccount) form.append('cheque_account', draft.chequeAccount);
     if (draft.beatId) form.append('beat_id', draft.beatId);
+    if (draft.allocations?.length) {
+      form.append('allocations', JSON.stringify(draft.allocations.map(a => ({bill_id: a.billId, amount: a.amount}))));
+    }
     if (draft.gst) {
       form.append('gst_rate', draft.gst.rate);
       form.append('hsn_code', draft.gst.hsn);

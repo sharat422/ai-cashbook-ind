@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..calc import days_since, paid_at_sale, today_iso
+from .. import allocation
+from ..calc import days_since, today_iso
 from ..database import get_db
 from ..deps import require
 from ..rbac import DATA_VIEW
@@ -31,22 +32,15 @@ def _business_ledger(db: Session, business: Business) -> list[LedgerEntry]:
     ).all()
 
 
-def _customer_aging(entries: list[LedgerEntry]) -> dict:
-    """FIFO-allocate payments against oldest credits, then bucket the unpaid
-    remainder of each credit by its age."""
-    settled = paid_at_sale(entries)  # cash GST sales aren't debt
-    entries = [e for e in entries if e.id not in settled]
-    credits = sorted((e for e in entries if e.type == "credit"), key=lambda e: e.date)
-    pool = sum(e.amount for e in entries if e.type == "payment")
-
+def _customer_aging(entries: list[LedgerEntry], links: allocation.Links | None = None) -> dict:
+    """What is left on each bill (linked payments first, the rest oldest first:
+    app/allocation.py), bucketed by the bill's age."""
     buckets = {"current": 0.0, "d1_30": 0.0, "d31_60": 0.0, "d61_90": 0.0, "d90_plus": 0.0}
-    for c in credits:
-        applied = min(pool, c.amount)
-        pool -= applied
-        unpaid = c.amount - applied
-        if unpaid <= 1e-9:
+    for b in allocation.view(entries, links).bills:
+        unpaid = max(b.left, 0) / 100
+        if unpaid <= 0:
             continue
-        age = days_since(c.date)
+        age = days_since(b.entry.date)
         if age <= 0:
             buckets["current"] += unpaid
         elif age <= 30:
@@ -73,8 +67,9 @@ def customers_aging(
         by_customer[e.customer_id].append(e)
 
     totals = {"current": 0.0, "d1_30": 0.0, "d31_60": 0.0, "d61_90": 0.0, "d90_plus": 0.0}
+    links = allocation.links(db, business.id)
     for c in customers:
-        b = _customer_aging(by_customer.get(c.id, []))
+        b = _customer_aging(by_customer.get(c.id, []), links)
         for k in totals:
             totals[k] += b[k]
 

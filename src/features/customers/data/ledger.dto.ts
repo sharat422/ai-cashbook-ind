@@ -27,6 +27,8 @@ export interface LedgerEntryDto {
   warning?: DuplicateReference;
   attachment_url: string | null;
   created_at: string;
+  /** A payment in the books: the bills it paid ([] = not linked to a bill). */
+  bills?: Array<{bill_id: string; number: string | null; date: string; amount: string}>;
 }
 
 export function toLedgerEntry(dto: LedgerEntryDto): LedgerEntry {
@@ -54,5 +56,7 @@ export function toLedgerEntry(dto: LedgerEntryDto): LedgerEntry {
     attachment: null,
     createdAt: dto.created_at,
     syncStatus: 'synced',
+    bills: dto.bills?.map(b => ({billId: b.bill_id, number: b.number ?? undefined, date: b.date,
+      amount: Number(b.amount)})),
   };
 }

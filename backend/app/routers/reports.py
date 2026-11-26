@@ -15,10 +15,14 @@ from ..validation import validate_date
 router = APIRouter(tags=["reports"])
 
 
-def _by_category(rows: list, total: float) -> list[dict]:
+# Sales on credit (khata entries) show as their own income category.
+CREDIT_SALES = "Credit sales"
+
+
+def _by_category(rows: list[tuple[str, float]], total: float) -> list[dict]:
     buckets: dict[str, float] = defaultdict(float)
-    for r in rows:
-        buckets[r.category] += r.amount
+    for category, amount in rows:
+        buckets[category] += amount
     return [
         {"category": cat, "amount": amt, "share": (amt / total) if total else 0.0}
         for cat, amt in sorted(buckets.items(), key=lambda kv: kv[1], reverse=True)
@@ -33,6 +37,12 @@ def report_summary(
     db: Session = Depends(get_db),
 ) -> dict:
     """Profit & Loss + category breakdowns for a date range [from, to].
+
+    Income = income entries + sales on credit (khata), at invoice value with
+    GST: the same figure as the GST reports' total for the GST invoices among
+    them (gst_reports.credit_sales). Nothing is counted twice: an income entry
+    is only ever typed in by hand, never written for a khata entry, and money
+    collected on the khata is not income (it pays a sale already counted).
 
     Dates are inclusive ISO strings (YYYY-MM-DD); lexical comparison is valid
     for that format.
@@ -52,19 +62,23 @@ def report_summary(
         if from_ <= e.date <= to
     ]
 
-    income_total = sum(i.amount for i in incomes)
+    credit = db.scalars(gr.credit_sales(business, from_, to)).all()
+    income_rows = [(i.category, i.amount) for i in incomes] + [(CREDIT_SALES, e.amount) for e in credit]
+
+    income_total = sum(a for _, a in income_rows)
     expense_total = sum(e.amount for e in expenses)
 
     return {
         "from": from_,
         "to": to,
         "income_total": income_total,
+        "credit_sales": sum(e.amount for e in credit),
         "expense_total": expense_total,
         "profit": income_total - expense_total,
-        "income_count": len(incomes),
+        "income_count": len(income_rows),
         "expense_count": len(expenses),
-        "income_by_category": _by_category(incomes, income_total),
-        "expense_by_category": _by_category(expenses, expense_total),
+        "income_by_category": _by_category(income_rows, income_total),
+        "expense_by_category": _by_category([(e.category, e.amount) for e in expenses], expense_total),
     }
 
 

@@ -8,6 +8,7 @@ import type {LedgerEntryInput} from '@features/customers/domain/usecases/ledger'
 import {tNow} from '@/i18n';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
+import {BILLS_KEY} from './useCustomerBills';
 import {CUSTOMERS_KEY} from './useCustomers';
 import {LEDGER_KEY} from './useCustomerLedger';
 
@@ -31,6 +32,7 @@ export function useLedgerMutations(customerId: string) {
   const invalidate = () => {
     queryClient.invalidateQueries({queryKey: [LEDGER_KEY, customerId]});
     queryClient.invalidateQueries({queryKey: [CUSTOMERS_KEY]});
+    queryClient.invalidateQueries({queryKey: [BILLS_KEY, customerId]});
   };
 
   const addCredit = useMutation<LedgerEntry, Error, EntryInput>({

@@ -224,6 +224,8 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
         submitting={collect.isPending}
         onClose={() => setPaying(null)}
         onSubmit={onCollect}
+        customerId={paying?.retailer.customerId}
+        dayBeatId={paying?.beatId}
       />
     </Screen>
   );

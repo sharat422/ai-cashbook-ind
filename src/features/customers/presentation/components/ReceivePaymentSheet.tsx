@@ -5,6 +5,8 @@ import {FilterChip} from '@components/filters';
 import {AmountInput, DateField, FormField, NotesInput, TextField} from '@components/form';
 import {BottomSheet, Button, Text} from '@components/ui';
 import {BeatPicker} from '@features/beats/presentation/components/BeatPicker';
+import {splitPayment, type Bill, type BillAllocation} from '@features/customers/domain/bills';
+import {billLabel, useCustomerBills} from '@features/customers/presentation/hooks/useCustomerBills';
 import {
   isUtrMissing,
   PAYMENT_METHODS,
@@ -25,6 +27,8 @@ export interface ReceivePaymentInput {
   notes?: string;
   /** The beat it counts for (its ledger and daily close). */
   beatId?: string;
+  /** The bills it pays, oldest first as picked (none = not linked to a bill). */
+  allocations?: BillAllocation[];
 }
 
 export interface ReceivePaymentSheetProps {
@@ -35,8 +39,10 @@ export interface ReceivePaymentSheetProps {
   offline?: boolean;
   onClose: () => void;
   onSubmit: (input: ReceivePaymentInput) => void;
-  /** Set to offer a beat picker (the customer's beats); unset on a beat day-list, which knows its beat. */
+  /** Whose payment: offers their open bills, and a beat picker (the customer's beats). */
   customerId?: string;
+  /** Collected on this beat (a beat day-list): no beat picker; the bills are read through it (staff). */
+  dayBeatId?: string;
 }
 
 const METHODS = PAYMENT_METHODS;
@@ -64,6 +70,7 @@ export function ReceivePaymentSheet({
   onClose,
   onSubmit,
   customerId,
+  dayBeatId,
 }: ReceivePaymentSheetProps): React.JSX.Element {
   const [amount, setAmount] = useState<number>(NaN);
   const [method, setMethod] = useState<PaymentMethod>('upi');
@@ -75,7 +82,11 @@ export function ReceivePaymentSheet({
   const [beatId, setBeatId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [refError, setRefError] = useState<string | null>(null);
+  const [skip, setSkip] = useState<ReadonlySet<string>>(new Set());
   const t = useT();
+  // Open bills, oldest first; the payment goes on them in order unless one is left out.
+  const billsQuery = useCustomerBills(customerId, dayBeatId, visible);
+  const openBills = (billsQuery.data?.bills ?? []).filter((b: Bill) => b.left > 0);
 
   useEffect(() => {
     if (visible) {
@@ -89,6 +100,7 @@ export function ReceivePaymentSheet({
       setBeatId(undefined);
       setError(null);
       setRefError(null);
+      setSkip(new Set());
     }
   }, [visible]);
 
@@ -98,6 +110,13 @@ export function ReceivePaymentSheet({
     [outstanding, entered],
   );
   const overpay = entered > outstanding ? entered - outstanding : 0;
+  const {split, extra} = splitPayment(openBills, entered, skip);
+  const toggle = (id: string) =>
+    setSkip(prev => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
 
   const submit = () => {
     if (Number.isNaN(amount) || amount <= 0) {
@@ -117,6 +136,7 @@ export function ReceivePaymentSheet({
       chequeAccount: method === 'cheque' ? chequeAccount.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
       beatId,
+      allocations: split.length ? split : undefined,
     });
   };
 
@@ -193,6 +213,47 @@ export function ReceivePaymentSheet({
             />
           </FormField>
 
+          {openBills.length ? (
+            <FormField label={t('payments.billsTitle')} hint={t('payments.billsHint')}>
+              <View style={{gap: 8}}>
+                {openBills.map((b: Bill) => {
+                  const on = !skip.has(b.id);
+                  const gets = split.find(s => s.billId === b.id)?.amount ?? 0;
+                  return (
+                    <Pressable
+                      key={b.id}
+                      testID={`pay-bill-${b.id}`}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{checked: on}}
+                      onPress={() => toggle(b.id)}
+                      className={`flex-row items-center rounded-xl border px-3 py-2.5 ${
+                        on ? 'border-green-300 bg-green-50' : 'border-border bg-white'
+                      }`}>
+                      <View className="flex-1 pr-2">
+                        <Text className={`text-sm font-semibold ${on ? 'text-slate-900' : 'text-muted'}`}>
+                          {billLabel(t, b)}
+                        </Text>
+                        <Text variant="caption">
+                          {t('payments.billLeft', {left: formatINR(b.left), amount: formatINR(b.amount)})}
+                        </Text>
+                      </View>
+                      {gets > 0 ? (
+                        <Text testID={`pay-bill-gets-${b.id}`} className="text-sm font-bold text-success">
+                          {formatINR(gets)}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+                {extra > 0 ? (
+                  <Text testID="pay-unlinked" variant="caption">
+                    {t('payments.unlinkedExtra', {amount: formatINR(extra)})}
+                  </Text>
+                ) : null}
+              </View>
+            </FormField>
+          ) : null}
+
           <FormField label={t('payments.method')} required>
             <View className="flex-row flex-wrap" style={{gap: 8}}>
               {METHODS.map(m => (
@@ -213,7 +274,7 @@ export function ReceivePaymentSheet({
             <DateField value={date} onChange={setDate} />
           </FormField>
 
-          {customerId ? <BeatPicker customerId={customerId} value={beatId} onChange={setBeatId} /> : null}
+          {customerId && !dayBeatId ? <BeatPicker customerId={customerId} value={beatId} onChange={setBeatId} /> : null}
 
           <FormField
             label={method === 'upi' ? t('payments.utrLabel') : t('payments.reference')}

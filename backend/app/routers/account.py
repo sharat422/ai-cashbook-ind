@@ -68,6 +68,7 @@ from ..models import (
     GstInvoiceLine,
     GstInvoiceNumber,
     ImportLog,
+    PaymentAllocation,
     PaymentUtr,
     StockLevel,
 )
@@ -233,7 +234,7 @@ def delete_account(
         counts["beats"] += db.query(Beat).filter(
             Beat.business_id.in_(biz_ids)).delete(synchronize_session=False)
         # Rows that point at ledger entries go first (no SQLite cascade).
-        for model in (PaymentUtr, GstInvoiceNumber):
+        for model in (PaymentUtr, GstInvoiceNumber, PaymentAllocation):
             counts[model.__tablename__] += db.query(model).filter(
                 model.business_id.in_(biz_ids)).delete(synchronize_session=False)
         if cust_ids:

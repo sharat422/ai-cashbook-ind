@@ -92,7 +92,7 @@ def test_every_business_table_is_exported_or_deliberately_left_out(make_user, cl
     exported = {"customers", "ledger_entries", "gst_invoice_numbers", "gst_rate_change_logs", "incomes",
                 "expenses", "recurring_expenses", "items", "stock_levels", "stock_moves", "schemes",
                 "scheme_items", "bills", "bill_lines", "bill_series", "scheme_applications", "beats", "beat_retailers",
-                "visits", "beat_assignments", "bank_imports", "bank_lines", "bank_matches", "cash_counts", "cash_deposits", "daily_closes", "credit_notes", "ca_test_results", "suppliers", "item_units", "stock_month_locks", "statement_events", "statement_schedules",
+                "visits", "beat_assignments", "bank_imports", "bank_lines", "bank_matches", "cash_counts", "cash_deposits", "daily_closes", "payment_allocations", "credit_notes", "ca_test_results", "suppliers", "item_units", "stock_month_locks", "statement_events", "statement_schedules",
                 "import_logs", "business_members", "discarded_entries", "team_invites"}
     owned = {t.name for t in Base.metadata.sorted_tables if "business_id" in t.c or "customer_id" in t.c
              or t.name in {"scheme_items", "bill_lines", "beat_retailers", "beat_assignments"}}

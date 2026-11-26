@@ -1,4 +1,5 @@
 import type {Attachment} from '@/shared/types/attachment';
+import type {BillAllocation} from '../bills';
 import {gstInputError} from '@features/gst/domain/gst';
 import {isUtrMissing} from '../ledger';
 import type {
@@ -25,6 +26,8 @@ export interface LedgerEntryInput {
   attachment?: Attachment | null;
   beatId?: string;
   gst?: GstInvoiceInput;
+  /** Payment only: the bills it pays. */
+  allocations?: BillAllocation[];
 }
 
 function assertValid(draft: LedgerEntryDraft): void {
@@ -73,6 +76,7 @@ export function makeLedgerUseCases(repo: LedgerRepository) {
       attachment: input.attachment ?? null,
       beatId: input.beatId,
       gst: input.gst,
+      allocations: type === 'payment' && input.allocations?.length ? input.allocations : undefined,
     };
     assertValid(draft);
     return repo.addEntry(customerId, draft);

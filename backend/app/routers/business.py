@@ -64,10 +64,14 @@ def business_summary(
     last_month = _month_prefix(today, 1)
 
     payments = [e for e in ledger if e.type == "payment"]
+    # Sales = income entries + sales on credit (khata), as Reports P&L counts
+    # them (gst_reports.credit_sales: credit entries in the books, invoice value).
+    credits = [e for e in ledger if e.type == "credit"]
 
     # --- Yesterday (#26) ---
     yesterday = {
-        "sales": sum(i.amount for i in incomes if i.date == yday_s),
+        "sales": sum(i.amount for i in incomes if i.date == yday_s)
+        + sum(c.amount for c in credits if c.date == yday_s),
         "collections": sum(p.amount for p in payments if p.date == yday_s),
         "expenses": sum(e.amount for e in expenses if e.date == yday_s),
     }
@@ -85,7 +89,8 @@ def business_summary(
 
     # --- This month vs last month (#29 profit, #30 trends) ---
     def m_income(mp):
-        return sum(i.amount for i in incomes if i.date.startswith(mp))
+        return (sum(i.amount for i in incomes if i.date.startswith(mp))
+                + sum(c.amount for c in credits if c.date.startswith(mp)))
 
     def m_expense(mp):
         return sum(e.amount for e in expenses if e.date.startswith(mp))

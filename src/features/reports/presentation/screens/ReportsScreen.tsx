@@ -18,6 +18,7 @@ import {
 import {getReportTransactions} from '@features/reports/data/reportTransactions';
 import {useReportSummary} from '@features/reports/presentation/hooks/useReportSummary';
 import {useT, type TKey} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import {useAuthStore} from '@store/auth.store';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
@@ -254,7 +255,7 @@ function CategoryTable({
             <View key={r.category}>
               <View className="flex-row items-center justify-between">
                 <Text className="text-sm font-medium text-slate-900">
-                  {r.category}
+                  {categoryLabel(t, r.category)}
                 </Text>
                 <Text
                   className={`text-sm font-semibold ${

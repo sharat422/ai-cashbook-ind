@@ -4,6 +4,7 @@ import {beatsRemote, isBeatChanged, type Beat, type BeatDraft, type VisitInput} 
 import {saveVisit} from '@features/beats/data/visitQueue';
 import {ledgerUseCases} from '@features/customers/di';
 import type {LedgerEntryInput} from '@features/customers/domain/usecases/ledger';
+import {BILLS_KEY} from '@features/customers/presentation/hooks/useCustomerBills';
 import {warnIfDuplicateReference} from '@features/customers/presentation/hooks/useLedgerMutations';
 
 export const BEATS_KEY = 'beats';
@@ -78,6 +79,7 @@ export function useCollectOnBeat() {
       ledgerUseCases.receivePayment(customerId, input),
     onSuccess: entry => {
       qc.invalidateQueries({queryKey: [BEATS_KEY]});
+      qc.invalidateQueries({queryKey: [BILLS_KEY]});
       warnIfDuplicateReference(entry);
     },
   });

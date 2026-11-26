@@ -4,3 +4,4 @@ export * from './useCustomerMutations';
 export * from './useCustomerLedger';
 export * from './useLedgerMutations';
 export * from './useRiskPrediction';
+export * from './useCustomerBills';

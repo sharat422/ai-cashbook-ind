@@ -11,6 +11,7 @@
  * customer/business names in the fixture and words that are the same in every
  * language (₹, UPI, PDF, Excel, WhatsApp…; see hardcodedText.ts).
  */
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import React from 'react';
 import {act, create, type ReactTestRenderer} from 'react-test-renderer';
 import {Text, TextInput} from 'react-native';
@@ -132,7 +133,11 @@ beforeEach(() => {
 
 describe('1. switching to Telugu changes entry, statement and error screens', () => {
   it.each([
-    ['entry: receive payment', () => <ReceivePaymentSheet visible outstanding={1500} onClose={jest.fn()} onSubmit={jest.fn()} />],
+    ['entry: receive payment', () => (
+      <QueryClientProvider client={new QueryClient()}>
+        <ReceivePaymentSheet visible outstanding={1500} onClose={jest.fn()} onSubmit={jest.fn()} />
+      </QueryClientProvider>
+    )],
     ['entry: quick add', () => <QuickAddScreen navigation={nav} route={{params: {type: 'expense'}} as any} />],
     ['statement', () => <StatementDocument customer={customer} statement={statement} businessName="శ్రీ బాలాజీ ఏజెన్సీస్" />],
     ['error', () => <ErrorState onRetry={jest.fn()} />],
