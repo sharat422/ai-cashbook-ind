@@ -1679,7 +1679,7 @@
   "security.rootedDismiss": "Security warning dismiss karein",
   "security.rootedTitle": "⚠️ Device security warning",
   "settings.appLock": "App lock",
-  "settings.appLockDesc": "App khولne ke liye {n}-digit PIN lagega.",
+  "settings.appLockDesc": "App kholne ke liye {n} digit ka PIN zaroori rakhein.",
   "settings.appLockEnabled": "App lock on hai",
   "settings.appLockEnabledMsg": "Launch karte wakt yeh PIN pucha jayega.",
   "settings.billNumbers": "Bill ke number",
