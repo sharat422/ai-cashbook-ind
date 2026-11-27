@@ -1750,6 +1750,8 @@
   "errors.code.credit_limit_changed": "The credit limit was changed on another device to {limit}. Yours wasn't saved.",
   "errors.code.stock_short_godown": "Only {qty} {unit} of {item} in the godown.",
   "errors.code.stock_short_van": "Only {qty} {unit} of {item} in this van.",
+  "errors.code.receipt_ai_setup": "Receipt reading isn't set up on the server right now, so the photo wasn't read. Enter the expense by hand for now.",
+  "errors.code.receipt_ai_busy": "The receipt reader didn't answer. Try again in a moment, or enter the expense by hand.",
   "errors.code.stock_not_tracked": "{item} doesn't track stock. Turn on Track stock for it in the Item catalog first.",
   "errors.code.no_consent": "No consent — ask the retailer to opt in.",
   "errors.code.scheme_ended": "Scheme '{scheme}' ended on {date}, after this bill was made offline.",

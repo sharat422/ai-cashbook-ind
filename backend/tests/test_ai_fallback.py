@@ -1,7 +1,7 @@
 """E2E: AI endpoints on their deterministic fallback paths (no API keys set).
 
 With OPENAI/ANTHROPIC keys unset the backend must still return usable 200s:
-keyword categorization, heuristic insights, and an empty receipt draft.
+keyword categorization, heuristic insights; a receipt scan says reading is not set up (503).
 """
 
 import io
@@ -23,19 +23,19 @@ def test_categorize_unknown_is_miscellaneous(user, client):
     assert r.json()["category"] == "Miscellaneous"
 
 
-def test_receipt_scan_returns_empty_draft(user, client):
+def test_receipt_scan_without_a_key_says_reading_is_not_set_up(user, client, monkeypatch):
+    # Not an empty draft: the app showed that as "try a clearer photo" for every receipt.
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "anthropic_api_key", "")  # a developer's backend/.env may have one
     fake = io.BytesIO(b"not-a-real-image")
     r = client.post(
         "/api/v1/receipts/scan",
         headers=user.headers,
         files={"receipt": ("receipt.jpg", fake, "image/jpeg")},
     )
-    assert r.status_code == 200
-    draft = r.json()
-    # Every field present, all values null on the fallback path.
-    for field in ["vendor_name", "amount", "date", "category"]:
-        assert field in draft
-        assert draft[field]["value"] is None
+    assert r.status_code == 503
+    assert r.json()["code"] == "receipt_ai_setup"
 
 
 def test_insights_returns_non_empty_list(user, client):

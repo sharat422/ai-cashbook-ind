@@ -20,6 +20,7 @@ import wave
 from pathlib import Path
 
 from .config import settings
+from .errors import AppError
 
 log = logging.getLogger("cashbook.ai")
 
@@ -856,10 +857,24 @@ def prepare_receipt_image(raw: bytes, content_type: str | None) -> tuple[str, st
         return base64.b64encode(raw).decode("ascii"), _normalize_media_type(content_type, raw)
 
 
+def _receipt_unavailable(exc: Exception | None) -> AppError:
+    """The reader couldn't run: say why, instead of an empty draft the app reads as
+    "nothing could be read — try a clearer photo" (which blamed every photo)."""
+    # Bad key, no access, retired model, no credit or a request we built wrong: retrying won't help.
+    if exc is None or type(exc).__name__ in (
+            "AuthenticationError", "PermissionDeniedError", "NotFoundError", "BadRequestError"):
+        return AppError(503, "receipt_ai_setup", "Receipt reading isn't set up on the server right now, "
+                        "so the photo wasn't read. Enter the expense by hand for now.")
+    return AppError(503, "receipt_ai_busy", "The receipt reader didn't answer. Try again in a moment, "
+                    "or enter the expense by hand.")
+
+
 def _create_receipt_message(client, model: str, image_b64: str, media_type: str, instruction: str):
     return client.messages.create(
         model=model,
-        max_tokens=8192,
+        # The whole receipt comes back twice (transcription + item rows): a 60-line
+        # bill is ~4,800 tokens (~45 s). 12k fits ~150 lines without cutting it off.
+        max_tokens=12000,
         tools=[_RECEIPT_TOOL],
         tool_choice={"type": "tool", "name": "report_receipt"},
         messages=[
@@ -885,7 +900,7 @@ def scan_receipt(image_b64: str, media_type: str) -> dict:
     """Extract structured fields from a receipt image as a ReceiptExtractionDto."""
     if not settings.anthropic_api_key:
         log.error("Receipt scan skipped: ANTHROPIC_API_KEY is not set on the server")
-        return _empty_receipt()
+        raise _receipt_unavailable(None)
 
     try:
         import anthropic
@@ -935,7 +950,9 @@ def scan_receipt(image_b64: str, media_type: str) -> dict:
         # Logged at ERROR so it shows up in Render/Sentry — this used to be a
         # warning, which hid why every scan came back empty.
         log.error("Anthropic receipt scan failed (%s): %s", type(exc).__name__, exc)
-        return _empty_receipt()
+        if type(exc).__name__ == "BadRequestError" and "image" in str(exc).lower():
+            return _empty_receipt()  # the photo itself was refused: "try a clearer photo" is right
+        raise _receipt_unavailable(exc) from exc
 
 
 def _num_or_none(v):

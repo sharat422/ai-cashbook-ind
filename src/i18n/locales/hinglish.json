@@ -915,6 +915,8 @@
   "errors.code.invite_used": "Ye invite already accept ho chuka hai.",
   "errors.code.invoice_locked": "Invoice {number} issue ho chuka hai aur locked hai. Ise credit note se correct kar, ya cancel karke naya issue kar.",
   "errors.code.no_consent": "Consent nahi mila — retailer se opt in karane ko kahna.",
+  "errors.code.receipt_ai_busy": "Receipt reader ne jawab nahi diya. Thodi der baad dobara try karein, ya kharcha haath se enter karein.",
+  "errors.code.receipt_ai_setup": "Abhi server par receipt padhne ki setting nahi hui hai, isliye photo nahi padhi gayi. Abhi ke liye kharcha haath se enter karein.",
   "errors.code.recurring_duplicate": "Iska khata pehle se bana hai: {name}, {amount}",
   "errors.code.scheme_ended": "Scheme '{scheme}' {date} ko khatam ho gaya, iss bill ke baad offline tha.",
   "errors.code.stock_not_tracked": "{item} ka stock track nahi hota. Pehle Item catalog mein jaakar uske liye Track stock on karein.",

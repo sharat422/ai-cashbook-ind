@@ -61,7 +61,7 @@ export const ENV = {
    * Timeout for the AI receipt scan request (ms). OCR + AI extraction is slower
    * than a normal API call, so it gets its own, longer budget.
    */
-  receiptScanTimeoutMs: Number(Config.RECEIPT_SCAN_TIMEOUT_MS ?? 45000),
+  receiptScanTimeoutMs: Number(Config.RECEIPT_SCAN_TIMEOUT_MS ?? 120000), // a 60-line bill is ~45 s on the AI alone
   /**
    * Below this confidence the categorization UI flags the result for review.
    */

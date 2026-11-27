@@ -160,3 +160,32 @@ def test_scan_endpoint_rejects_empty_upload(user, client):
         files={"receipt": ("r.jpg", io.BytesIO(b""), "image/jpeg")},
     )
     assert r.status_code == 400
+
+
+def _api_error(cls, status, message):
+    return cls(message, response=httpx.Response(status, request=httpx.Request("POST", "https://x")), body=None)
+
+
+def test_a_failed_reader_says_why_instead_of_an_empty_draft(monkeypatch):
+    """An empty draft read as "try a clearer photo" for every receipt, whatever the real fault."""
+    import pytest
+    from app.errors import AppError
+
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    cases = [
+        (_api_error(anthropic.AuthenticationError, 401, "invalid x-api-key"), "receipt_ai_setup"),
+        (_api_error(anthropic.BadRequestError, 400, "Your credit balance is too low"), "receipt_ai_setup"),
+        (anthropic.APIConnectionError(request=httpx.Request("POST", "https://x")), "receipt_ai_busy"),
+        (_api_error(anthropic.InternalServerError, 529, "Overloaded"), "receipt_ai_busy"),
+    ]
+    for exc, code in cases:
+        client = MagicMock()
+        client.messages.create.side_effect = exc
+        with patch("anthropic.Anthropic", return_value=client), pytest.raises(AppError) as err:
+            scan_receipt("aW1hZ2U=", "image/jpeg")
+        assert (err.value.status_code, err.value.code) == (503, code), type(exc).__name__
+    # The photo itself refused: an empty draft, which the app shows as "try a clearer photo".
+    client = MagicMock()
+    client.messages.create.side_effect = _api_error(anthropic.BadRequestError, 400, "Could not process image")
+    with patch("anthropic.Anthropic", return_value=client):
+        assert scan_receipt("aW1hZ2U=", "image/jpeg") == _empty_receipt()
