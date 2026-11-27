@@ -2,7 +2,10 @@ import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
 } from '@features/expense/domain/entities';
-import type {ReceiptExtraction} from '@features/receipt-scanner/domain/entities';
+import type {
+  ReceiptExtraction,
+  ReceiptLineItem,
+} from '@features/receipt-scanner/domain/entities';
 
 /** One {value, confidence} pair as returned by the backend. */
 interface FieldDto<T> {
@@ -20,6 +23,33 @@ export interface ReceiptExtractionDto {
   tax_amount: FieldDto<number | null>;
   date: FieldDto<string | null>;
   category: FieldDto<string | null>;
+  /** Absent on older servers. */
+  line_items?: LineItemDto[];
+}
+
+interface LineItemDto {
+  description: string;
+  quantity: number | null;
+  unit: string | null;
+  rate: number | null;
+  amount: number | null;
+}
+
+const numOrNull = (v: unknown): number | null => {
+  const n = v == null || v === '' ? NaN : Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+function toLineItems(dtos: LineItemDto[] | undefined): ReceiptLineItem[] {
+  return (Array.isArray(dtos) ? dtos : [])
+    .filter(d => d && String(d.description ?? '').trim())
+    .map(d => ({
+      description: String(d.description).trim(),
+      quantity: numOrNull(d.quantity),
+      unit: d.unit ? String(d.unit).trim() || null : null,
+      rate: numOrNull(d.rate),
+      amount: numOrNull(d.amount),
+    }));
 }
 
 const clamp01 = (n: number): number => Math.max(0, Math.min(1, Number(n) || 0));
@@ -57,5 +87,6 @@ export function toReceiptExtraction(
     taxAmount: num(dto.tax_amount),
     date: str(dto.date),
     category: toCategory(dto.category),
+    lineItems: toLineItems(dto.line_items),
   };
 }

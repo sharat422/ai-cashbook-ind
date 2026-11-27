@@ -15,6 +15,44 @@ export interface ExtractedField<T> {
   confidence: Confidence;
 }
 
+/** One purchased item row read off the receipt. Numbers are null when not printed. */
+export interface ReceiptLineItem {
+  description: string;
+  quantity: number | null;
+  unit: string | null;
+  rate: number | null;
+  amount: number | null;
+}
+
+/** A line item as the user edits it (every field is text in an input). */
+export type EditableLineItem = Record<keyof ReceiptLineItem, string>;
+
+export function toEditableLineItem(item: ReceiptLineItem): EditableLineItem {
+  const s = (v: number | string | null) => (v == null ? '' : String(v));
+  return {
+    description: item.description,
+    quantity: s(item.quantity),
+    unit: s(item.unit),
+    rate: s(item.rate),
+    amount: s(item.amount),
+  };
+}
+
+/** "Items:" block for the expense notes, e.g. "- Tea · 2 cup × 12.5 = 25". */
+export function lineItemsNote(items: EditableLineItem[]): string {
+  const lines = items
+    .filter(i => i.description.trim())
+    .map(i => {
+      const qty = [i.quantity.trim(), i.unit.trim()].filter(Boolean).join(' ');
+      let line = `- ${i.description.trim()}`;
+      if (qty) line += ` · ${qty}`;
+      if (i.rate.trim()) line += ` × ${i.rate.trim()}`;
+      if (i.amount.trim()) line += ` = ${i.amount.trim()}`;
+      return line;
+    });
+  return lines.length ? ['Items:', ...lines].join('\n') : '';
+}
+
 /**
  * The structured result of scanning a receipt: the six extracted fields plus
  * an AI-suggested expense category. Every field carries a confidence score so
@@ -33,6 +71,8 @@ export interface ReceiptExtraction {
   date: ExtractedField<string>;
   /** AI categorization into one of the expense categories. */
   category: ExtractedField<ExpenseCategory>;
+  /** Item rows, in receipt order (empty when none were read). */
+  lineItems: ReceiptLineItem[];
 }
 
 /** Stages surfaced to the user during a scan (drives the progress stepper). */

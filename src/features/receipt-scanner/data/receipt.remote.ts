@@ -31,6 +31,7 @@ export const receiptRemote = {
     const result = toReceiptExtraction(dto);
     if (
       !result.receiptText.value.trim() &&
+      result.lineItems.length === 0 &&
       !result.vendorName.value.trim() &&
       !Number.isFinite(result.amount.value)
     ) {

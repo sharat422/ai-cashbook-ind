@@ -26,4 +26,20 @@ it('supports older servers without a full transcription', () => {
     value: '',
     confidence: 0,
   });
+  expect(toReceiptExtraction(dto).lineItems).toEqual([]);
+});
+
+it('maps structured line items and drops blank rows', () => {
+  const result = toReceiptExtraction({
+    ...dto,
+    line_items: [
+      {description: ' Tea ', quantity: 2, unit: 'cup', rate: 12.5, amount: 25},
+      {description: 'Rice', quantity: null, unit: '', rate: null, amount: 60.75},
+      {description: ' ', quantity: 1, unit: null, rate: 1, amount: 1},
+    ],
+  });
+  expect(result.lineItems).toEqual([
+    {description: 'Tea', quantity: 2, unit: 'cup', rate: 12.5, amount: 25},
+    {description: 'Rice', quantity: null, unit: null, rate: null, amount: 60.75},
+  ]);
 });

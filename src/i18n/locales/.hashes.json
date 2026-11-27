@@ -2047,7 +2047,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "gu": {
     "account.deleteAccount": "5b4180f40b06",
@@ -4097,7 +4104,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "hi": {
     "account.deleteAccount": "5b4180f40b06",
@@ -6147,7 +6161,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "hinglish": {
     "account.deleteAccount": "5b4180f40b06",
@@ -8197,7 +8218,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "kn": {
     "account.deleteAccount": "5b4180f40b06",
@@ -10247,7 +10275,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "ml": {
     "account.deleteAccount": "5b4180f40b06",
@@ -12297,7 +12332,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "mr": {
     "account.deleteAccount": "5b4180f40b06",
@@ -14347,7 +14389,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "pa": {
     "account.deleteAccount": "5b4180f40b06",
@@ -16397,7 +16446,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "ta": {
     "account.deleteAccount": "5b4180f40b06",
@@ -18447,7 +18503,14 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   },
   "te": {
     "account.deleteAccount": "5b4180f40b06",
@@ -20497,6 +20560,13 @@
     "statement.billsLeft": "0d630f65782f",
     "statement.billsAdvance": "41a8b0c4d0d7",
     "statement.saleOn": "0b1ed17b5b6c",
-    "cat.Credit sales": "b25162192620"
+    "cat.Credit sales": "b25162192620",
+    "receipt.items": "44d25b5d1b6d",
+    "receipt.itemName": "ecdda59aea5e",
+    "receipt.itemUnit": "f6b935ab3371",
+    "receipt.itemQty": "1e5ff9e500c2",
+    "receipt.itemRate": "3a9c736b3175",
+    "receipt.itemAmount": "43dc8532f7e5",
+    "receipt.removeItem": "76ecba1f27d2"
   }
 }

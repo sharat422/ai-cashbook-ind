@@ -26,6 +26,42 @@ def test_scan_requests_and_preserves_all_receipt_details(monkeypatch):
     assert "every line item" in request["messages"][0]["content"][1]["text"]
 
 
+def test_scan_returns_structured_line_items(monkeypatch):
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    result = _empty_receipt()
+    result["line_items"] = [
+        {"description": " Tea ", "quantity": 2, "unit": "cup", "rate": 12.5, "amount": 25},
+        {"description": "Rice", "quantity": "1.5", "unit": "", "rate": None, "amount": "60.75"},
+        {"description": "", "quantity": 1, "unit": None, "rate": 1, "amount": 1},  # dropped
+        "junk",  # dropped
+    ]
+    client = MagicMock()
+    client.messages.create.return_value = SimpleNamespace(content=[
+        SimpleNamespace(type="tool_use", input=result),
+    ])
+    with patch("anthropic.Anthropic", return_value=client):
+        extracted = scan_receipt("aW1hZ2U=", "image/jpeg")
+    assert extracted["line_items"] == [
+        {"description": "Tea", "unit": "cup", "quantity": 2.0, "rate": 12.5, "amount": 25.0},
+        {"description": "Rice", "unit": None, "quantity": 1.5, "rate": None, "amount": 60.75},
+    ]
+    schema = client.messages.create.call_args.kwargs["tools"][0]["input_schema"]
+    assert "line_items" in schema["required"]
+    assert schema["properties"]["line_items"]["type"] == "array"
+
+
+def test_model_without_line_items_returns_empty_list(monkeypatch):
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    result = _empty_receipt()
+    del result["line_items"]
+    client = MagicMock()
+    client.messages.create.return_value = SimpleNamespace(content=[
+        SimpleNamespace(type="tool_use", input=result),
+    ])
+    with patch("anthropic.Anthropic", return_value=client):
+        assert scan_receipt("aW1hZ2U=", "image/jpeg")["line_items"] == []
+
+
 # --- Image preparation: phone photos must reach the vision model in a shape it
 # accepts (the cause of "Couldn't read the receipt" on every scan). ----------
 import base64

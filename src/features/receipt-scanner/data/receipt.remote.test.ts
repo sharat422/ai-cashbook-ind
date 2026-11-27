@@ -24,6 +24,18 @@ it('sends unreadable or unavailable OCR to retry/manual entry', async () => {
   await expect(receiptRemote.scan(image)).rejects.toThrow('No receipt details');
 });
 
+it('treats line items alone as a successful read', async () => {
+  (apiRequest as jest.Mock).mockResolvedValueOnce({
+    ...draft,
+    line_items: [
+      {description: 'Tea', quantity: 2, unit: null, rate: 12.5, amount: 25},
+    ],
+  });
+  await expect(receiptRemote.scan(image)).resolves.toMatchObject({
+    lineItems: [{description: 'Tea'}],
+  });
+});
+
 it('allows a partial transcription for the user to complete', async () => {
   (apiRequest as jest.Mock).mockResolvedValueOnce({
     ...draft,

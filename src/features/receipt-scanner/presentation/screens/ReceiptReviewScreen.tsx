@@ -17,6 +17,11 @@ import {
   ExtractedFieldRow,
   ScanProgress,
 } from '@features/receipt-scanner/presentation/components';
+import {
+  lineItemsNote,
+  toEditableLineItem,
+  type EditableLineItem,
+} from '@features/receipt-scanner/domain/entities';
 import {useScanReceipt} from '@features/receipt-scanner/presentation/hooks';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
@@ -31,6 +36,7 @@ interface CorrectedFields {
   taxAmount: number;
   date: string;
   category: ExpenseCategory;
+  lineItems: EditableLineItem[];
 }
 
 /** Build the expense notes from the receipt-only fields the user kept. */
@@ -41,7 +47,9 @@ function composeNotes(f: CorrectedFields): string {
   if (!Number.isNaN(f.taxAmount) && f.taxAmount > 0) {
     parts.push(`Tax: ₹${f.taxAmount}`);
   }
-  return [...parts, f.receiptText.trim()].filter(Boolean).join('\n');
+  return [...parts, lineItemsNote(f.lineItems), f.receiptText.trim()]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /**
@@ -76,6 +84,7 @@ export function ReceiptReviewScreen({
       taxAmount: extraction.taxAmount.value,
       date: extraction.date.value || todayIST(),
       category: extraction.category.value,
+      lineItems: extraction.lineItems.map(toEditableLineItem),
     });
   }, [extraction]);
 
@@ -83,6 +92,29 @@ export function ReceiptReviewScreen({
     key: K,
     value: CorrectedFields[K],
   ) => setFields(prev => (prev ? {...prev, [key]: value} : prev));
+
+  const updateItem = (
+    index: number,
+    key: keyof EditableLineItem,
+    value: string,
+  ) =>
+    setFields(prev =>
+      prev
+        ? {
+            ...prev,
+            lineItems: prev.lineItems.map((it, i) =>
+              i === index ? {...it, [key]: value} : it,
+            ),
+          }
+        : prev,
+    );
+
+  const removeItem = (index: number) =>
+    setFields(prev =>
+      prev
+        ? {...prev, lineItems: prev.lineItems.filter((_, i) => i !== index)}
+        : prev,
+    );
 
   const onCreateDraft = () => {
     if (!fields) return;
@@ -171,6 +203,58 @@ export function ReceiptReviewScreen({
         </View>
 
         <View className="mt-6" style={{gap: 18}}>
+          {fields.lineItems.length > 0 ? (
+            <View style={{gap: 10}}>
+              <Text variant="label">{t('receipt.items')}</Text>
+              {fields.lineItems.map((item, i) => (
+                <View
+                  key={i}
+                  className="rounded-2xl border border-border bg-white p-3"
+                  style={{gap: 8}}>
+                  <View className="flex-row" style={{gap: 8}}>
+                    <View style={{flex: 3}}>
+                      <TextField
+                        value={item.description}
+                        onChangeText={v => updateItem(i, 'description', v)}
+                        placeholder={t('receipt.itemName')}
+                      />
+                    </View>
+                    <View style={{flex: 1}}>
+                      <TextField
+                        value={item.unit}
+                        onChangeText={v => updateItem(i, 'unit', v)}
+                        placeholder={t('receipt.itemUnit')}
+                      />
+                    </View>
+                  </View>
+                  <View className="flex-row" style={{gap: 8}}>
+                    {(['quantity', 'rate', 'amount'] as const).map(key => (
+                      <View key={key} style={{flex: 1}}>
+                        <TextField
+                          value={item[key]}
+                          onChangeText={v => updateItem(i, key, v)}
+                          placeholder={t(
+                            key === 'quantity'
+                              ? 'receipt.itemQty'
+                              : key === 'rate'
+                                ? 'receipt.itemRate'
+                                : 'receipt.itemAmount',
+                          )}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                  <Button
+                    title={t('receipt.removeItem')}
+                    variant="ghost"
+                    onPress={() => removeItem(i)}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           <ExtractedFieldRow
             label={t('receipt.fullText')}
             confidence={extraction.receiptText.confidence}>
