@@ -12,8 +12,8 @@ import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
 
-// Money in is green, money out dark. React Native's Text, not ours: our Text's variant
-// colour (text-slate-900 / text-muted) comes later in the generated CSS and would win.
+// Money in is green, money out dark. The label is React Native's Text so, nested in the
+// caption, it keeps the caption's size (ours would add the body variant's text-base).
 const tone = (e: BeatLedgerEntry) => (e.type === 'payment' ? 'text-green-700' : 'text-slate-900');
 
 /**
