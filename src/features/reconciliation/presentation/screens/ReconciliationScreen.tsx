@@ -14,6 +14,7 @@ import {
   useStatementImports,
   useSuggestions,
 } from '@features/reconciliation/presentation/hooks';
+import {isUtrMissing, UTR_LENGTH, utrDigits} from '@features/customers/domain/ledger';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {formatDisplayDate} from '@utils/date';
@@ -171,10 +172,10 @@ export function ReconciliationScreen({navigation}: AppScreenProps<'Reconciliatio
                 <CollectionText collection={c} />
                 {canEdit ? (
                   <>
-                    <Input testID={`utr-${c.id}`} placeholder={t('recon.utr')} keyboardType="number-pad"
-                      value={utrs[c.id] ?? ''} onChangeText={v => setUtrs(u => ({...u, [c.id]: v}))} />
+                    <Input testID={`utr-${c.id}`} placeholder={t('recon.utr')} keyboardType="number-pad" maxLength={UTR_LENGTH}
+                      value={utrs[c.id] ?? ''} onChangeText={v => setUtrs(u => ({...u, [c.id]: utrDigits(v)}))} />
                     <Button title={t('common.save')} variant="secondary" className="mt-2"
-                      disabled={!(utrs[c.id] ?? '').trim() || addUtr.isPending}
+                      disabled={isUtrMissing('upi', utrs[c.id]) || addUtr.isPending}
                       onPress={() => addUtr.mutate({customerId: c.customerId, entryId: c.id, utr: utrs[c.id]}, {onError: fail})} />
                   </>
                 ) : null}

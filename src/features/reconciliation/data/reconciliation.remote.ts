@@ -236,9 +236,9 @@ export const reconciliationRemote = {
     }),
   exceptions: () => apiRequest<Exceptions>('/reconciliation/exceptions', {method: 'GET'}),
   /** Record the cash physically counted; returns the day's close with over/short. */
-  cashCount: (date: string, beatId: string | undefined, counted: string, userId?: string) =>
+  cashCount: (date: string, beatId: string | undefined, counted: string, userId?: string, note?: string) =>
     apiRequest<DailyClose>('/daily-close/cash-count', {
-      method: 'POST', body: {date, beatId: beatId ?? null, counted, userId: userId ?? null},
+      method: 'POST', body: {date, beatId: beatId ?? null, counted, userId: userId ?? null, note: note || null},
     }),
   /** The server works the figures out again; only the counted cash is sent. */
   closeDay: (beatId: string, date: string, cashCounted: string) =>

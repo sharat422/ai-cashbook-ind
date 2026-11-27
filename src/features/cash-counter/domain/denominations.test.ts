@@ -1,4 +1,4 @@
-import {cashTotal, subtotal, totalPieces} from './denominations';
+import {cashTotal, countNote, subtotal, totalPieces} from './denominations';
 
 describe('cash counter', () => {
   it('totals the worked example (₹7,000)', () => {
@@ -19,4 +19,9 @@ describe('cash counter', () => {
     expect(cashTotal({})).toBe(0);
     expect(cashTotal({100: 3})).toBe(300);
   });
+});
+
+it('notes only what was counted, highest first', () => {
+  expect(countNote({100: 8, 500: 10, 50: 0})).toBe('₹500×10, ₹100×8');
+  expect(countNote({})).toBe('');
 });

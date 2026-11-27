@@ -46,7 +46,7 @@ def test_ledger_reference_and_notes_are_encrypted(make_user, client):
     c = add_customer(client, u.headers, full_name="Sita", mobile="7000005678")
     add_ledger(
         client, u.headers, c["id"], type="payment", amount=500, date=today_iso(),
-        client_id="enc-1", reference_number="UTR-SECRET-9911", payment_method="upi",
+        client_id="enc-1", reference_number="771199119911", payment_method="upi",
         notes="cash-back adjustment",
     )
     with engine.connect() as conn:
@@ -54,11 +54,11 @@ def test_ledger_reference_and_notes_are_encrypted(make_user, client):
             text("SELECT reference_number, payment_method, notes FROM ledger_entries")
         ).all()
     blob = " ".join(str(v) for r in rows for v in r)
-    assert "UTR-SECRET-9911" not in blob
+    assert "771199119911" not in blob
     assert "cash-back adjustment" not in blob
     # API still shows the real values.
     led = client.get(f"/api/v1/customers/{c['id']}/ledger", headers=u.headers).json()
-    assert led[0]["reference_number"] == "UTR-SECRET-9911"
+    assert led[0]["reference_number"] == "771199119911"
 
 
 def test_roundtrip_and_legacy_plaintext_passthrough():

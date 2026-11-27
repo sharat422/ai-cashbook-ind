@@ -373,7 +373,7 @@ def set_credit_limit(
 
 # --- Ledger sub-resource -------------------------------------------------
 PAYMENT_METHODS = ("cash", "upi", "bank", "card", "cheque", "credit", "other")
-_REFERENCE_RE = re.compile(r"^[A-Za-z0-9/_.-]{6,40}$")
+_UTR_RE = re.compile(r"^\d{12}$")  # a UPI payment's UTR (UPI reference number) is 12 digits
 
 
 def _validate_payment(
@@ -395,8 +395,8 @@ def _validate_payment(
             if not utr_rule:
                 return method, None  # an old app's offline payment: saved, flagged utr_missing
             raise HTTPException(422, "Enter the UPI transaction ID (UTR) for a UPI payment.")
-        if not _REFERENCE_RE.match(reference):
-            raise HTTPException(422, "The UTR should be 6 to 40 letters or digits.")
+        if not _UTR_RE.match(reference):
+            raise HTTPException(422, "The UTR should be the 12-digit number from the UPI app.")
     return method, reference
 
 # --- Bills: what each credit sale has been paid, and what each payment paid ---

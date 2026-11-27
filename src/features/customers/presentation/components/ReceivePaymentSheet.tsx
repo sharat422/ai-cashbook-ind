@@ -11,6 +11,8 @@ import {
   isUtrMissing,
   PAYMENT_METHODS,
   type PaymentMethod,
+  UTR_LENGTH,
+  utrDigits,
 } from '@features/customers/domain/ledger';
 import {useT, type TKey} from '@/i18n';
 import {paymentMethodLabel} from '@/i18n/labels';
@@ -284,12 +286,13 @@ export function ReceivePaymentSheet({
             <TextField
               value={reference}
               onChangeText={v => {
-                setReference(v);
+                setReference(method === 'upi' ? utrDigits(v) : v);
                 if (refError) setRefError(null);
               }}
               placeholder={t(REFERENCE_HINT[method])}
               autoCapitalize="characters"
-              maxLength={40}
+              keyboardType={method === 'upi' ? 'number-pad' : 'default'}
+              maxLength={method === 'upi' ? UTR_LENGTH : 40}
             />
           </FormField>
 

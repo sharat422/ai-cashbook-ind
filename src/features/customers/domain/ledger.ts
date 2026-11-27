@@ -30,13 +30,18 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'other',
 ];
 
-const UTR_RE = /^[A-Za-z0-9/_.-]{6,40}$/;
+/** A UPI payment's UTR (its UPI reference number) is 12 digits. */
+export const UTR_LENGTH = 12;
+const UTR_RE = /^\d{12}$/;
 
-/** Server rule, mirrored here: a UPI payment must carry its UTR / transaction
- *  ID (6–40 letters or digits) so it can be matched to the bank statement. */
+/** Server rule, mirrored here: a UPI payment must carry its 12-digit UTR so it
+ *  can be matched to the bank statement. */
 export function isUtrMissing(method: PaymentMethod | undefined, reference?: string): boolean {
   return method === 'upi' && !UTR_RE.test((reference ?? '').replace(/\s/g, ''));
 }
+
+/** What a UTR box keeps of what's typed or pasted: the digits. */
+export const utrDigits = (text: string): string => text.replace(/\D/g, '');
 
 /** Sync state of an entry created locally relative to the backend. */
 export type LedgerSyncStatus = 'synced' | 'pending';

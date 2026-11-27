@@ -38,7 +38,8 @@ def _dd_mm(iso: str) -> str:
 def test_upi_payment_without_utr_is_rejected_by_the_api(make_user, client):
     owner = make_user()
     cid = add_customer(client, owner.headers)["id"]
-    for ref in (None, "", "   ", "12"):  # the app sends utr_rule: it enforces the UTR
+    # A UPI UTR is 12 digits: shorter, longer or with letters is refused.
+    for ref in (None, "", "   ", "12", "41234567890", "4123456789012", "41234567890A", "T2311261234567890"):
         r = _pay(client, owner.headers, cid, 500, f"no-utr-{ref!r}", ref=ref, utr_rule="true")
         assert r.status_code == 422, (ref, r.text)
     # A short UTR is refused even from an old app (no utr_rule).
@@ -103,13 +104,13 @@ def test_matching_rules(make_user, client):
     owner = make_user()
     cid = add_customer(client, owner.headers)["id"]
     d = days_ago_iso(5)
-    a = _pay(client, owner.headers, cid, "250.00", "a", ref="SCB1AB2C3", date=d).json()
+    a = _pay(client, owner.headers, cid, "250.00", "a", ref="412300009901", date=d).json()
     b = _pay(client, owner.headers, cid, "250.00", "b", ref="777777777777", date=d).json()
     _pay(client, owner.headers, cid, "250.00", "cash", method="cash", date=d)  # never matched
     _pay(client, owner.headers, cid, "250.01", "penny", ref="888888888888", date=d)
     content = "\n".join([
         "Date,Description,Amount,Dr/Cr",
-        f"{days_ago_iso(4)},UPI-PAYMENT SCB1AB2C3 RAMESH,250.00,CR",  # ref in narration
+        f"{days_ago_iso(4)},UPI-PAYMENT 412300009901 RAMESH,250.00,CR",  # ref in narration
         f"{days_ago_iso(5)},UPI 999999999999,250,CR",  # same amount, no ref hit
         f"{days_ago_iso(5)},UPI 111111111111,250.00,DR",  # money out
         f"{days_ago_iso(20)},OLD,250.00,CR",  # too far from any collection
@@ -120,7 +121,7 @@ def test_matching_rules(make_user, client):
     assert [x["row"] for x in body["rejected"]] == [6]
     sugg = client.get(f"{API}/reconciliation/suggestions", headers=owner.headers).json()
     pairs = {(s["bankLine"]["narration"], s["collection"]["id"], s["match"]) for s in sugg}
-    assert pairs == {("UPI-PAYMENT SCB1AB2C3 RAMESH", a["id"], "utr"),
+    assert pairs == {("UPI-PAYMENT 412300009901 RAMESH", a["id"], "utr"),
                      ("UPI 999999999999", b["id"], "amount_date")}
     exc = client.get(f"{API}/reconciliation/exceptions", headers=owner.headers).json()
     assert [l["narration"] for l in exc["bankLines"]] == ["OLD"]

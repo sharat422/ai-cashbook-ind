@@ -787,12 +787,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -2056,7 +2056,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "gu": {
     "account.deleteAccount": "5b4180f40b06",
@@ -2846,12 +2848,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -4115,7 +4117,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "hi": {
     "account.deleteAccount": "5b4180f40b06",
@@ -4905,12 +4909,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -6174,7 +6178,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "hinglish": {
     "account.deleteAccount": "5b4180f40b06",
@@ -6964,12 +6970,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -8233,7 +8239,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "kn": {
     "account.deleteAccount": "5b4180f40b06",
@@ -9023,12 +9031,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -10292,7 +10300,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "ml": {
     "account.deleteAccount": "5b4180f40b06",
@@ -11082,12 +11092,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -12351,7 +12361,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "mr": {
     "account.deleteAccount": "5b4180f40b06",
@@ -13141,12 +13153,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -14410,7 +14422,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "pa": {
     "account.deleteAccount": "5b4180f40b06",
@@ -15200,12 +15214,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -16469,7 +16483,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "ta": {
     "account.deleteAccount": "5b4180f40b06",
@@ -17259,12 +17275,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -18528,7 +18544,9 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   },
   "te": {
     "account.deleteAccount": "5b4180f40b06",
@@ -19318,12 +19336,12 @@
     "payments.refCard": "c3640ac39860",
     "payments.refCheque": "447ca1cde544",
     "payments.refOptional": "e3039b8476e1",
-    "payments.refUpi": "22ca270751a8",
+    "payments.refUpi": "05e6dd0ace2b",
     "payments.reference": "ea10bb628600",
     "payments.remainingAfter": "b5181ea720bb",
     "payments.title": "c6ef8f105bd6",
     "payments.utrLabel": "6df1e07a5fe4",
-    "payments.utrRequired": "d5360cea8ac2",
+    "payments.utrRequired": "81c723bba6a3",
     "receipt.captureSubtitle": "4132d680bf40",
     "receipt.captureTitle": "3ba3bcfa44d4",
     "receipt.categoryAi": "38e9524527ae",
@@ -20587,6 +20605,8 @@
     "receipt.itemAmount": "43dc8532f7e5",
     "receipt.removeItem": "76ecba1f27d2",
     "errors.code.receipt_ai_setup": "e99bb58baf4b",
-    "errors.code.receipt_ai_busy": "04f924e016ea"
+    "errors.code.receipt_ai_busy": "04f924e016ea",
+    "cash.saved": "14f753147de3",
+    "cash.saveHint": "2013fd0bb0f0"
   }
 }

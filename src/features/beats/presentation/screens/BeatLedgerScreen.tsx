@@ -1,6 +1,6 @@
 import {useQuery} from '@tanstack/react-query';
 import React, {useState} from 'react';
-import {RefreshControl, ScrollView, View} from 'react-native';
+import {RefreshControl, ScrollView, Text as RNText, View} from 'react-native';
 
 import {FilterChip} from '@components/filters';
 import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
@@ -11,6 +11,10 @@ import {paymentMethodLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
+
+// Money in is green, money out dark. React Native's Text, not ours: our Text's variant
+// colour (text-slate-900 / text-muted) comes later in the generated CSS and would win.
+const tone = (e: BeatLedgerEntry) => (e.type === 'payment' ? 'text-green-700' : 'text-slate-900');
 
 /**
  * One ledger per beat: that beat's credit and payment entries, newest first.
@@ -54,16 +58,18 @@ export function BeatLedgerScreen({route}: AppScreenProps<'BeatLedger'>): React.J
                 <View className="flex-1 pr-3">
                   <Text className="text-sm font-semibold">{e.customerName}</Text>
                   <Text variant="caption">
-                    {[formatDisplayDate(e.date),
-                      e.type === 'credit' ? t('ledger.creditGiven') : t('ledger.paymentReceived'),
-                      e.invoiceNumber ? t('beats.ledgerInvoice', {number: e.invoiceNumber}) : '',
+                    {formatDisplayDate(e.date)}{' · '}
+                    <RNText testID="beat-ledger-kind" className={`font-semibold ${tone(e)}`}>
+                      {e.type === 'payment' ? t('ledger.paymentReceived') : t('ledger.creditGiven')}
+                    </RNText>
+                    {[e.invoiceNumber ? t('beats.ledgerInvoice', {number: e.invoiceNumber}) : '',
                       e.paymentMethod ? paymentMethodLabel(t, e.paymentMethod) : '',
-                    ].filter(Boolean).join(' · ')}
+                    ].filter(Boolean).map(part => ` · ${part}`).join('')}
                   </Text>
                 </View>
-                <Text className={`text-sm font-semibold ${e.type === 'payment' ? 'text-green-700' : 'text-slate-900'}`}>
-                  {formatINR(e.amount)}
-                </Text>
+                <RNText testID="beat-ledger-amount" className={`text-base font-bold ${tone(e)}`}>
+                  {e.type === 'payment' ? '+ ' : '− '}{formatINR(e.amount)}
+                </RNText>
               </View>
             ))
           )}

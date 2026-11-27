@@ -15,6 +15,11 @@ export function totalPieces(counts: Counts): number {
   return DENOMINATIONS.reduce((n, d) => n + (counts[d] || 0), 0);
 }
 
+/** What was counted, for the saved count's note: "₹500×10, ₹100×8". */
+export function countNote(counts: Counts): string {
+  return DENOMINATIONS.filter(d => counts[d]).map(d => `₹${d}×${counts[d]}`).join(', ');
+}
+
 /** Subtotal for one denomination. */
 export function subtotal(denom: number, count: number): number {
   return denom * (count || 0);

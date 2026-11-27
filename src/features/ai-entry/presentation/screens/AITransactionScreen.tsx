@@ -30,6 +30,8 @@ import {
   isUtrMissing,
   PAYMENT_METHODS,
   type PaymentMethod,
+  UTR_LENGTH,
+  utrDigits,
 } from '@features/customers/domain/ledger';
 import {useT} from '@/i18n';
 import {paymentMethodLabel} from '@/i18n/labels';
@@ -386,11 +388,11 @@ export function AITransactionScreen({
                     <TextField
                       value={utr}
                       onChangeText={v => {
-                        setUtr(v);
+                        setUtr(utrDigits(v));
                         clearFieldError();
                       }}
-                      autoCapitalize="characters"
-                      maxLength={40}
+                      keyboardType="number-pad"
+                      maxLength={UTR_LENGTH}
                       error={errorField === 'utr' ? error : null}
                     />
                   </FormField>

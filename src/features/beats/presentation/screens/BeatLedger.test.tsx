@@ -104,3 +104,29 @@ test.each([
   expect(onChange.mock.calls).toEqual(expected ? [[expected]] : []);
   act(() => r.unmount());
 });
+
+test('money in is green with +, money out dark with −, label and amount alike', async () => {
+  asRole('owner');
+  mockList.mockResolvedValue([beat('north', 'North')]);
+  let r!: ReactTestRenderer;
+  await act(async () => {
+    r = create(wrap(<BeatLedgerScreen navigation={{} as never} route={{params: undefined} as never} />));
+  });
+  await settle();
+  const shown = (testID: string) => r.root.findAll(n => n.props.testID === testID && typeof n.type !== 'string'
+    && n.props.className !== undefined).map(n => ({
+    text: ([] as unknown[]).concat(n.props.children).join(''),
+    classes: String(n.props.className).split(/\s+/),
+  }));
+  const colours = (classes: string[]) => classes.filter(c => /^text-(?!xs|sm|base|lg|xl)/.test(c));
+  // One colour class each: a second one (e.g. our Text's text-muted) could override it on the phone.
+  expect(shown('beat-ledger-amount').map(a => [a.text, colours(a.classes), a.classes.includes('font-bold')])).toEqual([
+    ['+ ₹1,500', ['text-green-700'], true],
+    ['− ₹900', ['text-slate-900'], true],
+  ]);
+  expect(shown('beat-ledger-kind').map(k => [k.text, colours(k.classes)])).toEqual([
+    ['Payment received', ['text-green-700']],
+    ['Credit given', ['text-slate-900']],
+  ]);
+  act(() => r.unmount());
+});

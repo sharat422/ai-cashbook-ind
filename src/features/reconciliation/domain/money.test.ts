@@ -1,4 +1,4 @@
-import {isUtrMissing} from '@features/customers/domain/ledger';
+import {isUtrMissing, utrDigits} from '@features/customers/domain/ledger';
 import {makeLedgerUseCases} from '@features/customers/domain/usecases/ledger';
 import {formatMoney, isZero} from './money';
 
@@ -14,6 +14,11 @@ test('a UPI payment needs a UTR; other methods do not', async () => {
   expect(isUtrMissing('upi', undefined)).toBe(true);
   expect(isUtrMissing('upi', '12')).toBe(true);
   expect(isUtrMissing('upi', '4123 4567 8901')).toBe(false);
+  // A UTR is 12 digits: 11, 13 or letters are refused; the box keeps digits only.
+  for (const bad of ['41234567890', '4123456789012', '41234567890A', 'T2311261234567890']) {
+    expect(isUtrMissing('upi', bad)).toBe(true);
+  }
+  expect(utrDigits('UTR: 4123-4567-8901')).toBe('412345678901');
   expect(isUtrMissing('cash', undefined)).toBe(false);
 
   const addEntry = jest.fn().mockResolvedValue({});

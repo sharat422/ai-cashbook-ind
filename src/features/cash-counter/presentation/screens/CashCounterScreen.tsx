@@ -1,26 +1,57 @@
 import React, {useMemo, useState} from 'react';
-import {Pressable, ScrollView, TextInput, View} from 'react-native';
+import {Alert, Pressable, ScrollView, TextInput, View} from 'react-native';
 
 import {Button, Screen, Text} from '@components/ui';
 import {
   DENOMINATIONS,
   cashTotal,
+  countNote,
   subtotal,
   totalPieces,
   type Counts,
 } from '@features/cash-counter/domain/denominations';
+import {usePermissions} from '@features/auth/hooks';
+import {PERMISSIONS} from '@features/auth/rbac';
+import {useBeats} from '@features/beats/presentation/hooks';
+import {reconciliationRemote} from '@features/reconciliation/data/reconciliation.remote';
+import {formatMoney} from '@features/reconciliation/domain/money';
 import {useT} from '@/i18n';
+import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
+import {todayIST} from '@utils/date';
 import {formatINR} from '@utils/currency';
 import {onlyDigits} from '@utils/validation';
 
-/** Physical cash counter: enter how many of each note/coin → live total. */
-export function CashCounterScreen(): React.JSX.Element {
+/** Physical cash counter: enter how many of each note/coin → live total, then save it as today's count. */
+export function CashCounterScreen({navigation}: AppScreenProps<'CashCounter'>): React.JSX.Element {
   const t = useT();
   const [counts, setCounts] = useState<Counts>({});
+  const [saving, setSaving] = useState(false);
+  // Saved as Daily close's "Save count" does: the owner's for the whole business, staff's for their beat.
+  const seesAll = usePermissions().can(PERMISSIONS.DATA_VIEW);
+  const beats = useBeats().data;
+  const beatId = seesAll ? undefined : beats?.[0]?.id;
 
   const total = useMemo(() => cashTotal(counts), [counts]);
   const pieces = useMemo(() => totalPieces(counts), [counts]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const close = await reconciliationRemote.cashCount(todayIST(), beatId, total.toFixed(2), undefined, countNote(counts));
+      const diff = close.cashOverShort;
+      const vsRecorded = diff == null ? '' : Number(diff) === 0 ? t('close.countMatches')
+        : `${Number(diff) < 0 ? t('close.short') : t('close.over')} ${formatMoney(Math.abs(Number(diff)).toFixed(2))}`;
+      Alert.alert(t('cash.saved'), [`${t('close.cashCounted')} ${formatINR(total)}`, vsRecorded].filter(Boolean).join('\n'), [
+        {text: t('common.ok')},
+        {text: t('close.title'), onPress: () => navigation.navigate('DailyClose', beatId ? {beatId} : undefined)},
+      ]);
+    } catch (e) {
+      Alert.alert(t('form.couldNotSave'), e instanceof Error ? e.message : t('common.tryAgainMsg'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const setCount = (denom: number, text: string) => {
     const n = Number(onlyDigits(text));
@@ -103,6 +134,10 @@ export function CashCounterScreen(): React.JSX.Element {
             </Text>
           </View>
         </View>
+
+        <Button testID="cash-save" title={t('close.saveCount')} className="mt-3" loading={saving}
+          disabled={total <= 0 || saving} onPress={save} />
+        <Text variant="caption" className="mt-1 text-center">{t('cash.saveHint', {screen: t('close.title')})}</Text>
 
         {total > 0 ? (
           <Pressable className="mt-2 self-center" onPress={() => setCounts({})}>
