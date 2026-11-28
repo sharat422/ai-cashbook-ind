@@ -1,4 +1,3 @@
-import {personLabel} from '@utils/personLabel';
 import React, {useState} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
 
@@ -10,6 +9,7 @@ import type {StockItem, Van} from '@features/stock/data/stock.remote';
 import {formatQty} from '@features/stock/domain/qty';
 import {useStockLevels} from '@features/stock/presentation/hooks';
 import {StockMoveSheet, type StockAction} from '@features/stock/presentation/StockMoveSheet';
+import {vanLabel} from '@features/stock/presentation/vanLabel';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 
@@ -42,10 +42,7 @@ export function StockScreen({navigation}: AppScreenProps<'Stock'>): React.JSX.El
   const {items, vans}: {items: StockItem[]; vans: Van[]} = levels.data;
   const lowCount = items.filter(i => i.low).length;
   const shown = lowOnly ? items.filter(i => i.low) : items;
-  const vanName = (userId: string) => {
-    const v = vans.find(x => x.userId === userId);
-    return v ? personLabel(v.name, v.mobile) : userId.slice(0, 6);
-  };
+  const vanName = (userId: string) => vanLabel(t, vans.find(x => x.userId === userId));
 
   return (
     <Screen scroll={false}>
@@ -89,7 +86,7 @@ export function StockScreen({navigation}: AppScreenProps<'Stock'>): React.JSX.El
             </Text>
             <Text variant="caption" className="mt-1">
               🏬 {t('stock.godown')}: {formatQty(item.godown)}
-              {Object.entries(item.vans).map(([u, q]) => `   🚚 ${vanName(u)}: ${formatQty(q)}`).join('')}
+              {Object.entries(item.vans).map(([u, q]) => `   ${vanName(u)}: ${formatQty(q)}`).join('')}
             </Text>
             <View className="mt-3 flex-row flex-wrap" style={{gap: 8}}>
               {canEdit ? (

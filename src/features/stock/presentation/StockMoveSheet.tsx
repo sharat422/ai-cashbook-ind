@@ -1,4 +1,3 @@
-import {personLabel} from '@utils/personLabel';
 import {useQuery} from '@tanstack/react-query';
 import React, {useEffect, useState} from 'react';
 import {Alert, ScrollView, View} from 'react-native';
@@ -9,6 +8,7 @@ import {BottomSheet, Button, Text} from '@components/ui';
 import {stockRemote, type Supplier, type Van} from '@features/stock/data/stock.remote';
 import {formatQty, isQty} from '@features/stock/domain/qty';
 import {makeStockClientId, useStockMutations} from '@features/stock/presentation/hooks';
+import {vanLabel} from '@features/stock/presentation/vanLabel';
 import {useT} from '@/i18n';
 import {todayIST} from '@utils/date';
 
@@ -81,7 +81,6 @@ export function StockMoveSheet({
   }, [action, item?.id, ownVanOnly]);
 
   const pending = record.isPending || transfer.isPending;
-  const vanLabel = (v: Van) => `🚚 ${personLabel(v.name, v.mobile)}`;
 
   const submit = () => {
     if (!action || !item) return;
@@ -147,7 +146,7 @@ export function StockMoveSheet({
                 .map(v => (
                   <FilterChip
                     key={v.userId}
-                    label={`${vanLabel(v)} · ${formatQty(item?.vanQty?.[v.userId] ?? '0')}`}
+                    label={`${vanLabel(t, v)} · ${formatQty(item?.vanQty?.[v.userId] ?? '0')}`}
                     selected={source.location === 'van' && source.vanUserId === v.userId}
                     onPress={() => setSource({location: 'van', vanUserId: v.userId})}
                   />
@@ -165,7 +164,7 @@ export function StockMoveSheet({
                 onPress={() => setSource({location: 'godown'})} />
               {vans.filter(v => item?.vanQty?.[v.userId]).map(v => (
                 <FilterChip key={v.userId} testID={`move-from-${v.userId}`}
-                  label={`${vanLabel(v)} · ${formatQty(item?.vanQty?.[v.userId] ?? '0')}`}
+                  label={`${vanLabel(t, v)} · ${formatQty(item?.vanQty?.[v.userId] ?? '0')}`}
                   selected={source.location === 'van' && source.vanUserId === v.userId}
                   onPress={() => setSource({location: 'van', vanUserId: v.userId})} />
               ))}
@@ -179,12 +178,15 @@ export function StockMoveSheet({
                 <FilterChip testID="move-to-godown" label={`🏬 ${t('stock.godown')}`}
                   selected={dest?.location === 'godown'} onPress={() => setDest({location: 'godown'})} />
               ) : null}
-              {vans.filter(v => !samePlace(source, {location: 'van', vanUserId: v.userId})).map(v => (
-                <FilterChip key={v.userId} testID={`move-to-${v.userId}`} label={vanLabel(v)}
+              {vans.filter(v => v.vanId && !samePlace(source, {location: 'van', vanUserId: v.userId})).map(v => (
+                <FilterChip key={v.userId} testID={`move-to-${v.userId}`} label={vanLabel(t, v)}
                   selected={dest?.location === 'van' && dest.vanUserId === v.userId}
                   onPress={() => setDest({location: 'van', vanUserId: v.userId})} />
               ))}
             </View>
+            {!vans.some(v => v.vanId) ? (
+              <Text testID="move-no-vans" variant="caption">{t('vans.noneToLoad')}</Text>
+            ) : null}
           </FormField>
         ) : null}
 

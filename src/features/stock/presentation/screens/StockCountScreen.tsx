@@ -1,4 +1,3 @@
-import {personLabel} from '@utils/personLabel';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
 import {Alert, ScrollView, View} from 'react-native';
@@ -10,6 +9,7 @@ import {stockRemote, type CountResult, type StockItem, type Van} from '@features
 import {difference, formatQty, isQty, toMilli} from '@features/stock/domain/qty';
 import {useConnectivity} from '@features/income/presentation/hooks/useConnectivity';
 import {makeStockClientId, useStockLevels, useStockMutations} from '@features/stock/presentation/hooks';
+import {vanLabel} from '@features/stock/presentation/vanLabel';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {formatTimestamp, todayIST} from '@utils/date';
@@ -116,7 +116,7 @@ export function StockCountScreen(_: AppScreenProps<'StockCount'>): React.JSX.Ele
         <View className="mt-4 flex-row flex-wrap" style={{gap: 8}}>
           <FilterChip label={`🏬 ${t('stock.godown')}`} selected={where === 'godown'} onPress={() => pick('godown')} />
           {vans.map(v => (
-            <FilterChip key={v.userId} label={`🚚 ${personLabel(v.name, v.mobile)}`} selected={where === v.userId}
+            <FilterChip key={v.userId} label={vanLabel(t, v)} selected={where === v.userId}
               onPress={() => pick(v.userId)} />
           ))}
         </View>

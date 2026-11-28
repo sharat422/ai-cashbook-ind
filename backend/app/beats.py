@@ -204,7 +204,8 @@ def open_promises(db: Session, customer_ids: list[str]) -> dict[str, dict]:
         if (paid[cid] > 0) if amount is None else (paid[cid] >= amount - 0.005):
             continue
         out[cid] = {"date": v.promise_date, "amount": amount,
-                    "remaining": None if amount is None else round(amount - paid[cid], 2), "beat_id": v.beat_id}
+                    "remaining": None if amount is None else round(amount - paid[cid], 2), "beat_id": v.beat_id,
+                    "made_at": v.created_at}
     return out
 
 
@@ -271,7 +272,8 @@ def day_list(db: Session, beat: Beat) -> list[dict]:
             "credit_limit": c.credit_limit,
             "last_promise_date": promise.get(c.id),
             # Still to be paid: today's or overdue ones go in the day list's "Promises due".
-            "promise": {k: v for k, v in promises[c.id].items() if k != "beat_id"} if c.id in promises else None,
+            "promise": {k: v for k, v in promises[c.id].items() if k not in ("beat_id", "made_at")}
+            if c.id in promises else None,
             "today_visit": visit_dto(today_visit[c.id]) if c.id in today_visit else None,
         })
     return out

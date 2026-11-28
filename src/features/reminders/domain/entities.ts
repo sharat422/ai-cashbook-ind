@@ -35,8 +35,13 @@ export interface Reminder {
   id: string;
   customerId: string;
   channel: ReminderChannel;
-  templateKey: ReminderTemplateKey;
+  /** The template used (a reminder sent from this phone). */
+  templateKey?: ReminderTemplateKey;
   message: string;
   status: ReminderStatus;
   createdAt: string;
+  /** Sent by the scheduled job (the WhatsApp statement), not from a phone. */
+  automatic?: boolean;
+  /** Who sent it, when it came from the shared history. */
+  sentByName?: string | null;
 }

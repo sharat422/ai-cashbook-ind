@@ -27,10 +27,12 @@ function Row({reminder}: {reminder: Reminder}): React.JSX.Element {
       <View className="flex-row items-center justify-between">
         <Text className="text-sm font-semibold text-slate-900">
           {CHANNEL_ICON[reminder.channel]} {t(`reminders.channel.${reminder.channel}` as TKey)}
-          <Text className="text-xs font-normal text-muted">
-            {' · '}
-            {t(`reminders.tpl.${reminder.templateKey}.name` as TKey)}
-          </Text>
+          {reminder.templateKey ? (
+            <Text className="text-xs font-normal text-muted">
+              {' · '}
+              {t(`reminders.tpl.${reminder.templateKey}.name` as TKey)}
+            </Text>
+          ) : null}
         </Text>
         <View className={`rounded-full px-2 py-0.5 ${s.bg}`}>
           <Text className={`text-[10px] font-semibold ${s.text}`}>
@@ -43,6 +45,8 @@ function Row({reminder}: {reminder: Reminder}): React.JSX.Element {
       </Text>
       <Text className="mt-1 text-[10px] text-muted">
         {formatTimestampDate(reminder.createdAt)}
+        {reminder.automatic ? ` · ${t('reminders.automatic')}`
+          : reminder.sentByName ? ` · ${t('reminders.sentBy', {name: reminder.sentByName})}` : ''}
       </Text>
     </View>
   );

@@ -25,7 +25,7 @@ from .models import (
     AccessLog, BankImport, BankLine, BankMatch, Beat, BeatAssignment, BeatRetailer, Bill, BillLine, BillSeries, Business,
     BusinessMember, CaTestResult, CashCount, CashDeposit, CreditNote, DailyClose, Customer, DiscardedEntry, TeamInvite, Supplier, Expense, GstInvoiceLine, GstInvoiceNumber, GstRateChangeLog, ImportLog,
     Income, Item, ItemUnit, LedgerEntry, PaymentAllocation, StockMonthLock, RecurringExpense, Scheme, SchemeApplication, SchemeItem,
-    StatementEvent, StatementSchedule, StockLevel, StockMove, Visit,
+    StatementEvent, StatementSchedule, StockLevel, StockMove, ReminderEvent, ReminderRule, SchemeClaim, Van, Visit,
 )
 from .doc_i18n import ENGLISH, Tr
 from .doc_i18n import date as ldate
@@ -96,6 +96,10 @@ def sections(db: Session, business: Business) -> dict[str, list[dict]]:
         "stock_month_locks": by_business(StockMonthLock, StockMonthLock.month),
         "stock_levels": by_business(StockLevel),
         "stock_moves": by_business(StockMove, StockMove.created_at),
+        "vans": by_business(Van, Van.created_at),
+        "scheme_claims": by_business(SchemeClaim, SchemeClaim.created_at),
+        "reminder_rules": by_business(ReminderRule),
+        "reminder_events": by_business(ReminderEvent, ReminderEvent.created_at),
         "schemes": schemes,
         "scheme_items": child(SchemeItem, SchemeItem.scheme_id, scheme_ids),
         "bills": bills,

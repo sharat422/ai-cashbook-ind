@@ -427,6 +427,7 @@ export function SettingsScreen({
           title={t('settings.group.customers')}
           rows={[
             canManageSettings && {title: t('bulk.settingsButton'), onPress: () => navigation.navigate('BulkStatements')},
+            canManageSettings && {title: t('reminders.rules.title'), onPress: () => navigation.navigate('ReminderRules')},
           ]}>
           {canManageSettings ? <StatementLanguageSetting /> : null}
         </Group>
@@ -454,6 +455,7 @@ export function SettingsScreen({
           title={t('settings.group.account')}
           rows={[
             canManageSettings && {title: t('account.editBusiness'), onPress: () => navigation.navigate('BusinessEdit')},
+            canManageSettings && {title: t('vans.title'), onPress: () => navigation.navigate('Vans')},
             {title: t('account.deleteAccount'), onPress: () => navigation.navigate('DeleteAccount')},
           ]}
         />

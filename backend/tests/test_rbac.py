@@ -132,8 +132,10 @@ def test_owner_names_people_and_the_name_shows_on_vans_and_visits(make_user, cli
     assert r.status_code == 200 and r.json()["name"] == "Ravi (Van 2)"
     uid = r.json()["user_id"]
     staff = _login(client, "7322000001")
+    # Their van shows by its name, with theirs beside it (never their number).
+    assert client.post("/api/v1/vans", headers=owner.headers, json={"name": "Van 2", "userId": uid}).status_code == 200
     vans = client.get("/api/v1/stock", headers=owner.headers).json()["vans"]
-    assert any(v["userId"] == uid and v["name"] == "Ravi (Van 2)" for v in vans)
+    assert any(v["userId"] == uid and (v["name"], v["staffName"]) == ("Van 2", "Ravi (Van 2)") for v in vans)
 
     shop = add_customer(client, owner.headers)["id"]
     beat = client.post("/api/v1/beats", headers=owner.headers, json={

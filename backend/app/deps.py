@@ -179,3 +179,13 @@ def require(*permissions: str):
         return business
 
     return _dep
+
+
+def check_cron_secret(request) -> None:
+    """A scheduled job's call (.github/workflows/*.yml) with the backend's CRON_SECRET."""
+    import hmac
+
+    from .config import settings
+    secret = settings.cron_secret
+    if not secret or not hmac.compare_digest(request.headers.get("X-Cron-Secret", ""), secret):
+        raise HTTPException(403, "Wrong cron secret.")

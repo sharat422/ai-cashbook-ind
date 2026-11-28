@@ -38,6 +38,8 @@ export type AppStackParamList = {
   Settings: undefined;
   ConsentSettings: undefined;
   BusinessEdit: undefined;
+  Vans: undefined;
+  ReminderRules: undefined;
   DeleteAccount: undefined;
   YourData: undefined;
   SyncStatus: undefined;
@@ -78,6 +80,7 @@ export type AppStackParamList = {
   BulkStatements: undefined;
   SchemeForm: {scheme?: Scheme};
   SchemeReport: {customerId?: string; customerName?: string};
+  SchemeClaims: undefined;
   Diagnostics: undefined;
   Help: undefined;
   Feedback: {kind?: 'bug' | 'feedback'} | undefined;

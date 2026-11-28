@@ -40,6 +40,7 @@ import {BillDetailScreen} from '@features/schemes/presentation/screens/BillDetai
 import {GstInvoiceScreen} from '@features/gst/presentation/GstInvoiceScreen';
 import {SchemeFormScreen} from '@features/schemes/presentation/screens/SchemeFormScreen';
 import {SchemeReportScreen} from '@features/schemes/presentation/screens/SchemeReportScreen';
+import {SchemeClaimsScreen} from '@features/schemes/presentation/screens/SchemeClaimsScreen';
 import {SchemesScreen} from '@features/schemes/presentation/screens/SchemesScreen';
 import {BulkStatementsScreen} from '@features/customers/presentation/screens/BulkStatementsScreen';
 import {StockCountScreen} from '@features/stock/presentation/screens/StockCountScreen';
@@ -60,6 +61,8 @@ import {ReportsScreen} from '@features/reports/presentation/screens/ReportsScree
 import {SettingsScreen} from '@features/settings/presentation/screens/SettingsScreen';
 import {ConsentSettingsScreen} from '@features/consent/presentation/screens/ConsentSettingsScreen';
 import {BusinessEditScreen} from '@features/account/presentation/screens/BusinessEditScreen';
+import {VansScreen} from '@features/stock/presentation/screens/VansScreen';
+import {ReminderRulesScreen} from '@features/reminders/presentation/screens/ReminderRulesScreen';
 import {DeleteAccountScreen} from '@features/account/presentation/screens/DeleteAccountScreen';
 import {YourDataScreen} from '@features/account/presentation/screens/YourDataScreen';
 import {KhataImportScreen} from '@features/import/presentation/KhataImportScreen';
@@ -92,6 +95,9 @@ const Guarded = {
   BankImportScreen: withPermission(BankImportScreen, PERMISSIONS.ENTRY_EDIT),
   BankMatchScreen: withPermission(BankMatchScreen, PERMISSIONS.ENTRY_EDIT),
   BusinessEditScreen: withPermission(BusinessEditScreen, PERMISSIONS.SETTINGS_MANAGE),
+  SchemeClaimsScreen: withPermission(SchemeClaimsScreen, PERMISSIONS.REPORTS_VIEW),
+  VansScreen: withPermission(VansScreen, PERMISSIONS.SETTINGS_MANAGE),
+  ReminderRulesScreen: withPermission(ReminderRulesScreen, PERMISSIONS.SETTINGS_MANAGE),
   ItemFormScreen: withPermission(ItemFormScreen, PERMISSIONS.SETTINGS_MANAGE),
   RecurringFormScreen: withPermission(RecurringFormScreen, PERMISSIONS.SETTINGS_MANAGE),
   SchemeFormScreen: withPermission(SchemeFormScreen, PERMISSIONS.SETTINGS_MANAGE),
@@ -109,6 +115,8 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="ConsentSettings" component={ConsentSettingsScreen} />
       <Stack.Screen name="BusinessEdit" component={Guarded.BusinessEditScreen} />
+      <Stack.Screen name="Vans" component={Guarded.VansScreen} />
+      <Stack.Screen name="ReminderRules" component={Guarded.ReminderRulesScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="YourData" component={YourDataScreen} />
       <Stack.Screen name="SyncStatus" component={SyncStatusScreen} />
@@ -162,6 +170,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="BulkStatements" component={BulkStatementsScreen} />
       <Stack.Screen name="SchemeForm" component={Guarded.SchemeFormScreen} />
       <Stack.Screen name="SchemeReport" component={SchemeReportScreen} />
+      <Stack.Screen name="SchemeClaims" component={Guarded.SchemeClaimsScreen} />
       <Stack.Screen name="Diagnostics" component={DiagnosticsScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen

@@ -17,6 +17,7 @@ import {VisitSyncManager} from '@features/beats/presentation/VisitSyncManager';
 import {StockSyncManager} from '@features/stock/presentation/StockSyncManager';
 import {CreditSyncManager} from '@features/customers/presentation/CreditSyncManager';
 import {DailySummaryManager} from '@features/daily-summary/presentation/DailySummaryManager';
+import {RecurringAutoPostNotifier} from '@features/recurring/presentation/AutoPostNotifier';
 import {ExpenseSyncManager} from '@features/expense/presentation/ExpenseSyncManager';
 import {OfflineSyncManager} from '@features/income/presentation/OfflineSyncManager';
 import {LockGate} from '@features/security/presentation/LockGate';
@@ -35,6 +36,8 @@ function App(): React.JSX.Element {
         <StockSyncManager />
         {/* Dispatches the daily summary notification when due. */}
         <DailySummaryManager />
+        {/* Tells the owner when a recurring expense or income posted itself. */}
+        <RecurringAutoPostNotifier />
         <ErrorBoundary>
           <LockGate>
             <RootNavigator />

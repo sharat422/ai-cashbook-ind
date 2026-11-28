@@ -35,8 +35,8 @@ const wrap = (el: React.ReactElement) => (
 );
 
 const vans = [
-  {userId: 'ravi', mobile: '9000000001', role: 'staff', name: 'Ravi'},
-  {userId: 'sita', mobile: '9000000002', role: 'staff', name: 'Sita'},
+  {vanId: 'v1', userId: 'ravi', name: 'Van 1', registration: null, staffName: 'Ravi'},
+  {vanId: 'v2', userId: 'sita', name: 'Van 2', registration: null, staffName: 'Sita'},
 ];
 const item = {id: 'soap', name: 'Soap', unit: 'box', godown: '20.000', vanQty: {ravi: '30.000'}};
 
@@ -74,6 +74,25 @@ test('the owner moves 10 from a van back to the godown', async () => {
   expect(mockTransfer).toHaveBeenCalledWith(expect.objectContaining({
     itemId: 'soap', quantity: '10', fromLocation: 'van', fromVanUserId: 'ravi', toLocation: 'godown',
     vanUserId: undefined}), expect.anything());
+  act(() => r.unmount());
+});
+
+test('vans by name; a van not named yet can be emptied but not loaded', async () => {
+  const unnamed = {vanId: null, userId: 'old', name: null, registration: null, staffName: 'Mohan'};
+  let r!: ReactTestRenderer;
+  await act(async () => {
+    r = create(wrap(<StockMoveSheet action="transfer" item={{...item, vanQty: {old: '5.000'}}}
+      vans={[vans[0], unnamed]} onClose={jest.fn()} />));
+  });
+  const text = JSON.stringify(r.toJSON());
+  expect(text).toContain('🚚 Van 1');
+  expect(text).toContain("🚚 Mohan's van · 5"); // a source, by the person's name, never their phone
+  expect(ids(r, 'move-to-')).toEqual(['move-to-ravi']); // loading: named vans only
+  act(() => r.unmount());
+  await act(async () => {
+    r = create(wrap(<StockMoveSheet action="transfer" item={item} vans={[unnamed]} onClose={jest.fn()} />));
+  });
+  expect(ids(r, 'move-no-vans')).not.toHaveLength(0); // none named: says where to add one
   act(() => r.unmount());
 });
 

@@ -1,0 +1,33 @@
+name: Recurring expenses and income
+
+# Posts the recurring expenses and income set to post automatically, on their due
+# date (backend/app/routers/recurring.py, post_due). The backend books each due
+# occurrence once, so a repeated or late run books nothing twice; three runs a day
+# ride out a Render cold start.
+#
+# Needs repository secrets CRON_SECRET_STAGING / CRON_SECRET_PROD equal to the
+# backend's CRON_SECRET on each service (the same ones as statement-schedules.yml).
+# Without them the step is skipped.
+on:
+  schedule:
+    - cron: '7 1,7,13 * * *'   # 6:37 a.m., 12:37 p.m. and 6:37 p.m. IST
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Staging
+        env:
+          SECRET: ${{ secrets.CRON_SECRET_STAGING }}
+        if: env.SECRET != ''
+        run: |
+          curl -fsS --max-time 120 -X POST -H "X-Cron-Secret: $SECRET" \
+            https://smart-cashbook-api.onrender.com/api/v1/cron/recurring
+      - name: Production
+        env:
+          SECRET: ${{ secrets.CRON_SECRET_PROD }}
+        if: env.SECRET != ''
+        run: |
+          curl -fsS --max-time 120 -X POST -H "X-Cron-Secret: $SECRET" \
+            https://ai-cashbook-ind.onrender.com/api/v1/cron/recurring

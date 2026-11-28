@@ -21,12 +21,26 @@ export interface StockItem {
   display?: string;
 }
 
+/** Where van stock can be: a named van (Settings → Vans) on its driver's stock, or
+ *  someone holding van stock with no van named (vanId and name null). Label it
+ *  with vanLabel(): never a phone number. */
 export interface Van {
+  vanId: string | null;
+  /** The driver: van stock is keyed by their user id. */
   userId: string;
-  mobile: string;
-  role: string;
-  /** The owner's name for this person; label vans with personLabel(). */
   name: string | null;
+  registration: string | null;
+  /** The owner's name for the driver. */
+  staffName: string | null;
+}
+
+/** A van as set up in Settings → Vans. */
+export type VanRecord = Van & {vanId: string; name: string};
+export interface VanInput {
+  name: string;
+  /** "" clears it. */
+  registration: string;
+  userId: string;
 }
 
 export interface VanItem {
@@ -153,6 +167,11 @@ export const stockRemote = {
   unlockMonth: (month: string) => apiRequest<MonthStatus>(`/stock/months/${month}/unlock`, {method: 'POST'}),
   suppliers: () => apiRequest<Supplier[]>('/suppliers', {method: 'GET'}),
   levels: () => apiRequest<{items: StockItem[]; vans: Van[]}>('/stock', {method: 'GET'}),
+  /** Settings → Vans (owner). */
+  vans: () => apiRequest<VanRecord[]>('/vans', {method: 'GET'}),
+  addVan: (body: VanInput) => apiRequest<VanRecord>('/vans', {method: 'POST', body}),
+  editVan: (vanId: string, body: Partial<VanInput>) =>
+    apiRequest<VanRecord>(`/vans/${encodeURIComponent(vanId)}`, {method: 'PATCH', body}),
   low: () => apiRequest<StockItem[]>('/stock/low', {method: 'GET'}),
   van: (userId?: string) =>
     apiRequest<VanItem[]>(`/stock/van${userId ? `?userId=${userId}` : ''}`, {method: 'GET'}),

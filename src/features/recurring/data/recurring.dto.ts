@@ -18,6 +18,9 @@ export interface RecurringDto {
   last_posted_date: string | null;
   notes: string | null;
   active: boolean;
+  kind?: string;
+  auto_post?: boolean;
+  last_auto_posted_at?: string | null;
   is_due: boolean;
   created_at: string;
 }
@@ -27,6 +30,7 @@ export interface RecurringListDto {
   due_count: number;
   due_total: number;
   monthly_total: number;
+  income_monthly_total?: number;
 }
 
 export interface PostOccurrenceDto {
@@ -48,6 +52,9 @@ export function toRecurring(dto: RecurringDto): RecurringExpense {
     lastPostedDate: dto.last_posted_date ?? null,
     notes: dto.notes ?? undefined,
     active: !!dto.active,
+    kind: dto.kind === 'income' ? 'income' : 'expense',
+    autoPost: !!dto.auto_post,
+    lastAutoPostedAt: dto.last_auto_posted_at ?? null,
     isDue: !!dto.is_due,
     createdAt: dto.created_at,
   };
@@ -59,6 +66,7 @@ export function toRecurringList(dto: RecurringListDto): RecurringList {
     dueCount: Number(dto.due_count ?? 0),
     dueTotal: Number(dto.due_total ?? 0),
     monthlyTotal: Number(dto.monthly_total ?? 0),
+    incomeMonthlyTotal: Number(dto.income_monthly_total ?? 0),
   };
 }
 
@@ -73,5 +81,7 @@ export function fromRecurringDraft(draft: RecurringDraft): Record<string, unknow
     next_due_date: draft.nextDueDate,
     notes: draft.notes ?? null,
     active: draft.active,
+    kind: draft.kind,
+    auto_post: draft.autoPost,
   };
 }

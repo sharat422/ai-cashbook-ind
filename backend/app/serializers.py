@@ -147,6 +147,9 @@ def recurring_expense_dto(m: RecurringExpense, *, today: str | None = None) -> d
         "last_posted_date": m.last_posted_date,
         "notes": m.notes,
         "active": m.active,
+        "kind": m.kind or "expense",
+        "auto_post": bool(m.auto_post),
+        "last_auto_posted_at": m.last_auto_posted_at,
         "is_due": bool(m.active and today and is_due(m.next_due_date, today)),
         "created_at": m.created_at,
     }

@@ -174,6 +174,8 @@ def _add_bank_soft_delete_columns(engine, inspector, tables: set[str]) -> None:
               "statement_links": {"revoked_at": "VARCHAR(40)", "detailed": "BOOLEAN DEFAULT FALSE"},
               "customers": {"statement_language": "VARCHAR(10)"},
               "visits": {"promise_amount": "NUMERIC(12,2)"},
+              "recurring_expenses": {"kind": "VARCHAR(10) DEFAULT 'expense'", "auto_post": "BOOLEAN DEFAULT FALSE",
+                                     "last_auto_posted_at": "VARCHAR(40)"},
               "businesses": {"statement_language": "VARCHAR(10)", "upi_id": "VARCHAR(60)",
                              "upi_payee_name": "VARCHAR(100)"},
               "bills": {"reverses_id": "VARCHAR(40)", "status": "VARCHAR(16)"},

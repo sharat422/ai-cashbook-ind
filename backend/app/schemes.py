@@ -1,6 +1,6 @@
 """FMCG trade schemes: apply the right one at billing and log it.
 
-Phase 1: apply and log only — no scheme claim filing or claim automation.
+Applies and logs schemes; claims to the supplier are made from this log (scheme_claims.py).
 One scheme per bill line: when several could apply, the owner's priority
 (1 beats 2) decides and the others are logged "not applied" with the reason.
 """

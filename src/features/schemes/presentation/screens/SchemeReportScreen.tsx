@@ -1,13 +1,14 @@
+import {useQueryClient} from '@tanstack/react-query';
 import React, {useState} from 'react';
-import {Pressable, RefreshControl, ScrollView, View} from 'react-native';
+import {Alert, Pressable, RefreshControl, ScrollView, View} from 'react-native';
 
 import {FilterChip} from '@components/filters';
-import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
+import {Button, EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import {usePermissions} from '@features/auth/hooks';
 import {PERMISSIONS} from '@features/auth/rbac';
 import {formatMoney} from '@features/reconciliation/domain/money';
-import type {SchemeApplication, SchemeReport} from '@features/schemes/data/schemes.remote';
-import {useSchemeLog, useSchemeReport} from '@features/schemes/presentation/hooks';
+import {schemesRemote, type SchemeApplication, type SchemeReport} from '@features/schemes/data/schemes.remote';
+import {SCHEMES_KEY, useSchemeLog, useSchemeReport} from '@features/schemes/presentation/hooks';
 import {formatQty} from '@features/stock/domain/qty';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
@@ -29,7 +30,7 @@ function shiftMonth(ym: string, by: number): string {
  * scheme considered on each bill, applied or not). From a retailer's profile
  * it opens on that retailer's log.
  */
-export function SchemeReportScreen({route}: AppScreenProps<'SchemeReport'>): React.JSX.Element {
+export function SchemeReportScreen({navigation, route}: AppScreenProps<'SchemeReport'>): React.JSX.Element {
   const t = useT();
   const {customerId, customerName} = route.params ?? {};
   const {can} = usePermissions();
@@ -43,6 +44,33 @@ export function SchemeReportScreen({route}: AppScreenProps<'SchemeReport'>): Rea
   const active = tab === 'summary' ? report : log;
   const data: SchemeReport | undefined = report.data;
   const rows: SchemeApplication[] = log.data ?? [];
+  // File a claim (owner): one per scheme given away this month, its value across SKUs.
+  const canClaim = can(PERMISSIONS.SETTINGS_MANAGE);
+  const qc = useQueryClient();
+  const [filing, setFiling] = useState<string | null>(null);
+  const toClaim = Object.values((data?.rows ?? []).reduce<Record<string, {id: string; name: string; value: number}>>(
+    (acc, r) => {
+      const s = (acc[r.schemeId] ??= {id: r.schemeId, name: r.schemeName, value: 0});
+      s.value += Number(r.value);
+      return acc;
+    }, {})).filter(s => s.value > 0);
+  const fileClaim = (s: {id: string; name: string; value: number}) =>
+    Alert.alert(t('claims.fileTitle', {scheme: s.name}), t('claims.fileMsg', {
+      value: formatMoney(s.value.toFixed(2)), from: formatDisplayDate(from), to: formatDisplayDate(to)}), [
+      {text: t('common.cancel'), style: 'cancel'},
+      {text: t('claims.file'), onPress: async () => {
+        setFiling(s.id);
+        try {
+          await schemesRemote.fileClaim(s.id, from, to);
+          await qc.invalidateQueries({queryKey: [SCHEMES_KEY, 'claims']});
+          navigation.navigate('SchemeClaims');
+        } catch (e) {
+          Alert.alert(t('form.couldNotSave'), e instanceof Error ? e.message : t('common.tryAgainMsg'));
+        } finally {
+          setFiling(null);
+        }
+      }},
+    ]);
 
   return (
     <Screen scroll={false}>
@@ -63,6 +91,7 @@ export function SchemeReportScreen({route}: AppScreenProps<'SchemeReport'>): Rea
           <View className="mt-3 flex-row" style={{gap: 8}}>
             <FilterChip label={t('schemes.summaryTab')} selected={tab === 'summary'} onPress={() => setTab('summary')} />
             <FilterChip label={t('schemes.logTab')} selected={tab === 'log'} onPress={() => setTab('log')} />
+            <FilterChip testID="open-claims" label={t('claims.title')} onPress={() => navigation.navigate('SchemeClaims')} />
           </View>
         ) : null}
 
@@ -77,6 +106,18 @@ export function SchemeReportScreen({route}: AppScreenProps<'SchemeReport'>): Rea
               <Line light label={t('schemes.totalDiscount')} value={formatMoney(data.totalDiscount)} />
               <Line light label={t('schemes.totalFree')} value={formatQty(data.totalFreeQty)} />
             </View>
+            {canClaim && toClaim.length > 0 ? (
+              <View testID="scheme-claims" className="mt-3 rounded-2xl border border-border bg-white p-4" style={{gap: 8}}>
+                <Text variant="label">{t('claims.fileHeading')}</Text>
+                {toClaim.map(s => (
+                  <View key={s.id} className="flex-row items-center justify-between" style={{gap: 8}}>
+                    <Text className="flex-1 text-sm">{s.name} · {formatMoney(s.value.toFixed(2))}</Text>
+                    <Button testID={`claim-file-${s.id}`} title={t('claims.file')} variant="secondary" fullWidth={false}
+                      loading={filing === s.id} disabled={filing !== null} onPress={() => fileClaim(s)} />
+                  </View>
+                ))}
+              </View>
+            ) : null}
             {data.rows.length === 0 ? <EmptyState icon="🎁" title={t('schemes.noneApplied')} /> : null}
             {data.rows.map(r => (
               <View key={`${r.schemeId}-${r.itemId}`} className="mt-3 rounded-2xl border border-border bg-white p-4" style={{gap: 4}}>

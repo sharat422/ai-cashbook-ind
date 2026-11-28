@@ -54,6 +54,10 @@ jest.mock('@features/expense/presentation/hooks', () => ({
   useCreateExpense: () => ({mutate: mockCreateExpense, isPending: false}),
 }));
 const mockDispatch = jest.fn(async (_: unknown) => 'sent');
+// The shared reminder history (server): none yet, and a send is recorded.
+jest.mock('@features/reminders/data/reminders.remote', () => ({
+  remindersRemote: {history: async () => [], record: async () => ({})},
+}));
 jest.mock('@features/reminders/presentation/dispatch', () => ({
   dispatchReminder: (input: unknown) => mockDispatch(input),
 }));
@@ -188,7 +192,9 @@ describe('2. a Telugu-only user: first entry, reminder, daily close', () => {
   it('sends a reminder in Telugu', async () => {
     let r!: ReactTestRenderer;
     await act(async () => {
-      r = create(<SendReminderSheet visible customer={customer} outstanding={1500} businessName="శ్రీ బాలాజీ ఏజెన్సీస్" onClose={jest.fn()} />);
+      r = create(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+        <SendReminderSheet visible customer={customer} outstanding={1500} businessName="శ్రీ బాలాజీ ఏజెన్సీస్" onClose={jest.fn()} />
+      </QueryClientProvider>);
     });
     expect(englishOnly(visible(r))).toEqual([]);
     await pressText(r, translate('te', 'reminders.send', {channel: translate('te', 'reminders.channel.whatsapp')}));

@@ -1,4 +1,3 @@
-import {personLabel} from '@utils/personLabel';
 import React from 'react';
 import {Alert, FlatList, RefreshControl, View} from 'react-native';
 
@@ -8,6 +7,7 @@ import {PERMISSIONS} from '@features/auth/rbac';
 import type {StockItem, StockMove, Van} from '@features/stock/data/stock.remote';
 import {formatQty} from '@features/stock/domain/qty';
 import {useStockLevels, useStockMoves, useStockMutations} from '@features/stock/presentation/hooks';
+import {vanLabel} from '@features/stock/presentation/vanLabel';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {formatDisplayDate} from '@utils/date';
@@ -33,7 +33,7 @@ export function StockHistoryScreen({route}: AppScreenProps<'StockHistory'>): Rea
       })},
     ]);
   const place = (location: string, van: string | null) =>
-    location === 'godown' ? `🏬 ${t('stock.godown')}` : `🚚 ${(v => personLabel(v?.name, v?.mobile))(vans.find(x => x.userId === van))}`;
+    location === 'godown' ? `🏬 ${t('stock.godown')}` : vanLabel(t, vans.find(x => x.userId === van));
 
   if (moves.isLoading) {
     return (

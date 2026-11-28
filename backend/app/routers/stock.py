@@ -10,10 +10,12 @@ from .. import stock as svc
 from ..calc import today_iso
 from ..database import get_db
 from ..deps import get_current_membership, require
-from ..models import AccessLog, Business, BusinessMember, Item, ItemUnit, StockMonthLock, StockMove, Supplier, User, now_iso
-from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_EDIT, role_can
+from ..errors import AppError
+from ..models import (AccessLog, Business, BusinessMember, Item, ItemUnit, StockLevel, StockMonthLock, StockMove,
+                      Supplier, User, Van, now_iso)
+from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_EDIT, SETTINGS_MANAGE, role_can
 from ..security import get_current_user
-from ..validation import validate_date, validate_notes
+from ..validation import validate_date, validate_notes, validate_text
 
 router = APIRouter(tags=["stock"])
 
@@ -90,13 +92,112 @@ def move_dto(m: StockMove) -> dict:
             "createdBy": m.created_by, "createdAt": m.created_at}
 
 
+def _display_names(db: Session, business: Business) -> dict[str, str | None]:
+    return dict(db.execute(select(BusinessMember.user_id, BusinessMember.display_name)
+                           .where(BusinessMember.business_id == business.id)).all())
+
+
+def _van_holders(db: Session, business: Business) -> set[str]:
+    """Everyone holding van stock now."""
+    return set(db.scalars(select(StockLevel.van_key).where(
+        StockLevel.business_id == business.id, StockLevel.location == "van", StockLevel.qty != 0)))
+
+
 def _vans(db: Session, business: Business) -> list[dict]:
-    rows = db.execute(
-        select(BusinessMember, User).join(User, User.id == BusinessMember.user_id)
-        .where(BusinessMember.business_id == business.id, BusinessMember.status == "active")
-    ).all()
-    return [{"userId": u.id, "mobile": u.mobile, "role": m.role, "name": m.display_name}
-            for m, u in sorted(rows, key=lambda r: (r[0].role != "staff", r[0].display_name or r[1].mobile))]
+    """Where van stock can be: each named van (Settings → Vans), on its driver's
+    stock, then anyone still holding van stock with no van named (name None: the app
+    calls it by the person's name). Never a phone number: the Stock screen shows it."""
+    names = _display_names(db, business)
+    vans = db.scalars(select(Van).where(Van.business_id == business.id).order_by(Van.name)).all()
+    out = [_van_dto(v, names) for v in vans]
+    named = {v.user_id for v in vans}
+    out += [{"vanId": None, "userId": uid, "name": None, "registration": None, "staffName": names.get(uid)}
+            for uid in sorted(_van_holders(db, business) - named)]
+    return out
+
+
+def _van_dto(v: Van, names: dict[str, str | None]) -> dict:
+    return {"vanId": v.id, "userId": v.user_id, "name": v.name, "registration": v.registration,
+            "staffName": names.get(v.user_id)}
+
+
+# --- Vans: a name (and registration) on a team member's van stock ---------------
+
+class VanBody(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    name: str | None = None
+    registration: str | None = None  # "" clears it
+    user_id: str | None = Field(default=None, alias="userId")
+
+
+def _driver_label(db: Session, business: Business, user_id: str) -> str:
+    m = db.scalars(select(BusinessMember).where(BusinessMember.business_id == business.id,
+                                                BusinessMember.user_id == user_id)).first()
+    if m and m.display_name:
+        return m.display_name
+    u = db.get(User, user_id)
+    return u.mobile if u else "them"
+
+
+def _check_van(db: Session, business: Business, name: str, user_id: str, van_id: str | None) -> None:
+    member = db.scalars(select(BusinessMember).where(
+        BusinessMember.business_id == business.id, BusinessMember.user_id == user_id,
+        BusinessMember.status == "active")).first()
+    if member is None or member.role == "accountant":
+        raise HTTPException(422, "Pick someone on your team to drive the van.")
+    others = db.scalars(select(Van).where(Van.business_id == business.id, Van.id != (van_id or ""))).all()
+    if any(v.name.casefold() == name.casefold() for v in others):
+        raise AppError(409, "van_name_taken", f"There's already a van called {name}.", name=name)
+    taken = next((v for v in others if v.user_id == user_id), None)
+    if taken:
+        staff = _driver_label(db, business, user_id)
+        raise AppError(409, "van_staff_taken", f"{staff} already has {taken.name}: one van each.",
+                       staff=staff, van=taken.name)
+
+
+@router.get("/vans")
+def list_vans(business: Business = Depends(require(SETTINGS_MANAGE)), db: Session = Depends(get_db)) -> list[dict]:
+    names = _display_names(db, business)
+    return [_van_dto(v, names) for v in db.scalars(select(Van).where(Van.business_id == business.id)
+                                                    .order_by(Van.name))]
+
+
+@router.post("/vans")
+def add_van(body: VanBody, business: Business = Depends(require(SETTINGS_MANAGE)),
+            db: Session = Depends(get_db)) -> dict:
+    name = validate_text(body.name or "", "Van name", 40)
+    if not body.user_id:
+        raise HTTPException(422, "Pick who drives the van.")
+    _check_van(db, business, name, body.user_id, None)
+    reg = (body.registration or "").strip().upper() or None
+    van = Van(business_id=business.id, name=name, user_id=body.user_id,
+              registration=validate_text(reg, "Registration", 20) if reg else None)
+    db.add(van)
+    db.commit()
+    return _van_dto(van, _display_names(db, business))
+
+
+@router.patch("/vans/{van_id}")
+def edit_van(van_id: str, body: VanBody, business: Business = Depends(require(SETTINGS_MANAGE)),
+             db: Session = Depends(get_db)) -> dict:
+    """Rename it, change the registration, or give it to someone else. The stock is
+    the driver's, so it moves to someone else only once its stock is back in the godown."""
+    van = db.get(Van, van_id)
+    if van is None or van.business_id != business.id:
+        raise HTTPException(404, "Van not found.")
+    name = validate_text(body.name, "Van name", 40) if body.name is not None else van.name
+    user_id = body.user_id or van.user_id
+    _check_van(db, business, name, user_id, van.id)
+    if user_id != van.user_id and van.user_id in _van_holders(db, business):
+        staff = _driver_label(db, business, van.user_id)
+        raise AppError(409, "van_has_stock", f"{van.name} still has stock with {staff}. Move it back to the "
+                       "godown before giving the van to someone else.", van=van.name, staff=staff)
+    van.name, van.user_id = name, user_id
+    if body.registration is not None:
+        reg = body.registration.strip().upper()
+        van.registration = validate_text(reg, "Registration", 20) if reg else None
+    db.commit()
+    return _van_dto(van, _display_names(db, business))
 
 
 def _stock_items(db: Session, business: Business) -> list[Item]:

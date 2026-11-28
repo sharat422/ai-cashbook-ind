@@ -15,7 +15,7 @@ import {categoryLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
 import {formatINR} from '@utils/currency';
-import {formatDisplayDate} from '@utils/date';
+import {formatDisplayDate, formatTimestamp, todayIST} from '@utils/date';
 
 export function RecurringListScreen({
   navigation,
@@ -25,7 +25,11 @@ export function RecurringListScreen({
     useRecurringExpenses();
   const {post} = useRecurringMutations();
 
-  const items = data?.items ?? [];
+  const items: RecurringExpense[] = data?.items ?? [];
+  // What's coming up in the next 7 days (not yet due), soonest first.
+  const today = todayIST();
+  const weekOut = new Date(Date.parse(`${today}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+  const upcoming = items.filter(r => r.active && r.nextDueDate > today && r.nextDueDate <= weekOut);
   const showSkeleton = isLoading && items.length === 0;
   const showError = isError && items.length === 0;
   const showEmpty = !isLoading && !isError && items.length === 0;
@@ -82,6 +86,22 @@ export function RecurringListScreen({
               value={formatINR(data.monthlyTotal)}
               accent="text-green-300"
             />
+          </View>
+        ) : null}
+
+        {upcoming.length > 0 ? (
+          <View testID="recurring-upcoming" className="mt-3 rounded-2xl border border-border bg-white p-3" style={{gap: 4}}>
+            <Text variant="label">{t('recurring.upcoming')}</Text>
+            {upcoming.map(r => (
+              <View key={r.id} className="flex-row justify-between" style={{gap: 8}}>
+                <Text className="flex-1 text-sm" numberOfLines={1}>
+                  {formatDisplayDate(r.nextDueDate)} · {r.name}
+                </Text>
+                <Text className={`text-sm font-semibold ${r.kind === 'income' ? 'text-green-700' : 'text-slate-900'}`}>
+                  {r.kind === 'income' ? '+ ' : ''}{formatINR(r.amount)}
+                </Text>
+              </View>
+            ))}
           </View>
         ) : null}
       </View>
@@ -173,6 +193,11 @@ function RecurringRow({
                 {t('recurring.due')}
               </Text>
             ) : null}
+            {rec.active && rec.autoPost ? (
+              <Text testID={`recurring-auto-${rec.id}`} className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
+                {t('recurring.autoBadge')}
+              </Text>
+            ) : null}
           </View>
           <Text variant="caption" className="mt-0.5">
             {frequencyLabel(t, rec.frequency, rec.interval)} · {categoryLabel(t, rec.category)}
@@ -180,9 +205,14 @@ function RecurringRow({
               ? ` · ${t('recurring.next', {date: formatDisplayDate(rec.nextDueDate)})}`
               : ''}
           </Text>
+          {rec.lastAutoPostedAt ? (
+            <Text variant="caption" testID={`recurring-autoposted-${rec.id}`}>
+              {t('recurring.autoPostedOn', {when: formatTimestamp(rec.lastAutoPostedAt)})}
+            </Text>
+          ) : null}
         </View>
-        <Text className="text-base font-semibold text-slate-900">
-          {formatINR(rec.amount)}
+        <Text className={`text-base font-semibold ${rec.kind === 'income' ? 'text-green-700' : 'text-slate-900'}`}>
+          {rec.kind === 'income' ? '+ ' : ''}{formatINR(rec.amount)}
         </Text>
       </View>
 

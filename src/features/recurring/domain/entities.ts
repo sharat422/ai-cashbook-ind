@@ -17,6 +17,9 @@ export const RECURRING_FREQUENCIES = [
 
 export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
 
+/** A recurring expense posts an expense; recurring income (rent received, a retainer…) an income. */
+export type RecurringKind = 'expense' | 'income';
+
 /** "Every month", "Every 2 weeks", "Every 10 days"…, in the user's language. */
 export function frequencyLabel(
   t: TranslateFn,
@@ -42,6 +45,9 @@ export interface RecurringDraft {
   nextDueDate: string;
   notes?: string;
   active: boolean;
+  kind: RecurringKind;
+  /** Posted by the server on its due date, not only by Mark paid. */
+  autoPost: boolean;
 }
 
 /** A persisted recurring-expense template (server-computed fields included). */
@@ -50,6 +56,8 @@ export interface RecurringExpense extends RecurringDraft {
   /** Intended day-of-month for monthly templates (server-derived). */
   anchorDay: number | null;
   lastPostedDate: string | null;
+  /** When the scheduled job last posted it (null: never). */
+  lastAutoPostedAt: string | null;
   /** True when the next occurrence has arrived (and the template is active). */
   isDue: boolean;
   createdAt: string;
@@ -61,6 +69,8 @@ export interface RecurringList {
   dueCount: number;
   /** Sum of amounts currently due. */
   dueTotal: number;
-  /** Rough monthly run-rate of all active templates. */
+  /** Rough monthly run-rate of all active expense templates. */
   monthlyTotal: number;
+  /** The same for recurring income. */
+  incomeMonthlyTotal: number;
 }

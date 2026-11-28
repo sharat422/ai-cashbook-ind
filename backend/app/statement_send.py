@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime, time, timedelta, timezone
+from typing import Callable
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -76,10 +77,12 @@ def preview(db: Session, business: Business, customers: list[Customer], now: dat
 
 
 def bulk(db: Session, business: Business, user: User | None, customers: list[Customer], *,
-         start: str | None = None, now: datetime | None = None) -> dict:
+         start: str | None = None, now: datetime | None = None,
+         outcome: "Callable[[Customer, str], None] | None" = None) -> dict:
     """Send every opted-in retailer in `customers` their statement, with the caps
     above. Refused as a whole (422/409) outside the window or without an
-    approved template; otherwise each retailer's outcome is logged."""
+    approved template; otherwise each retailer's outcome is logged, and given to
+    `outcome` (customer, "sent" or the count it went to) when there is one."""
     now = now or ist_now()
     if not in_window(now):
         raise HTTPException(422, "Statements go out between 9 a.m. and 8 p.m. IST. Try again then.")
@@ -97,6 +100,8 @@ def bulk(db: Session, business: Business, user: User | None, customers: list[Cus
             svc.log(db, business.id, c.id, "blocked", "system", channel="whatsapp_server",
                     note=f"Bulk send {batch}: {why}", user=user)
             out[key] += 1
+            if outcome:
+                outcome(c, key)
         if svc.consent(db, business.id, c.id)["status"] != "opted_in":
             refuse("no WhatsApp opt-in from this retailer", "notOptedIn")
         elif messaged_today(db, business.id, c.id, now):
@@ -107,6 +112,8 @@ def bulk(db: Session, business: Business, user: User | None, customers: list[Cus
             try:
                 send_template(db, business, c, user, start, note=f"Bulk send {batch}: ")
                 out["sent"] += 1
+                if outcome:
+                    outcome(c, "sent")
             except (WhatsAppSendError, WhatsAppNotConfigured) as exc:
                 code = getattr(exc, "code", None)
                 last = f"WhatsApp refused{f' ({code})' if code else ''}: {getattr(exc, 'reason', str(exc))}"

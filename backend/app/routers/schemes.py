@@ -11,15 +11,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import billing, stock
+from .. import scheme_claims as claims
 from .. import schemes as rules_mod
 from ..database import get_db
+from ..errors import AppError
+from ..gst_reports import XLSX
 from ..deps import get_current_membership, require
-from ..models import Bill, BillLine, BillSeries, Business, Customer, Item, Scheme, SchemeApplication, SchemeItem, User, gen_id
+from ..models import (Bill, BillLine, BillSeries, Business, Customer, Item, Scheme, SchemeApplication, SchemeClaim, SchemeItem,
+                      User, gen_id, now_iso)
 from ..calc import today_iso
 from ..gst import financial_year
 from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_EDIT, REPORTS_VIEW, SETTINGS_MANAGE, role_can
 from ..security import get_current_user
-from ..validation import validate_date, validate_text
+from ..validation import validate_date, validate_notes, validate_text
 
 router = APIRouter(tags=["schemes"])
 
@@ -428,6 +432,12 @@ def scheme_report(
 ) -> dict:
     """Applied schemes by scheme and SKU for the period, with totals."""
     start, end = _period(from_, to)
+    return report_rows(db, business, start, end, scheme_id, item_id)
+
+
+def report_rows(db: Session, business: Business, start: str, end: str,
+                scheme_id: str | None = None, item_id: str | None = None) -> dict:
+    """The Scheme Report's figures: what claims are made from, so the two always agree."""
     # Applied rows, less the reversals of returned bills: the report nets them out.
     q = select(SchemeApplication).where(
         SchemeApplication.business_id == business.id, SchemeApplication.status.in_(("applied", "reversed")),
@@ -459,3 +469,97 @@ def scheme_report(
             "totalDiscount": f"{sum((g['discount'] for g in rows), zero_m):.2f}",
             "totalValue": f"{sum((g['value'] for g in rows), zero_m):.2f}",
             "totalFreeQty": _q(sum((g["freeQty"] for g in rows), zero_q))}
+
+
+# --- Scheme claims: what a scheme gave away in a period, claimed from the supplier --
+
+class ClaimBody(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    scheme_id: str = Field(alias="schemeId")
+    from_: str = Field(alias="from")
+    to: str
+
+
+class ClaimEdit(BaseModel):
+    status: str | None = None
+    note: str | None = None  # "" clears it
+
+
+def _claim(db: Session, business: Business, claim_id: str) -> SchemeClaim:
+    c = db.get(SchemeClaim, claim_id)
+    if c is None or c.business_id != business.id:
+        raise HTTPException(404, "Claim not found.")
+    return c
+
+
+@router.get("/schemes/claims")
+def list_claims(business: Business = Depends(require(REPORTS_VIEW)), db: Session = Depends(get_db)) -> list[dict]:
+    return [claims.claim_dto(c) for c in db.scalars(select(SchemeClaim).where(
+        SchemeClaim.business_id == business.id).order_by(SchemeClaim.created_at.desc()))]
+
+
+@router.post("/schemes/claims")
+def file_claim(body: ClaimBody, business: Business = Depends(require(SETTINGS_MANAGE)),
+               user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Assemble a claim from the scheme log: the report's rows for the scheme and
+    period, copied as they stand. One live claim per scheme and period (a rejected
+    one can be claimed again)."""
+    start, end = _period(body.from_, body.to)
+    report = report_rows(db, business, start, end, body.scheme_id)
+    rows = report["rows"]
+    if not rows or Decimal(report["totalValue"]) <= 0:
+        raise AppError(422, "claim_empty", "Nothing was given away on this scheme in that period, so there's "
+                       "nothing to claim.")
+    name = rows[0]["schemeName"]
+    clash = db.scalars(select(SchemeClaim).where(
+        SchemeClaim.business_id == business.id, SchemeClaim.scheme_id == body.scheme_id,
+        SchemeClaim.status != "rejected", SchemeClaim.period_from <= end, SchemeClaim.period_to >= start)).first()
+    if clash:
+        raise AppError(409, "claim_exists", f"There's already a claim for {name} from {clash.period_from} to "
+                       f"{clash.period_to}.", scheme=name, start=clash.period_from, end=clash.period_to)
+    bills = len({a.bill_id for a in db.scalars(select(SchemeApplication).where(
+        SchemeApplication.business_id == business.id, SchemeApplication.scheme_id == body.scheme_id,
+        SchemeApplication.status == "applied", SchemeApplication.date >= start, SchemeApplication.date <= end))}
+        - set(db.scalars(select(Bill.id).where(Bill.business_id == business.id, Bill.status == "cancelled"))))
+    lines = [{k: r[k] for k in ("itemId", "itemName", "bills", "quantity", "freeQty", "discount", "value")} for r in rows]
+    c = SchemeClaim(business_id=business.id, scheme_id=body.scheme_id, scheme_name=name,
+                    scheme_type=rows[0]["schemeType"], period_from=start, period_to=end, bills=bills,
+                    total_qty=sum((Decimal(r["quantity"]) for r in rows), Decimal("0")),
+                    total_free_qty=Decimal(report["totalFreeQty"]), total_discount=Decimal(report["totalDiscount"]),
+                    total_value=Decimal(report["totalValue"]), lines=json.dumps(lines), created_by=user.id)
+    db.add(c)
+    db.commit()
+    return claims.claim_dto(c)
+
+
+@router.patch("/schemes/claims/{claim_id}")
+def edit_claim(claim_id: str, body: ClaimEdit, business: Business = Depends(require(SETTINGS_MANAGE)),
+               db: Session = Depends(get_db)) -> dict:
+    """The claim's status as the supplier answers, and their answer in a note.
+    The figures never change: a new claim is made for a different period."""
+    c = _claim(db, business, claim_id)
+    if body.status is not None:
+        if body.status not in claims.STATUSES:
+            raise HTTPException(422, "Status must be draft, filed, approved, rejected or paid.")
+        if body.status != "draft" and c.filed_at is None:
+            c.filed_at = now_iso()
+        c.status = body.status
+    if body.note is not None:
+        c.note = validate_notes(body.note, 1000)
+    c.updated_at = now_iso()
+    db.commit()
+    return claims.claim_dto(c)
+
+
+@router.get("/schemes/claims/{claim_id}.pdf")
+def claim_pdf(claim_id: str, business: Business = Depends(require(REPORTS_VIEW)), db: Session = Depends(get_db)):
+    c = _claim(db, business, claim_id)
+    return Response(claims.render_pdf(business, c), media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="Claim_{c.id[:8]}.pdf"'})
+
+
+@router.get("/schemes/claims/{claim_id}.xlsx")
+def claim_xlsx(claim_id: str, business: Business = Depends(require(REPORTS_VIEW)), db: Session = Depends(get_db)):
+    c = _claim(db, business, claim_id)
+    return Response(claims.render_xlsx(business, c), media_type=XLSX,
+                    headers={"Content-Disposition": f'attachment; filename="Claim_{c.id[:8]}.xlsx"'})

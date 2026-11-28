@@ -168,6 +168,12 @@ class RecurringExpense(Base):
     last_posted_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # 'expense' posts an Expense, 'income' an Income (recurring income uses the same template).
+    kind: Mapped[str] = mapped_column(String(10), default="expense")
+    # Posted by the scheduled job on its due date (cron/recurring), not only by Mark paid.
+    # Templates from before it existed stay by hand until the owner turns it on.
+    auto_post: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_auto_posted_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
 
@@ -790,6 +796,22 @@ class StockMove(Base):
     )
 
 
+class Van(Base):
+    """A van's name (and registration) on one team member's van stock. Stock stays
+    keyed by that person's user id (StockMove/StockLevel van_user_id): the van is a
+    label for it, so a person has at most one van and a van one person."""
+
+    __tablename__ = "vans"
+    __table_args__ = (UniqueConstraint("business_id", "user_id", name="uq_van_user"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(40))
+    registration: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+
+
 class StockLevel(Base):
     """Current stock of one item at one place. Changed only by a single
     conditional UPDATE (app/stock.py), so two sales at the same moment can't
@@ -972,6 +994,69 @@ class SchemeApplication(Base):
     free_qty: Mapped[Decimal] = mapped_column(Numeric(12, 3))
     discount: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # off the bill
     value: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # discount + free goods at rate
+
+
+class ReminderRule(Base):
+    """The owner's rules for payment reminders (app/reminders.py): who gets chased
+    and when, and whether the automatic ones are sent. One per business."""
+
+    __tablename__ = "reminder_rules"
+    __table_args__ = (UniqueConstraint("business_id", name="uq_reminder_rules_business"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)  # send the automatic ones
+    before_promise_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # None: off
+    overdue_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # past the 30-day mark; None: off
+    repeat_days: Mapped[int] = mapped_column(Integer, default=7)
+    beat_id: Mapped[str | None] = mapped_column(String(40), nullable=True)  # None: every retailer
+    updated_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    updated_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+
+class ReminderEvent(Base):
+    """The shared reminder history: every reminder to a retailer, sent by the
+    scheduled job (sent_by None) or by hand from any phone."""
+
+    __tablename__ = "reminder_events"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
+    customer_id: Mapped[str] = mapped_column(ForeignKey("customers.id", ondelete="CASCADE"), index=True)
+    channel: Mapped[str] = mapped_column(String(20))  # whatsapp_server | whatsapp | sms
+    reason: Mapped[str] = mapped_column(String(10))  # promise | overdue | manual
+    status: Mapped[str] = mapped_column(String(10))  # sent | failed
+    message: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sent_by: Mapped[str | None] = mapped_column(String(40), nullable=True)  # None: automatic
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso, index=True)
+
+
+class SchemeClaim(Base):
+    """A claim to the supplier for what one scheme gave away in a period. The
+    figures are the Scheme Report's, copied when it's made (scheme_claims.py)."""
+
+    __tablename__ = "scheme_claims"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=gen_id)
+    business_id: Mapped[str] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
+    scheme_id: Mapped[str] = mapped_column(String(40), index=True)
+    scheme_name: Mapped[str] = mapped_column(String(120))
+    scheme_type: Mapped[str] = mapped_column(String(20))
+    period_from: Mapped[str] = mapped_column(String(10))
+    period_to: Mapped[str] = mapped_column(String(10))
+    status: Mapped[str] = mapped_column(String(10), default="draft")  # scheme_claims.STATUSES
+    bills: Mapped[int] = mapped_column(Integer, default=0)
+    total_qty: Mapped[Decimal] = mapped_column(Numeric(12, 3))
+    total_free_qty: Mapped[Decimal] = mapped_column(Numeric(12, 3))
+    total_discount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    total_value: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    lines: Mapped[str] = mapped_column(Text)  # JSON: the report's rows for the scheme, by SKU
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)  # the supplier's answer
+    created_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
+    filed_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    updated_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 class StatementLink(Base):

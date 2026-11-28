@@ -166,6 +166,30 @@ export interface SchemeReport {
   totalFreeQty: Qty;
 }
 
+export const CLAIM_STATUSES = ['draft', 'filed', 'approved', 'rejected', 'paid'] as const;
+export type ClaimStatus = (typeof CLAIM_STATUSES)[number];
+
+/** A claim to the supplier: one scheme, one period, the Scheme Report's figures copied when it was made. */
+export interface SchemeClaim {
+  id: string;
+  schemeId: string;
+  schemeName: string;
+  schemeType: SchemeType;
+  from: string;
+  to: string;
+  status: ClaimStatus;
+  bills: number;
+  quantity: Qty;
+  freeQty: Qty;
+  discount: Money;
+  value: Money;
+  lines: {itemId: string; itemName: string; bills: number; quantity: Qty; freeQty: Qty; discount: Money; value: Money}[];
+  /** The supplier's answer. */
+  note: string | null;
+  createdAt: string;
+  filedAt: string | null;
+}
+
 const qs = (params: Record<string, string | undefined>) =>
   Object.entries(params)
     .filter(([, v]) => v)
@@ -197,4 +221,10 @@ export const schemesRemote = {
     apiRequest<SchemeApplication[]>(`/schemes/log?${qs({from, to, customerId})}`, {method: 'GET'}),
   report: (from: string, to: string, schemeId?: string, itemId?: string) =>
     apiRequest<SchemeReport>(`/schemes/report?${qs({from, to, schemeId, itemId})}`, {method: 'GET'}),
+  claims: () => apiRequest<SchemeClaim[]>('/schemes/claims', {method: 'GET'}),
+  /** Owner: a claim for one scheme and period, from the scheme log (a draft until filed). */
+  fileClaim: (schemeId: string, from: string, to: string) =>
+    apiRequest<SchemeClaim>('/schemes/claims', {method: 'POST', body: {schemeId, from, to}}),
+  updateClaim: (id: string, body: {status?: ClaimStatus; note?: string}) =>
+    apiRequest<SchemeClaim>(`/schemes/claims/${encodeURIComponent(id)}`, {method: 'PATCH', body}),
 };

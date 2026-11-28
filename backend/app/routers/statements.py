@@ -15,7 +15,7 @@ from .. import doc_i18n, link_limits
 from .. import statement_send as sending
 from .. import statements as svc
 from ..database import get_db
-from ..deps import require
+from ..deps import check_cron_secret, require
 from ..models import Beat, Business, Customer, StatementEvent, StatementLink, StatementSchedule, User
 from ..calc import today_iso
 from ..config import settings
@@ -363,9 +363,7 @@ def set_schedule(
 def run_statement_schedules(request: Request, db: Session = Depends(get_db)) -> dict:
     """Called hourly by .github/workflows/statement-schedules.yml with the cron
     secret. Runs the monthly sends that are due; safe to call any time."""
-    secret = settings.cron_secret
-    if not secret or not hmac.compare_digest(request.headers.get("X-Cron-Secret", ""), secret):
-        raise HTTPException(403, "Wrong cron secret.")
+    check_cron_secret(request)
     return {"ran": sending.run_schedules(db)}
 
 

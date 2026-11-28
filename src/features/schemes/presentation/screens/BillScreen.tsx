@@ -1,4 +1,3 @@
-import {personLabel} from '@utils/personLabel';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import React, {useState} from 'react';
 import {Alert, Pressable, ScrollView, View} from 'react-native';
@@ -19,6 +18,7 @@ import {LEDGER_KEY} from '@features/customers/presentation/hooks/useCustomerLedg
 import {queueStock} from '@features/stock/data/stockQueue';
 import {formatQty, isQty} from '@features/stock/domain/qty';
 import {useStockLevels, useVanStock} from '@features/stock/presentation/hooks';
+import {vanLabel} from '@features/stock/presentation/vanLabel';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {useDebouncedValue} from '@/shared/hooks/useDebouncedValue';
@@ -135,7 +135,7 @@ export function BillScreen({navigation, route}: AppScreenProps<'Bill'>): React.J
             <FilterChip label={t('stock.myVan')} selected onPress={() => undefined} />
           )}
           {vans.map(v => (
-            <FilterChip key={v.userId} label={`🚚 ${personLabel(v.name, v.mobile)}`} selected={where === v.userId}
+            <FilterChip key={v.userId} label={vanLabel(t, v)} selected={where === v.userId}
               onPress={() => setWhere(v.userId)} />
           ))}
         </View>

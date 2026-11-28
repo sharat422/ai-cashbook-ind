@@ -5,6 +5,10 @@ import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import type {Beat, BeatRetailer, VisitOutcome} from '@features/beats/data/beats.remote';
 import {makeVisitClientId, useVisitQueue} from '@features/beats/data/visitQueue';
 import {PromisesDueList} from '@features/beats/presentation/components/PromisesDue';
+import type {DueReminder} from '@features/reminders/data/reminders.remote';
+import {DueRemindersCard} from '@features/reminders/presentation/components/DueRemindersCard';
+import {SendReminderSheet} from '@features/reminders/presentation/components/SendReminderSheet';
+import {useAuthStore} from '@store/auth.store';
 import {
   VisitOutcomeSheet,
   reasonLabel,
@@ -59,6 +63,8 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
   // amount: a promise's still to be paid, to start the payment with.
   const [paying, setPaying] = useState<{beatId: string; retailer: BeatRetailer; amount?: number} | null>(null);
   const today = todayIST();
+  const [reminding, setReminding] = useState<DueReminder | null>(null);
+  const businessName = useAuthStore(s => s.business?.businessName);
 
   const onCollect = (input: ReceivePaymentInput) => {
     if (!paying) return;
@@ -138,6 +144,7 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
                 setPaying({beatId: beat.id, retailer, amount: row.remaining ?? undefined});
               }}
             />
+            <DueRemindersCard beatId={beat.id} onPress={setReminding} />
             {beat.retailers.map((r, i) => {
               const pending = queued.find(
                 v => v.beatId === beat.id && v.customerId === r.customerId,
@@ -242,6 +249,16 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
         dayBeatId={paying?.beatId}
         initialAmount={paying?.amount}
       />
+      {reminding ? (
+        <SendReminderSheet
+          visible
+          customer={{id: reminding.customerId, fullName: reminding.fullName, mobile: reminding.mobile,
+            outstandingAmount: reminding.outstandingAmount, isOverdue: reminding.reason === 'overdue', createdAt: ''}}
+          outstanding={reminding.outstandingAmount}
+          businessName={businessName}
+          onClose={() => setReminding(null)}
+        />
+      ) : null}
     </Screen>
   );
 }

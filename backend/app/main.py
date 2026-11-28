@@ -21,6 +21,7 @@ from .monitoring import (
 )
 from .routers import (
     account,
+    reminders,
     sync_queue,
     ai_routes,
     voice_live,
@@ -172,6 +173,7 @@ for module in (
     stock,
     imports,
     sync_queue,
+    reminders,
 ):
     app.include_router(module.router, prefix=API_PREFIX)
 # Retailer statement links (/s/<token>): opened in a browser without the app.

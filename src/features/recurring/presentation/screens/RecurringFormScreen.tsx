@@ -4,18 +4,21 @@ import {Alert, Pressable, View} from 'react-native';
 import {AmountInput, DateField, FormField, TextField} from '@components/form';
 import {Button, Screen, SegmentedControl, Select, Text} from '@components/ui';
 import {EXPENSE_CATEGORIES} from '@features/expense/domain/entities';
+import {INCOME_CATEGORIES} from '@features/income/domain/entities';
 import {
   RECURRING_FREQUENCIES,
   frequencyLabel,
   type RecurringDraft,
   type RecurringExpense,
   type RecurringFrequency,
+  type RecurringKind,
 } from '@features/recurring/domain/entities';
 import {
   useRecurringExpenses,
   useRecurringMutations,
 } from '@features/recurring/presentation/hooks';
 import {useT} from '@/i18n';
+import {categoryLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
 import {todayIST} from '@utils/date';
@@ -44,6 +47,9 @@ export function RecurringFormScreen({
     {label: t('recurring.paused'), value: false},
   ];
 
+  const [kind, setKind] = useState<RecurringKind>(editing?.kind ?? 'expense');
+  const [autoPost, setAutoPost] = useState(editing?.autoPost ?? true);
+  const categories: readonly string[] = kind === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const [name, setName] = useState(editing?.name ?? '');
   const [amount, setAmount] = useState<number>(editing?.amount ?? NaN);
   const [category, setCategory] = useState<string | null>(
@@ -103,12 +109,14 @@ export function RecurringFormScreen({
       name: name.trim(),
       amount,
       category,
-      vendor: vendor.trim(),
+      vendor: kind === 'income' ? '' : vendor.trim(),
       frequency,
       interval: Math.max(1, Math.round(interval)),
       nextDueDate,
       notes: notes.trim() || undefined,
       active,
+      kind,
+      autoPost,
     };
 
     const onSuccess = () => navigation.goBack();
@@ -151,6 +159,19 @@ export function RecurringFormScreen({
         </Text>
 
         <View className="mt-6" style={{gap: 18}}>
+          {editing ? null : (
+            <FormField label={t('recurring.kind')}>
+              <SegmentedControl
+                value={kind}
+                options={[{label: t('recurring.kindExpense'), value: 'expense' as RecurringKind},
+                  {label: t('recurring.kindIncome'), value: 'income' as RecurringKind}]}
+                onChange={k => {
+                  setKind(k);
+                  setCategory((k === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[0]);
+                }}
+              />
+            </FormField>
+          )}
           <FormField
             label={t('recurring.name')}
             required
@@ -185,7 +206,8 @@ export function RecurringFormScreen({
             error={errorField === 'category' ? error : null}>
             <Select
               placeholder={t('form.selectCategory')}
-              options={EXPENSE_CATEGORIES as unknown as string[]}
+              options={categories as string[]}
+              labelOf={c => categoryLabel(t, c)}
               value={category}
               onSelect={v => {
                 setCategory(v);
@@ -194,14 +216,16 @@ export function RecurringFormScreen({
             />
           </FormField>
 
-          <FormField label={t('recurring.paidTo')} hint={t('common.optional')}>
-            <TextField
-              placeholder={t('recurring.paidToPlaceholder')}
-              value={vendor}
-              onChangeText={setVendor}
-              maxLength={120}
-            />
-          </FormField>
+          {kind === 'expense' ? (
+            <FormField label={t('recurring.paidTo')} hint={t('common.optional')}>
+              <TextField
+                placeholder={t('recurring.paidToPlaceholder')}
+                value={vendor}
+                onChangeText={setVendor}
+                maxLength={120}
+              />
+            </FormField>
+          ) : null}
 
           <FormField label={t('recurring.frequency')}>
             <SegmentedControl
@@ -220,6 +244,14 @@ export function RecurringFormScreen({
               value={nextDueDate}
               onChange={setNextDueDate}
               maximumDate={FAR_FUTURE}
+            />
+          </FormField>
+
+          <FormField label={t('recurring.autoPost')} hint={t(autoPost ? 'recurring.autoPostOnHint' : 'recurring.autoPostOffHint')}>
+            <SegmentedControl
+              value={autoPost}
+              options={[{label: t('recurring.autoOn'), value: true}, {label: t('recurring.autoOff'), value: false}]}
+              onChange={setAutoPost}
             />
           </FormField>
 
@@ -244,7 +276,7 @@ export function RecurringFormScreen({
         </View>
 
         <Button
-          title={editing ? t('recurring.saveChanges') : t('recurring.addExpense')}
+          title={editing ? t('recurring.saveChanges') : kind === 'income' ? t('recurring.addIncome') : t('recurring.addExpense')}
           className="mt-8"
           loading={saving}
           onPress={onSave}
