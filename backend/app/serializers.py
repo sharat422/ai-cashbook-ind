@@ -163,4 +163,7 @@ def business_dto(m: Business) -> dict:
         "gstRegistered": m.gst_registered,
         "gstin": m.gstin,
         "address": m.address,
+        # Every member's phone builds payment QRs from these (staff included).
+        "upiId": m.upi_id,
+        "upiPayeeName": m.upi_payee_name,
     }

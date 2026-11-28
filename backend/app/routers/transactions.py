@@ -49,6 +49,7 @@ def list_transactions(
                 "id": e.id, "type": "expense", "amount": e.amount,
                 "category": e.category, "date": e.date, "vendor": e.vendor,
                 "notes": e.notes, "attachment_url": e.attachment_url, "created_at": e.created_at,
+                "purchase_id": e.purchase_id,  # a stock purchase's: cancelled by reversing it in Stock
             })
 
     if search:

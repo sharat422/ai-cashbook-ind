@@ -18,7 +18,7 @@ from ..models import Business, BusinessMember, User, now_iso
 from ..rbac import SETTINGS_MANAGE
 from ..security import create_access_token, get_current_user
 from ..serializers import business_dto
-from ..validation import validate_mobile
+from ..validation import validate_mobile, validate_upi_id
 
 log = logging.getLogger("cashbook.auth")
 router = APIRouter(tags=["auth"])
@@ -187,6 +187,8 @@ class UpdateBusinessInput(BaseModel):
     gstRegistered: bool | None = None
     gstin: str | None = Field(default=None, max_length=20)  # "" clears it
     address: str | None = Field(default=None, max_length=300)  # printed on GST invoices; "" clears it
+    upiId: str | None = Field(default=None, max_length=60)  # name@bank for payment QRs; "" clears it
+    upiPayeeName: str | None = Field(default=None, max_length=100)  # "" = the business name
 
 
 @router.patch("/businesses/me")
@@ -209,6 +211,10 @@ def update_business(
         business.gst_registered = body.gstRegistered
     if body.address is not None:
         business.address = body.address or None
+    if body.upiId is not None:
+        business.upi_id = validate_upi_id(body.upiId)
+    if body.upiPayeeName is not None:
+        business.upi_payee_name = body.upiPayeeName or None
     if body.gstin is not None or body.state is not None:
         # Re-check on a state change too: the GSTIN's state must still match.
         business.gstin = gst.seller_gstin(

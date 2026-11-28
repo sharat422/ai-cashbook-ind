@@ -11,10 +11,6 @@ import {
   DecisionHistory,
 } from '@features/categorization/presentation/components';
 import {useCategorize} from '@features/categorization/presentation/hooks';
-import {
-  EXPENSE_CATEGORIES,
-  type ExpenseCategory,
-} from '@features/expense/domain/entities';
 import {useT} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {colors} from '@theme/colors';
@@ -22,12 +18,6 @@ import {colors} from '@theme/colors';
 const SAMPLE =
   'INDIAN OIL CORP\nRetail outlet, MG Road\nPetrol 28.4 L @ ₹104.50\n' +
   'Total ₹2,968.00  GST ₹452.74\nInvoice INV-77310  10/06/2026';
-
-/** Map this service's categories onto the expense form's category set. */
-function toExpenseCategory(category: AiCategory): ExpenseCategory {
-  const match = EXPENSE_CATEGORIES.find(c => c === category);
-  return (match ?? 'Miscellaneous') as ExpenseCategory;
-}
 
 /**
  * AI Expense Categorization: paste receipt text → get {category, confidence}
@@ -153,9 +143,7 @@ export function CategorizationScreen({
               onPress={() =>
                 navigation.navigate('AddExpense', {
                   initialValues: {
-                    category: toExpenseCategory(
-                      correction ?? decision.result.category,
-                    ),
+                    category: correction ?? decision.result.category,
                   },
                 })
               }

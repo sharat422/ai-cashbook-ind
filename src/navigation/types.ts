@@ -83,9 +83,11 @@ export type AppStackParamList = {
   Feedback: {kind?: 'bug' | 'feedback'} | undefined;
   AITransaction: undefined;
   QuickAdd: {type?: 'income' | 'expense'} | undefined;
-  AddIncome: undefined;
+  /** edit: fix a synced income (owner); otherwise a new one. */
+  AddIncome: {edit: EntryDetail & {id: string}} | undefined;
+  /** edit: fix a synced expense (owner); otherwise a new one, maybe prefilled. */
   AddExpense:
-    | {initialValues?: ExpensePrefill; initialAttachment?: Attachment | null}
+    | {initialValues?: ExpensePrefill; initialAttachment?: Attachment | null; edit?: EntryDetail & {id: string}}
     | undefined;
   TransactionHistory: undefined;
   TransactionDetail: {entry: EntryDetail};

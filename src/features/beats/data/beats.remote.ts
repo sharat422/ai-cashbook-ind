@@ -28,7 +28,27 @@ export interface Visit {
   outcome: VisitOutcome;
   reason: string | null;
   promiseDate: string | null;
+  promiseAmount: number | null;
   visitedAt: string;
+}
+
+/** A promise to pay still open: its date, what was promised (null: no amount said)
+ *  and what's left of it after payments since. */
+export interface OpenPromise {
+  date: string;
+  amount: number | null;
+  remaining: number | null;
+}
+
+/** One promise due today or overdue, on a beat this person sees (the home screen's list). */
+export interface PromiseDue extends OpenPromise {
+  customerId: string;
+  fullName: string;
+  businessName: string | null;
+  outstandingAmount: number;
+  beatId: string;
+  beatName: string;
+  overdue: boolean;
 }
 
 export interface BeatRetailer {
@@ -40,6 +60,8 @@ export interface BeatRetailer {
   overdueAmount: number;
   creditLimit: number | null;
   lastPromiseDate: string | null;
+  /** Still to be paid (today's or overdue ones are "Promises due"). */
+  promise?: OpenPromise | null; // older servers don't send it
   todayVisit: Visit | null;
 }
 
@@ -97,6 +119,8 @@ export interface VisitInput {
   outcome: VisitOutcome;
   reason?: string;
   promiseDate?: string;
+  /** What the retailer promised to pay by promiseDate. */
+  promiseAmount?: number;
   /** When it happened (ISO). Sent so an offline visit keeps its real time. */
   visitedAt: string;
 }
@@ -109,6 +133,7 @@ interface VisitDto {
   outcome: VisitOutcome;
   reason: string | null;
   promise_date: string | null;
+  promise_amount?: number | null;
   visited_at: string;
 }
 
@@ -132,6 +157,7 @@ interface BeatDto {
     overdue_amount: number;
     credit_limit: number | null;
     last_promise_date: string | null;
+    promise?: OpenPromise | null;
     today_visit: VisitDto | null;
   }>;
 }
@@ -144,6 +170,7 @@ const toVisit = (d: VisitDto): Visit => ({
   outcome: d.outcome,
   reason: d.reason,
   promiseDate: d.promise_date,
+  promiseAmount: d.promise_amount ?? null,
   visitedAt: d.visited_at,
 });
 
@@ -165,6 +192,7 @@ const toBeat = (d: BeatDto): Beat => ({
     overdueAmount: Number(r.overdue_amount ?? 0),
     creditLimit: r.credit_limit,
     lastPromiseDate: r.last_promise_date,
+    promise: r.promise ?? null,
     todayVisit: r.today_visit ? toVisit(r.today_visit) : null,
   })),
 });
@@ -221,6 +249,15 @@ export const beatsRemote = {
         body: {customerIds, baseVersion},
       }),
     );
+  },
+  /** Open promises due today or overdue, on the beats this person sees. */
+  async promisesDue(): Promise<PromiseDue[]> {
+    const rows = await apiRequest<Array<{customer_id: string; full_name: string; business_name: string | null;
+      outstanding_amount: number; beat_id: string; beat_name: string; promise_date: string; amount: number | null;
+      remaining: number | null; overdue: boolean}>>('/promises/due', {method: 'GET'});
+    return rows.map(r => ({customerId: r.customer_id, fullName: r.full_name, businessName: r.business_name,
+      outstandingAmount: Number(r.outstanding_amount ?? 0), beatId: r.beat_id, beatName: r.beat_name,
+      date: r.promise_date, amount: r.amount, remaining: r.remaining, overdue: r.overdue}));
   },
   async recordVisit(input: VisitInput): Promise<Visit> {
     return toVisit(await apiRequest<VisitDto>('/visits', {method: 'POST', body: input}));

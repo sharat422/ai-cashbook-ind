@@ -17,6 +17,7 @@ import {
 } from '@features/settings/store/voiceSettings.store';
 import {TextField} from '@components/form';
 import {GRIEVANCE} from '@config/constants';
+import {accountRemote} from '@features/account/data/account.remote';
 import {isValidUpiId} from '@features/collections/domain/upi';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {
@@ -90,18 +91,31 @@ export function SettingsScreen({
   const logout = useAuthStore(s => s.logout);
   const businessName = useAuthStore(s => s.business?.businessName);
 
-  const savedUpi = useCollectionSettingsStore(s => s.upiId);
-  const savedPayee = useCollectionSettingsStore(s => s.payeeName);
-  const setUpi = useCollectionSettingsStore(s => s.setUpi);
-  const [upiId, setUpiId] = useState(savedUpi);
-  const [payee, setPayee] = useState(savedPayee);
+  // The UPI ID is the business's, for every member's phone. A phone that had its own
+  // (before it moved to the business) offers it here, so the owner saves it once.
+  const business = useAuthStore(s => s.business);
+  const phoneUpi = useCollectionSettingsStore(s => s.upiId);
+  const phonePayee = useCollectionSettingsStore(s => s.payeeName);
+  const [upiId, setUpiId] = useState(business?.upiId || phoneUpi);
+  const [payee, setPayee] = useState(business?.upiPayeeName || phonePayee);
+  const [savingUpi, setSavingUpi] = useState(false);
 
-  const onSaveUpi = () => {
+  const onSaveUpi = async () => {
     if (upiId.trim() && !isValidUpiId(upiId)) {
       return Alert.alert(t('settings.upiInvalid'), t('settings.upiInvalidMsg'));
     }
-    setUpi(upiId, payee.trim() || businessName || '');
-    Alert.alert(t('settings.upiSaved'), t('settings.upiSavedMsg'));
+    setSavingUpi(true);
+    try {
+      const updated = await accountRemote.updateBusiness({upiId: upiId.trim(), upiPayeeName: payee.trim()});
+      const now = useAuthStore.getState().business;
+      useAuthStore.getState().setBusiness({...now, ...updated, role: now?.role ?? updated.role});
+      useCollectionSettingsStore.getState().setUpi('', ''); // the business has it now: no copy on this phone
+      Alert.alert(t('settings.upiSaved'), t('settings.upiSavedMsg'));
+    } catch (e) {
+      Alert.alert(t('form.couldNotSave'), e instanceof Error ? e.message : t('common.tryAgainMsg'));
+    } finally {
+      setSavingUpi(false);
+    }
   };
 
   const [mode, setMode] = useState<PinMode>('idle');
@@ -393,7 +407,8 @@ export function SettingsScreen({
                   placeholder={businessName ?? t('settings.payeePlaceholder')}
                 />
               </View>
-              <Button title={t('settings.upiSave')} variant="secondary" onPress={onSaveUpi} />
+              <Button testID="upi-save" title={t('settings.upiSave')} variant="secondary" loading={savingUpi}
+                disabled={savingUpi} onPress={() => void onSaveUpi()} />
             </View>
           ) : null}
         </Group>

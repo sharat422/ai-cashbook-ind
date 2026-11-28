@@ -45,6 +45,8 @@ export interface ReceivePaymentSheetProps {
   customerId?: string;
   /** Collected on this beat (a beat day-list): no beat picker; the bills are read through it (staff). */
   dayBeatId?: string;
+  /** The amount to start with (a promise to pay's); empty otherwise. */
+  initialAmount?: number;
 }
 
 const METHODS = PAYMENT_METHODS;
@@ -73,6 +75,7 @@ export function ReceivePaymentSheet({
   onSubmit,
   customerId,
   dayBeatId,
+  initialAmount,
 }: ReceivePaymentSheetProps): React.JSX.Element {
   const [amount, setAmount] = useState<number>(NaN);
   const [method, setMethod] = useState<PaymentMethod>('upi');
@@ -92,7 +95,7 @@ export function ReceivePaymentSheet({
 
   useEffect(() => {
     if (visible) {
-      setAmount(NaN);
+      setAmount(initialAmount ?? NaN);
       setMethod('upi');
       setDate(todayIST());
       setReference('');

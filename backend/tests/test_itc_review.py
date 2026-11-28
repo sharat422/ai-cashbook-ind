@@ -69,6 +69,17 @@ def test_purchases_with_gst_are_on_the_review_sheet_and_others_are_not(make_user
     assert _move(client, owner.headers, item, "purchase", 1, cid="x2", supplierGstin="29ABC").status_code == 422
 
 
+def test_a_reversed_purchase_is_not_on_the_review_its_itc_no_longer_exists(make_user, client):
+    owner = _gst_owner(make_user, client)
+    item = _purchases(client, owner)
+    ka = next(m for m in client.get(f"{API}/stock/moves", headers=owner.headers, params={"itemId": item}).json()
+              if m.get("billRef") == "KA/7")
+    assert client.post(f"{API}/stock/moves/{ka['id']}/reverse", headers=owner.headers).status_code == 200
+    assert [r[3] for r in _sheet(client, owner.headers)] == ["MH/9"]
+    assert [r[3] for r in _sheet(client, owner.headers, "post",
+                                 {"gstr2b": ("2B.xlsx", _2b_xlsx((SUPPLIER_KA, "KA/7")))})] == ["MH/9"]
+
+
 def test_a_2b_file_marks_matches_and_keeps_lines_not_in_it(make_user, client):
     owner = _gst_owner(make_user, client)
     _purchases(client, owner)

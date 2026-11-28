@@ -45,7 +45,7 @@ const KEYWORDS: Record<Exclude<AiCategory, 'Miscellaneous'>, string[]> = {
     'hpcl',
     'hp petrol',
   ],
-  Inventory: [
+  Purchases: [
     'inventory',
     'stock',
     'wholesale',

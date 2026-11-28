@@ -58,9 +58,9 @@ test.each([
   ['staff', 'north'],
 ] as const)('%s saves today\'s count (beat: %s) with the notes counted', async (role, beat) => {
   const {r, inputs, save, navigate} = await render(role);
-  // Rows are ₹2000, ₹500, ₹200, ₹100…: 10 × ₹500 and 8 × ₹100 = ₹5,800.
-  await act(async () => inputs[1].props.onChangeText('10'));
-  await act(async () => inputs[3].props.onChangeText('8'));
+  // Rows are ₹500, ₹200, ₹100…: 10 × ₹500 and 8 × ₹100 = ₹5,800.
+  await act(async () => inputs[0].props.onChangeText('10'));
+  await act(async () => inputs[2].props.onChangeText('8'));
   expect(save().props.disabled).toBe(false);
   await act(async () => save().props.onPress());
   expect(mockCashCount).toHaveBeenCalledWith(todayIST(), beat, '5800.00', undefined, '₹500×10, ₹100×8');
@@ -72,12 +72,37 @@ test.each([
   act(() => r.unmount());
 });
 
+test('no ₹2000 row: it is out of circulation', async () => {
+  const {r} = await render('owner');
+  expect(JSON.stringify(r.toJSON())).not.toContain('2000');
+  act(() => r.unmount());
+});
+
+test("the owner can save the count for a beat, for that beat's Daily close", async () => {
+  const {r, inputs, save, navigate} = await render('owner');
+  const chip = (label: string) => r.root.findAll(n => n.props.label === label && n.props.onPress)[0];
+  expect(chip('All beats').props.selected).toBe(true); // the whole business, unless a beat is picked
+  await act(async () => chip('North').props.onPress());
+  await act(async () => inputs[0].props.onChangeText('4'));
+  await act(async () => save().props.onPress());
+  expect(mockCashCount).toHaveBeenCalledWith(todayIST(), 'north', '2000.00', undefined, '₹500×4');
+  (Alert.alert as jest.Mock).mock.calls[0][2][1].onPress();
+  expect(navigate).toHaveBeenCalledWith('DailyClose', {beatId: 'north'});
+  act(() => r.unmount());
+});
+
+test('staff with one beat: no beat chips, it is theirs', async () => {
+  const {r} = await render('staff');
+  expect(r.root.findAll(n => n.props.testID === 'cash-beat')).toHaveLength(0);
+  act(() => r.unmount());
+});
+
 test('a failed save says so and keeps the count', async () => {
   mockCashCount.mockRejectedValueOnce(new Error('Pick your beat to count its cash.'));
   const {r, inputs, save} = await render('staff');
-  await act(async () => inputs[1].props.onChangeText('2'));
+  await act(async () => inputs[0].props.onChangeText('2'));
   await act(async () => save().props.onPress());
   expect(Alert.alert).toHaveBeenCalledWith('Could not save', 'Pick your beat to count its cash.');
-  expect(inputs[1].props.value).toBe('2');
+  expect(inputs[0].props.value).toBe('2');
   act(() => r.unmount());
 });

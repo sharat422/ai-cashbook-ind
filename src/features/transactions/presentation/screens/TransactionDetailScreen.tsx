@@ -1,7 +1,14 @@
-import React from 'react';
-import {Image, Linking, View} from 'react-native';
+import {useQueryClient} from '@tanstack/react-query';
+import React, {useState} from 'react';
+import {Alert, Image, Linking, View} from 'react-native';
 
 import {Button, Screen, Text} from '@components/ui';
+import {usePermissions} from '@features/auth/hooks';
+import {PERMISSIONS} from '@features/auth/rbac';
+import {expenseRemote} from '@features/expense/data/expense.remote';
+import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
+import {incomeRemote} from '@features/income/data/income.remote';
+import {useIncomeStore} from '@features/income/presentation/store/income.store';
 import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
 import {formatDisplayDate} from '@utils/date';
@@ -9,16 +16,49 @@ import {useT} from '@/i18n';
 import {categoryLabel} from '@/i18n/labels';
 
 /**
- * One income or expense, read-only: opened by tapping it in Recent activity or
- * Transaction history. Shows everything that was saved, including the full
- * notes and the attached bill photo (a PDF opens in the phone's viewer).
+ * One income or expense: opened by tapping it in Recent activity or Transaction
+ * history. Shows everything that was saved, including the full notes and the
+ * attached bill photo (a PDF opens in the phone's viewer). The owner can edit or
+ * delete a synced income or expense; the server logs the change. A stock
+ * purchase's expense is cancelled by reversing the purchase in Stock instead.
  */
-export function TransactionDetailScreen({route}: AppScreenProps<'TransactionDetail'>): React.JSX.Element {
+export function TransactionDetailScreen({navigation, route}: AppScreenProps<'TransactionDetail'>): React.JSX.Element {
   const t = useT();
   const e = route.params.entry;
   const income = e.kind === 'income';
   const file = e.attachmentUri ?? e.attachmentUrl;
   const isPdf = !!file && /\.pdf(\?|$)/i.test(file);
+  const {can} = usePermissions();
+  const queryClient = useQueryClient();
+  const [deleting, setDeleting] = useState(false);
+  const id = (e.syncStatus ?? 'synced') === 'synced' && !e.purchase ? e.id : undefined;
+
+  const remove = async (entryId: string) => {
+    setDeleting(true);
+    try {
+      if (income) {
+        await incomeRemote.remove(entryId);
+        useIncomeStore.getState().removeEntry(entryId);
+      } else {
+        await expenseRemote.remove(entryId);
+        useExpenseStore.getState().removeEntry(entryId);
+      }
+      await queryClient.invalidateQueries(); // out of Reports, Dashboard and history at once
+      navigation.goBack();
+    } catch (err) {
+      setDeleting(false);
+      Alert.alert(t('income.couldNotDelete'), err instanceof Error ? err.message : t('common.tryAgainMsg'));
+    }
+  };
+  const confirmDelete = (entryId: string) =>
+    Alert.alert(t(income ? 'income.deleteTitle' : 'expense.deleteTitle'),
+      t(income ? 'income.deleteMsg' : 'expense.deleteMsg', {amount: formatINR(e.amount), date: formatDisplayDate(e.date)}), [
+        {text: t('common.cancel'), style: 'cancel'},
+        {text: t('common.delete'), style: 'destructive', onPress: () => void remove(entryId)},
+      ]);
+  const openEdit = (entryId: string) =>
+    income ? navigation.navigate('AddIncome', {edit: {...e, id: entryId}})
+      : navigation.navigate('AddExpense', {edit: {...e, id: entryId}});
 
   return (
     <Screen>
@@ -55,6 +95,19 @@ export function TransactionDetailScreen({route}: AppScreenProps<'TransactionDeta
             )}
           </View>
         ) : null}
+        {id && (can(PERMISSIONS.ENTRY_EDIT) || can(PERMISSIONS.ENTRY_DELETE)) ? (
+          <View className="flex-row" style={{gap: 12}}>
+            {can(PERMISSIONS.ENTRY_EDIT) ? (
+              <Button testID="tx-edit" title={t('txDetail.edit')} variant="secondary" className="flex-1" fullWidth={false}
+                disabled={deleting} onPress={() => openEdit(id)} />
+            ) : null}
+            {can(PERMISSIONS.ENTRY_DELETE) ? (
+              <Button testID="tx-delete" title={t('common.delete')} variant="secondary" className="flex-1" fullWidth={false}
+                loading={deleting} onPress={() => confirmDelete(id)} />
+            ) : null}
+          </View>
+        ) : null}
+        {e.purchase ? <Text testID="tx-purchase-hint" variant="caption">{t('expense.purchaseHint')}</Text> : null}
       </View>
     </Screen>
   );

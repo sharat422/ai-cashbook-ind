@@ -72,7 +72,9 @@ def report_summary(
         "from": from_,
         "to": to,
         "income_total": income_total,
+        # The split: sales on khata and income entries ("cash sales"); they add up to income_total.
         "credit_sales": sum(e.amount for e in credit),
+        "cash_sales": sum(i.amount for i in incomes),
         "expense_total": expense_total,
         "profit": income_total - expense_total,
         "income_count": len(income_rows),

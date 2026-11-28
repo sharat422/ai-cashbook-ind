@@ -24,13 +24,12 @@ from .errors import AppError
 
 log = logging.getLogger("cashbook.ai")
 
-# Must stay in sync with the app's AI_CATEGORIES / EXPENSE_CATEGORIES.
-AI_CATEGORIES = [
-    "Rent", "Salary", "Food", "Travel", "Fuel",
-    "Inventory", "Utilities", "Marketing", "Miscellaneous",
-]
-RECEIPT_CATEGORIES = [
-    "Rent", "Salary", "Fuel", "Food", "Travel", "Utilities", "Miscellaneous",
+# The one list of expense categories: the categorizer, receipt scan and AI entry all
+# answer from it, and it is the app's EXPENSE_CATEGORIES (the expense form's list;
+# tests/test_expense_categories.py checks they match). A stock purchase's expense
+# is booked as "Purchases" too (stock.PURCHASES).
+EXPENSE_CATEGORIES = [
+    "Rent", "Salary", "Fuel", "Food", "Travel", "Utilities", "Purchases", "Marketing", "Miscellaneous",
 ]
 
 _KEYWORDS = {
@@ -41,7 +40,7 @@ _KEYWORDS = {
     "Salary": ["salary", "wages", "payroll", "stipend"],
     "Utilities": ["electricity", "water", "gas bill", "internet", "broadband", "mobile", "recharge"],
     "Marketing": ["ad", "advertis", "marketing", "facebook", "google ads", "promo"],
-    "Inventory": ["stock", "inventory", "purchase", "raw material", "supplier", "wholesale"],
+    "Purchases": ["stock", "inventory", "purchase", "raw material", "supplier", "wholesale"],
 }
 
 
@@ -49,7 +48,7 @@ def _heuristic_category(text: str) -> tuple[str, float]:
     low = (text or "").lower()
     for category, words in _KEYWORDS.items():
         if any(w in low for w in words):
-            if category in AI_CATEGORIES:
+            if category in EXPENSE_CATEGORIES:
                 return category, 0.55
     return "Miscellaneous", 0.3
 
@@ -68,7 +67,7 @@ def categorize_text(text: str) -> tuple[str, float]:
         client = OpenAI(api_key=settings.openai_api_key)
         prompt = (
             "You classify an Indian SMB business expense into exactly one "
-            f"category from this list: {', '.join(AI_CATEGORIES)}.\n"
+            f"category from this list: {', '.join(EXPENSE_CATEGORIES)}.\n"
             "Respond as JSON: {\"category\": <one of the list>, "
             "\"confidence\": <0..1>}.\n\n"
             f"Expense text: {text}"
@@ -80,7 +79,7 @@ def categorize_text(text: str) -> tuple[str, float]:
         )
         data = json.loads(resp.choices[0].message.content or "{}")
         category = data.get("category", "Miscellaneous")
-        if category not in AI_CATEGORIES:
+        if category not in EXPENSE_CATEGORIES:
             category = "Miscellaneous"
         confidence = float(data.get("confidence", 0.7))
         return category, max(0.0, min(1.0, confidence))
@@ -375,10 +374,6 @@ def parse_transaction(text: str, today: str, language: str | None = None) -> dic
 # what was said, and FLAG anything uncertain rather than guessing — so the app
 # can ask the user to confirm before saving.
 
-# The app's fixed expense categories (must match EXPENSE_CATEGORIES on the client).
-EXPENSE_AI_CATEGORIES = [
-    "Rent", "Salary", "Fuel", "Food", "Travel", "Utilities", "Miscellaneous",
-]
 
 # Map the common "personal expense" vocabulary a model might emit onto our set.
 _EXPENSE_CATEGORY_ALIASES = {
@@ -390,17 +385,19 @@ _EXPENSE_CATEGORY_ALIASES = {
     "water": "Utilities", "internet": "Utilities", "phone": "Utilities",
     "rent": "Rent", "lease": "Rent",
     "salary": "Salary", "wages": "Salary", "payroll": "Salary",
+    "inventory": "Purchases", "stock": "Purchases", "supplies": "Purchases", "wholesale": "Purchases",
+    "marketing": "Marketing", "advertising": "Marketing", "ads": "Marketing",
     "shopping": "Miscellaneous", "health": "Miscellaneous",
     "entertainment": "Miscellaneous", "other": "Miscellaneous",
 }
 
 
 def _to_expense_category(value) -> str | None:
-    """Coerce a model/heuristic category into one of EXPENSE_AI_CATEGORIES."""
+    """Coerce a model/heuristic category into one of EXPENSE_CATEGORIES."""
     if not value:
         return None
     s = str(value).strip()
-    if s in EXPENSE_AI_CATEGORIES:
+    if s in EXPENSE_CATEGORIES:
         return s
     return _EXPENSE_CATEGORY_ALIASES.get(s.lower())
 
@@ -519,7 +516,7 @@ def parse_expense(text: str, today: str, language: str | None = None) -> dict:
             "errors, and extract ONE expense.\n\n"
             "Return ONLY JSON with keys: detected_language (ISO code like 'hi','en'), "
             "amount (number or null), currency (ISO 4217 like 'INR','USD' or null), "
-            f"category (one of: {', '.join(EXPENSE_AI_CATEGORIES)}; or null), "
+            f"category (one of: {', '.join(EXPENSE_CATEGORIES)}; or null), "
             "vendor (merchant/payee name as said, or null), date (YYYY-MM-DD), "
             "note (short cleaned description), confidence ('high'|'medium'|'low'), "
             "needs_confirmation (boolean), ambiguous_fields (array of any of "
@@ -913,7 +910,7 @@ def scan_receipt(image_b64: str, media_type: str) -> dict:
             "report_receipt tool. Each field has a value (or null if absent) and "
             "your confidence in [0,1]. amount and tax_amount are numbers in INR; "
             "date is YYYY-MM-DD; category must be one of: "
-            f"{', '.join(RECEIPT_CATEGORIES)}. "
+            f"{', '.join(EXPENSE_CATEGORIES)}. "
             "receipt_text must transcribe ALL readable receipt details in their original "
             "language and line order: vendor/address/contact, invoice/GSTIN, date/time, "
             "every line item's description, quantity, unit, rate and amount, subtotal, "

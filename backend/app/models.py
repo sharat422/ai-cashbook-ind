@@ -91,6 +91,10 @@ class Business(Base):
     gstin: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     # The seller's address, printed on GST invoices (Rule 46).
     address: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    # Where customers pay: the UPI ID (name@bank) and name in every payment QR and
+    # link, on every member's phone. Set by the owner; None = not set yet.
+    upi_id: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    upi_payee_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), default=now_iso)
 
     user: Mapped[User] = relationship(back_populates="businesses")
@@ -692,6 +696,9 @@ class Visit(Base):
     outcome: Mapped[str] = mapped_column(String(20))  # one of VISIT_OUTCOMES
     reason: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     promise_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # What the retailer promised to pay by promise_date (None: no amount said).
+    # Open until payments saved after the visit add up to it (beats.open_promises).
+    promise_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     visited_at: Mapped[str] = mapped_column(String(40))  # ISO, +05:30 (IST)
     # Offline sync key: a retried upload returns the first row, never a second.
     client_id: Mapped[str] = mapped_column(String(80))

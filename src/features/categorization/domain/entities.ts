@@ -2,21 +2,12 @@
  * Domain entities for the AI Expense Categorization service. Pure types — no
  * framework imports.
  */
+import {EXPENSE_CATEGORIES, type ExpenseCategory} from '@features/expense/domain/entities';
 
-/** The categories this service classifies receipt text into. */
-export const AI_CATEGORIES = [
-  'Rent',
-  'Salary',
-  'Food',
-  'Travel',
-  'Fuel',
-  'Inventory',
-  'Utilities',
-  'Marketing',
-  'Miscellaneous',
-] as const;
+/** The categories this service classifies receipt text into: the expense form's own list. */
+export const AI_CATEGORIES = EXPENSE_CATEGORIES;
 
-export type AiCategory = (typeof AI_CATEGORIES)[number];
+export type AiCategory = ExpenseCategory;
 
 /** Whether a result came from the GPT model or the local fallback rule engine. */
 export type CategorizationSource = 'ai' | 'rule';

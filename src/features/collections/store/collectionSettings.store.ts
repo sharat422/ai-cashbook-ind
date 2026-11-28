@@ -10,7 +10,12 @@ interface CollectionSettingsState {
   setUpi: (upiId: string, payeeName: string) => void;
 }
 
-/** Persisted merchant collection settings (UPI ID for payment requests). */
+/**
+ * A UPI ID kept on this phone from before it moved to the business (Business.upiId,
+ * set once by the owner in Settings). Nothing writes one any more: Request Payment
+ * uses it only when the business has none (with a warning), and saving the
+ * business's UPI ID in Settings clears it.
+ */
 export const useCollectionSettingsStore = create<CollectionSettingsState>()(
   persist(
     set => ({

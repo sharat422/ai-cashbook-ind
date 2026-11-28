@@ -1,3 +1,4 @@
+import {useQueryClient} from '@tanstack/react-query';
 import React, {useState} from 'react';
 import {Alert, Pressable, View} from 'react-native';
 
@@ -14,7 +15,9 @@ import {
 } from '@components/form';
 import {Button, Screen, Text} from '@components/ui';
 import type {ParsedExpense} from '@features/expense/data/expenseParse.remote';
-import {EXPENSE_CATEGORIES} from '@features/expense/domain/entities';
+import {expenseRemote} from '@features/expense/data/expense.remote';
+import {EXPENSE_CATEGORIES, type ExpenseCategory} from '@features/expense/domain/entities';
+import {useExpenseStore} from '@features/expense/presentation/store/expense.store';
 import {
   useCreateExpense,
   useExpenseForm,
@@ -42,6 +45,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   Food: '🍽️',
   Travel: '✈️',
   Utilities: '💡',
+  Purchases: '🛒',
+  Marketing: '📣',
   Miscellaneous: '📦',
 };
 
@@ -57,7 +62,9 @@ const AMBIGUOUS_LABEL: Record<string, TKey> = {
 
 /**
  * Add Expense form. Offline-first + optimistic: saving returns instantly with a
- * local entry, then syncs in the background.
+ * local entry, then syncs in the background. With `edit` (the owner, from Entry
+ * details) it fixes a synced expense instead: online only, no voice entry, and
+ * the photo stays as it is.
  */
 export function AddExpenseScreen({
   navigation,
@@ -65,14 +72,18 @@ export function AddExpenseScreen({
 }: AppScreenProps<'AddExpense'>): React.JSX.Element {
   const t = useT();
   const online = useConnectivity();
-  // Seed the form when arriving from a receipt scan (or any prefill source).
-  const form = useExpenseForm({
+  const edit = route.params?.edit;
+  // Seed the form when arriving from a receipt scan (or any prefill source), or with the expense being fixed.
+  const form = useExpenseForm(edit ? {amount: edit.amount, category: edit.category as ExpenseCategory,
+    vendor: edit.vendor ?? '', date: edit.date, notes: edit.notes ?? ''} : {
     ...route.params?.initialValues,
     attachment: route.params?.initialAttachment ?? null,
   });
   const createExpense = useCreateExpense();
+  const queryClient = useQueryClient();
+  const [updating, setUpdating] = useState(false);
   const voice = useVoiceExpense();
-  const voiceAvailable = isVoiceAvailable();
+  const voiceAvailable = isVoiceAvailable() && !edit;
   const voiceLanguage = useVoiceSettingsStore(s => s.language);
   const [recording, setRecording] = useState(false);
   // The parse result drives a "please review" banner after a voice entry.
@@ -132,9 +143,28 @@ export function AddExpenseScreen({
     }
   };
 
+  const saveEdit = async (id: string) => {
+    setUpdating(true);
+    try {
+      const {amount, category, vendor, date, notes} = form.draft;
+      const saved = await expenseRemote.update(id, {amount, category, vendor: vendor ?? '', date, notes: notes ?? ''});
+      useExpenseStore.getState().replaceEntry(id, saved);
+      await queryClient.invalidateQueries(); // Reports, Dashboard, history: all from the fixed figure
+      Alert.alert(t('expense.updatedTitle'), undefined, [{text: t('common.ok'), onPress: () => navigation.pop(2)}]);
+    } catch (e) {
+      Alert.alert(t('form.couldNotSave'), e instanceof Error ? e.message : t('common.tryAgainMsg'));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const onSubmit = () => {
     form.markSubmitAttempted();
     if (alertFieldErrors(form.allErrors)) return;
+    if (edit) {
+      void saveEdit(edit.id);
+      return;
+    }
 
     createExpense.mutate(form.draft, {
       onSuccess: expense => {
@@ -154,6 +184,12 @@ export function AddExpenseScreen({
   return (
     <Screen>
       <View className="py-6">
+        {edit ? (
+          <View className="mb-5">
+            <Text variant="title">{t('expense.editTitle')}</Text>
+            <Text variant="subtitle" className="mt-1">{t('income.editSubtitle')}</Text>
+          </View>
+        ) : null}
         {/* Voice entry — speak the expense in any language (server extracts it) */}
         {voiceAvailable ? (
           <View className="mb-5">
@@ -229,7 +265,7 @@ export function AddExpenseScreen({
           ) : null}
         </View>
 
-        {!online ? (
+        {!online && !edit ? (
           <View className="mt-4 rounded-xl bg-amber-50 px-4 py-3">
             <Text className="text-sm font-medium text-amber-700">
               {t('entry.offlineBanner')}
@@ -278,18 +314,21 @@ export function AddExpenseScreen({
             />
           </FormField>
 
-          <FormField label={t('form.attachment')} hint={t('expense.attachmentHint')}>
-            <AttachmentPicker
-              value={form.values.attachment}
-              onChange={value => form.setField('attachment', value)}
-            />
-          </FormField>
+          {edit ? null : (
+            <FormField label={t('form.attachment')} hint={t('expense.attachmentHint')}>
+              <AttachmentPicker
+                value={form.values.attachment}
+                onChange={value => form.setField('attachment', value)}
+              />
+            </FormField>
+          )}
         </View>
 
         <Button
-          title={t('expense.save')}
+          testID="expense-save"
+          title={edit ? t('common.save') : t('expense.save')}
           className="mt-8"
-          loading={createExpense.isPending}
+          loading={createExpense.isPending || updating}
           onPress={onSubmit}
         />
         <Button

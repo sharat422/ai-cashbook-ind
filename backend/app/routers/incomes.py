@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..discards import refuse_if_discarded
 from ..database import get_db
-from ..deps import require
-from ..rbac import DATA_VIEW, ENTRY_CREATE
-from ..models import Business, Income
+from ..deps import get_current_user, require
+from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
+from .. import corrections
+from ..models import Business, Income, User
 from ..serializers import income_dto
 from ..storage import save_upload
 from ..validation import validate_amount, validate_date, validate_notes, validate_text
@@ -68,3 +70,48 @@ def create_income(
         return income_dto(db.scalars(find).one())
     db.refresh(row)
     return income_dto(row)
+
+
+
+# --- Corrections (owner only): edited or deleted in place, logged (app/corrections.py).
+
+class IncomeEdit(BaseModel):
+    amount: float | None = None
+    category: str | None = None
+    date: str | None = None
+    notes: str | None = None  # "" clears them
+
+
+@router.patch("/incomes/{income_id}")
+def edit_income(
+    income_id: str,
+    body: IncomeEdit,
+    business: Business = Depends(require(ENTRY_EDIT)),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    row = corrections.owned(db, Income, business, income_id)
+    new = {}
+    if body.amount is not None:
+        new["amount"] = validate_amount(body.amount)
+    if body.category is not None:
+        new["category"] = validate_text(body.category, "Category", 60)
+    if body.date is not None:
+        new["date"] = validate_date(body.date, allow_future=False)
+    if body.notes is not None:
+        new["notes"] = validate_notes(body.notes, 280)
+    corrections.edit(db, business, user, row, new)
+    db.commit()
+    db.refresh(row)
+    return income_dto(row)
+
+
+@router.delete("/incomes/{income_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_income(
+    income_id: str,
+    business: Business = Depends(require(ENTRY_DELETE)),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    corrections.delete(db, business, user, corrections.owned(db, Income, business, income_id))
+    db.commit()

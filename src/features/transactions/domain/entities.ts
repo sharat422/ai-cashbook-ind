@@ -20,11 +20,15 @@ export interface Transaction {
   notes?: string;
   /** The attached bill/photo on the server, if any. */
   attachmentUrl?: string;
+  /** Set on a stock purchase's expense: it goes only by reversing the purchase in Stock. */
+  purchaseId?: string;
   createdAt: string;
 }
 
 /** One income or expense as the Entry details screen shows it (from either list). */
 export interface EntryDetail {
+  /** The server's id, once synced: what Edit and Delete act on. */
+  id?: string;
   kind: TransactionType;
   amount: number;
   category: string;
@@ -35,6 +39,8 @@ export interface EntryDetail {
   attachmentUrl?: string;
   attachmentUri?: string;
   syncStatus?: 'synced' | 'pending' | 'failed';
+  /** A stock purchase's expense: no Edit or Delete (reverse the purchase in Stock). */
+  purchase?: boolean;
 }
 
 export type SortField = 'date' | 'amount';

@@ -19,6 +19,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from . import corrections
 from .discards import refuse_if_discarded
 from . import gst
 from .errors import AppError
@@ -402,7 +403,9 @@ def reverse(db: Session, business: Business, user: User, role: str, move_id: str
     moves. Not reversible: counts (a new count corrects a count), reversal
     rows, and anything already reversed. Taking stock back out is the same
     conditional UPDATE as a sale: refused if it's no longer there. A sale's
-    credit entry and a purchase's expense are left as they are."""
+    credit entry is left as it is; a purchase's expense is deleted with it
+    (logged), the only way that expense goes: it can't be edited or deleted
+    on its own (routers/expenses.py)."""
     first = db.get(StockMove, move_id)
     if first is None or first.business_id != business.id:
         raise _reject("Stock entry not found", status.HTTP_404_NOT_FOUND)
@@ -435,6 +438,9 @@ def reverse(db: Session, business: Business, user: User, role: str, move_id: str
         (take if q > 0 else put)(db, business, item, where, abs(q))
         mirrors.append(_move(business, item, where, m.kind, -q, day, user, group_id=gid,
                              reverses_id=m.id, note=f"Reversal of {m.kind} on {m.date}"))
+        if m.kind == "purchase":
+            for expense in db.scalars(select(Expense).where(Expense.purchase_id == m.id)).all():
+                corrections.delete(db, business, user, expense, why=f", with the reversal of its stock purchase on {day}")
     return _save(db, business, [item], mirrors, None)
 
 

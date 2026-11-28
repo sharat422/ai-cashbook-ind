@@ -11,6 +11,10 @@ export interface BusinessUpdate {
   gstin?: string;
   /** "" clears it. */
   address?: string;
+  /** name@bank; "" clears it. */
+  upiId?: string;
+  /** "" = the business name. */
+  upiPayeeName?: string;
 }
 
 export interface DeleteResult {

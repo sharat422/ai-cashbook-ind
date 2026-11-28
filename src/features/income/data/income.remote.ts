@@ -11,6 +11,8 @@ import {toIncome, type IncomeDto} from './income.dto';
  *     200 -> IncomeDto
  *   GET  /api/v1/incomes
  *     200 -> IncomeDto[]
+ *   PATCH  /api/v1/incomes/{id}  {amount, category, date, notes} -> IncomeDto (owner)
+ *   DELETE /api/v1/incomes/{id}  -> 204 (owner)
  */
 export const incomeRemote = {
   async create(draft: IncomeDraft, clientId: string): Promise<Income> {
@@ -34,6 +36,16 @@ export const incomeRemote = {
       body: form,
     });
     return toIncome(dto);
+  },
+
+  /** Owner only: fix a wrong income (the server keeps the change in its audit log). */
+  async update(id: string, patch: {amount: number; category: string; date: string; notes: string}): Promise<Income> {
+    return toIncome(await apiRequest<IncomeDto>(`/incomes/${encodeURIComponent(id)}`, {method: 'PATCH', body: patch}));
+  },
+
+  /** Owner only: delete an income (logged; a late retry of it is refused). */
+  async remove(id: string): Promise<void> {
+    await apiRequest<null>(`/incomes/${encodeURIComponent(id)}`, {method: 'DELETE'});
   },
 
   async list(): Promise<Income[]> {

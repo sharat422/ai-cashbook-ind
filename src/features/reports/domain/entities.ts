@@ -12,6 +12,10 @@ export interface ReportSummary {
   from: string;
   to: string;
   incomeTotal: number;
+  /** Sales on khata and income entries ("cash sales"); they add up to incomeTotal.
+   *  Server only: the device doesn't hold the khata, so offline leaves them out. */
+  creditSales?: number;
+  cashSales?: number;
   expenseTotal: number;
   profit: number;
   incomeCount: number;

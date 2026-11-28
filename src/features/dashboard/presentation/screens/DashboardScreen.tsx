@@ -20,6 +20,7 @@ import {PERMISSIONS} from '@features/auth/rbac';
 import {confirmLogout} from '@features/sync/syncStatus';
 import {SyncStatusBar} from '@features/sync/presentation/SyncStatusBar';
 import {MonthEndCard} from '@features/stock/presentation/MonthEndCard';
+import {PromisesDueCard} from '@features/beats/presentation/components/PromisesDue';
 import {ExportAlertBanner} from '@features/team/presentation/ExportAlertBanner';
 import {categoryLabel} from '@/i18n/labels';
 import type {SyncStatus} from '@/shared/types/attachment';
@@ -74,7 +75,7 @@ export function DashboardScreen({
         amount: e.amount,
         createdAt: e.createdAt,
         syncStatus: e.syncStatus,
-        entry: {kind: 'income' as const, amount: e.amount, category: e.category, date: e.date, notes: e.notes,
+        entry: {id: e.syncStatus === 'synced' ? e.id : undefined, kind: 'income' as const, amount: e.amount, category: e.category, date: e.date, notes: e.notes,
           attachmentUrl: e.attachmentUrl, attachmentUri: e.attachment?.uri, syncStatus: e.syncStatus},
       })),
       ...expenses.map(e => ({
@@ -85,7 +86,7 @@ export function DashboardScreen({
         amount: e.amount,
         createdAt: e.createdAt,
         syncStatus: e.syncStatus,
-        entry: {kind: 'expense' as const, amount: e.amount, category: e.category, date: e.date, vendor: e.vendor,
+        entry: {id: e.syncStatus === 'synced' ? e.id : undefined, purchase: !!e.purchaseId, kind: 'expense' as const, amount: e.amount, category: e.category, date: e.date, vendor: e.vendor,
           notes: e.notes, attachmentUrl: e.attachmentUrl, attachmentUri: e.attachment?.uri, syncStatus: e.syncStatus},
       })),
     ];
@@ -163,6 +164,8 @@ export function DashboardScreen({
         {/* AC4: an accountant exported something: the owner is told (the export already happened). */}
         <ExportAlertBanner onOpen={() => navigation.navigate('AccountantActivity', {})} />
         {can(PERMISSIONS.ENTRY_EDIT) ? <MonthEndCard onPress={() => navigation.navigate('StockCount')} /> : null}
+        {/* Who promised to pay today (or is overdue), on the beats this person sees. */}
+        <PromisesDueCard />
 
         {/* Non-blocking warning if the device looks rooted/jailbroken */}
         <DeviceIntegrityBanner />

@@ -37,6 +37,16 @@ export const expenseRemote = {
     return toExpense(dto);
   },
 
+  /** Owner only: fix a wrong expense (logged on the server; a stock purchase's is refused). */
+  async update(id: string, patch: {amount: number; category: string; vendor: string; date: string; notes: string}): Promise<Expense> {
+    return toExpense(await apiRequest<ExpenseDto>(`/expenses/${encodeURIComponent(id)}`, {method: 'PATCH', body: patch}));
+  },
+
+  /** Owner only: delete an expense (logged; a late retry of it is refused). */
+  async remove(id: string): Promise<void> {
+    await apiRequest<null>(`/expenses/${encodeURIComponent(id)}`, {method: 'DELETE'});
+  },
+
   async list(): Promise<Expense[]> {
     const dtos = await apiRequest<ExpenseDto[]>('/expenses', {method: 'GET'});
     return dtos.map(toExpense);

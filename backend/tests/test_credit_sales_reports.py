@@ -6,6 +6,8 @@ cancelled invoices aren't sales."""
 from conftest import days_ago_iso, today_iso
 from helpers import add_customer, add_income, add_ledger
 from test_gst import _gst_owner, _sale
+from test_stock import _item, _team
+from test_suppliers import _buy
 
 API = "/api/v1"
 
@@ -28,7 +30,7 @@ def test_a_week_of_credit_sales_only_is_not_zero_sales_and_matches_the_gst_repor
 
     pnl = _pnl(client, owner.headers, *week)
     assert pnl["income_total"] == pnl["credit_sales"] == sum(totals) == 4602.0
-    assert pnl["profit"] == 4602.0
+    assert pnl["cash_sales"] == 0 and pnl["profit"] == 4602.0
     assert [(c["category"], c["amount"]) for c in pnl["income_by_category"]] == [("Credit sales", 4602.0)]
 
     gst = client.get(f"{API}/reports/gst-summary", headers=owner.headers,
@@ -53,10 +55,22 @@ def test_a_credit_sale_counts_once_and_collections_are_not_sales(make_user, clie
     add_income(client, owner.headers, amount=500, date=day, category="Sales", client_id="i1")  # a cash sale
 
     pnl = _pnl(client, owner.headers, day, day)
-    assert (pnl["income_total"], pnl["credit_sales"], pnl["income_count"]) == (1500.0, 1000.0, 2)
+    assert (pnl["income_total"], pnl["credit_sales"], pnl["cash_sales"], pnl["income_count"]) == (1500.0, 1000.0, 500.0, 2)
     assert {c["category"]: c["amount"] for c in pnl["income_by_category"]} == {"Credit sales": 1000.0, "Sales": 500.0}
     biz = client.get(f"{API}/business/summary", headers=owner.headers).json()
     assert biz["month"]["sales"] == 1500.0 and biz["month"]["collections"] == 1000.0
+
+
+def test_a_stock_purchase_is_one_expense_and_no_sale(make_user, client):
+    owner, _ = _team(make_user, client)
+    item = _item(client, owner.headers)
+    assert _buy(client, owner.headers, item, 10, "p1", supplier="Sharma Traders").status_code == 200  # 10 × ₹80
+    day = today_iso()
+    pnl = _pnl(client, owner.headers, day, day)
+    assert (pnl["expense_total"], pnl["expense_count"]) == (800.0, 1)
+    assert (pnl["income_total"], pnl["credit_sales"], pnl["cash_sales"]) == (0, 0, 0)
+    biz = client.get(f"{API}/business/summary", headers=owner.headers).json()
+    assert (biz["month"]["sales"], biz["month"]["expenses"]) == (0, 800.0)
 
 
 def test_cash_gst_sale_counts_once_drafts_and_cancelled_invoices_not_at_all(make_user, client):

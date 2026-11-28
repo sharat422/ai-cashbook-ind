@@ -28,6 +28,22 @@ function categoryRows(rows: ReportSummary['incomeByCategory']): string {
     .join('');
 }
 
+/** Credit sales (khata), cash sales (income entries) and their total, for the CA to reconcile
+ *  against the GST report. Server figures only: an offline report has no khata, so no split. */
+export function salesRows(s: ReportSummary): [string, number][] {
+  if (s.creditSales == null || s.cashSales == null) return [];
+  return [['Credit sales (khata)', s.creditSales], ['Cash sales', s.cashSales], ['Total sales', s.incomeTotal]];
+}
+
+function salesTableHtml(summary: ReportSummary): string {
+  const rows = salesRows(summary);
+  if (!rows.length) return '';
+  return `<h2>Sales</h2><table>${rows.map(([label, amount], i) => {
+    const bold = i === rows.length - 1 ? ' style="font-weight:700"' : '';
+    return `<tr><td${bold}>${label}</td><td class="num"${bold}>${formatINR(amount)}</td></tr>`;
+  }).join('')}</table>`;
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -86,6 +102,7 @@ export function buildReportHtml(
       <div class="card"><div class="label">Expense</div><div class="value" style="color:#DC2626">${formatINR(summary.expenseTotal)}</div></div>
       <div class="card"><div class="label">Net profit</div><div class="value" style="color:${profitColor}">${formatINR(summary.profit)}</div></div>
     </div>
+    ${salesTableHtml(summary)}
     <h2>Income by category</h2>
     <table><tr><th>Category</th><th class="num">Amount</th><th class="num">Share</th></tr>${categoryRows(summary.incomeByCategory)}</table>
     <h2>Expense by category</h2>
@@ -138,6 +155,7 @@ export function summaryAoa(summary: ReportSummary): (string | number)[][] {
     ['Expense total', summary.expenseTotal],
     ['Net profit', summary.profit],
     [],
+    ...(salesRows(summary).length ? [['Sales', 'Amount (₹)'], ...salesRows(summary), []] : []),
     ['Income by category', 'Amount (₹)', 'Share %'],
     ...summary.incomeByCategory.map(r => [r.category, r.amount, Math.round(r.share * 100)]),
     [],

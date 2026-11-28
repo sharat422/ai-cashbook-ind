@@ -18,6 +18,8 @@ interface ExpenseState {
   // Entry actions
   addEntry: (entry: Expense) => void;
   replaceEntry: (id: string, entry: Expense) => void;
+  /** Drop an entry the owner deleted on the server. */
+  removeEntry: (id: string) => void;
   setEntryStatus: (id: string, syncStatus: Expense['syncStatus']) => void;
   /**
    * Replace the synced history with what the server returned (restore-on-new-
@@ -56,6 +58,9 @@ export const useExpenseStore = create<ExpenseState>()(
         set(state => ({
           entries: state.entries.map(e => (e.id === id ? entry : e)),
         })),
+
+      removeEntry: id =>
+        set(state => ({entries: state.entries.filter(e => e.id !== id)})),
 
       setEntryStatus: (id, syncStatus) =>
         set(state => ({

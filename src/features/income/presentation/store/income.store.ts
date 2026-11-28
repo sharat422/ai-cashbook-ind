@@ -19,6 +19,8 @@ interface IncomeState {
   addEntry: (entry: Income) => void;
   /** Replace an entry by id (e.g. swap an optimistic entry for the synced one). */
   replaceEntry: (id: string, entry: Income) => void;
+  /** Drop an entry the owner deleted on the server. */
+  removeEntry: (id: string) => void;
   /**
    * Replace the synced history with what the server returned (used by the
    * restore-on-new-device flow). Any local entry still pending/failed to sync is
@@ -58,6 +60,9 @@ export const useIncomeStore = create<IncomeState>()(
         set(state => ({
           entries: state.entries.map(e => (e.id === id ? entry : e)),
         })),
+
+      removeEntry: id =>
+        set(state => ({entries: state.entries.filter(e => e.id !== id)})),
 
       restoreEntries: serverEntries =>
         set(state => {

@@ -1,14 +1,18 @@
-import React, {useMemo, useState} from 'react';
+import {useQuery} from '@tanstack/react-query';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Alert, Linking, Platform, Pressable, Share, View} from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import {getMyBusiness} from '@api/auth.api';
 import {AmountInput, FormField} from '@components/form';
-import {Button, ErrorBoundary, Screen, Text} from '@components/ui';
+import {Button, ErrorBoundary, Screen, Skeleton, Text} from '@components/ui';
 import {
   buildUpiUri,
   isValidUpiId,
   makePaymentRef,
 } from '@features/collections/domain/upi';
+import {usePermissions} from '@features/auth/hooks';
+import {PERMISSIONS} from '@features/auth/rbac';
 import {useCollectionSettingsStore} from '@features/collections/store/collectionSettings.store';
 import {useLedgerMutations} from '@features/customers/presentation/hooks';
 import {useT} from '@/i18n';
@@ -23,11 +27,24 @@ export function RequestPaymentScreen({
 }: AppScreenProps<'RequestPayment'>): React.JSX.Element {
   const t = useT();
   const {customer} = route.params;
-  const businessName =
-    useAuthStore(s => s.business?.businessName) ?? t('dashboard.yourBusiness');
-  const upiId = useCollectionSettingsStore(s => s.upiId);
-  const storedPayee = useCollectionSettingsStore(s => s.payeeName);
-  const payeeName = storedPayee || businessName;
+  // The business as the server has it now: a phone that signed in before the owner set
+  // the UPI ID only has an older copy. Offline, the copy on the phone is used.
+  const cached = useAuthStore(s => s.business);
+  const fresh = useQuery({queryKey: ['business-me'], queryFn: getMyBusiness, staleTime: 0});
+  useEffect(() => {
+    const now = useAuthStore.getState().business;
+    if (fresh.data && now) useAuthStore.getState().setBusiness({...now, ...fresh.data, role: fresh.data.role ?? now.role});
+  }, [fresh.data]);
+  const business = fresh.data ?? cached;
+  const businessName = business?.businessName ?? t('dashboard.yourBusiness');
+  const canSetUpi = usePermissions().can(PERMISSIONS.SETTINGS_MANAGE);
+  // The business's UPI ID (the owner sets it once, for every phone). Only if it has none,
+  // a UPI ID this phone kept from before is used, with a warning.
+  const phoneUpi = useCollectionSettingsStore(s => s.upiId);
+  const phonePayee = useCollectionSettingsStore(s => s.payeeName);
+  const fromPhone = !isValidUpiId(business?.upiId ?? '') && isValidUpiId(phoneUpi);
+  const upiId = fromPhone ? phoneUpi : business?.upiId ?? '';
+  const payeeName = (fromPhone ? phonePayee : business?.upiPayeeName) || businessName;
   const {receivePayment} = useLedgerMutations(customer.id);
 
   const [amount, setAmount] = useState<number>(
@@ -130,20 +147,31 @@ export function RequestPaymentScreen({
             : ''}
         </Text>
 
-        {!configured ? (
-          <View className="mt-5 rounded-2xl bg-amber-50 p-4">
+        {!configured && fresh.isLoading ? (
+          <Skeleton className="mt-5 h-24 w-full" />
+        ) : !configured ? (
+          <View testID="request-no-upi" className="mt-5 rounded-2xl bg-amber-50 p-4">
             <Text className="text-sm font-medium text-amber-800">
-              {t('request.noUpi')}
+              {canSetUpi ? t('request.noUpi') : t('request.noUpiStaff')}
             </Text>
-            <Button
-              title={t('request.setUpi')}
-              variant="secondary"
-              className="mt-3"
-              onPress={() => navigation.navigate('Settings')}
-            />
+            {canSetUpi ? (
+              <Button
+                title={t('request.setUpi')}
+                variant="secondary"
+                className="mt-3"
+                onPress={() => navigation.navigate('Settings')}
+              />
+            ) : null}
           </View>
         ) : (
           <>
+            {fromPhone ? (
+              <View testID="request-phone-upi" className="mt-5 rounded-2xl bg-amber-50 p-4">
+                <Text className="text-sm font-medium text-amber-800">
+                  {t(canSetUpi ? 'request.phoneUpi' : 'request.phoneUpiStaff', {upi: upiId})}
+                </Text>
+              </View>
+            ) : null}
             {/* Amount */}
             <View className="mt-5 rounded-3xl bg-slate-900 px-5 pb-6 pt-5">
               <Text className="text-xs font-medium uppercase tracking-wide text-slate-400">

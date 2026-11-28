@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {View} from 'react-native';
 
 import {FilterChip} from '@components/filters';
-import {DateField, FormField, TextField} from '@components/form';
+import {AmountInput, DateField, FormField, TextField} from '@components/form';
 import {BottomSheet, Button, Text} from '@components/ui';
 import type {VisitOutcome} from '@features/beats/data/beats.remote';
 import {useT, type TKey} from '@/i18n';
@@ -22,13 +22,15 @@ export interface VisitOutcomeResult {
   outcome: VisitOutcome;
   reason?: string;
   promiseDate?: string;
+  promiseAmount?: number;
 }
 
 export interface VisitOutcomeSheetProps {
   visible: boolean;
   retailerName: string;
-  /** Ask for a promise-to-pay date only when the retailer owes money. */
-  hasDues: boolean;
+  /** What the retailer owes: a promise to pay is asked for only when they owe
+   *  money, and its amount starts as all of it. */
+  dues: number;
   saving?: boolean;
   onClose: () => void;
   onSave: (result: VisitOutcomeResult) => void;
@@ -43,7 +45,7 @@ export function reasonLabel(t: ReturnType<typeof useT>, reason: string): string 
 export function VisitOutcomeSheet({
   visible,
   retailerName,
-  hasDues,
+  dues,
   saving,
   onClose,
   onSave,
@@ -53,6 +55,7 @@ export function VisitOutcomeSheet({
   const [reason, setReason] = useState<string | null>(null);
   const [otherText, setOtherText] = useState('');
   const [promiseDate, setPromiseDate] = useState('');
+  const [promiseAmount, setPromiseAmount] = useState(NaN);
 
   useEffect(() => {
     if (visible) {
@@ -60,8 +63,9 @@ export function VisitOutcomeSheet({
       setReason(null);
       setOtherText('');
       setPromiseDate('');
+      setPromiseAmount(dues > 0 ? dues : NaN);
     }
-  }, [visible]);
+  }, [visible, dues]);
 
   const reasonText = reason === 'other' ? otherText.trim() : reason;
   const needsReason = outcome !== null && REASONS[outcome].length > 0;
@@ -111,11 +115,13 @@ export function VisitOutcomeSheet({
           </FormField>
         ) : null}
 
-        {hasDues && outcome !== 'not_visited' ? (
+        {dues > 0 && outcome !== 'not_visited' ? (
           <FormField label={t('beats.promiseDate')} hint={t('beats.promiseHint')}>
             {promiseDate ? (
               <View style={{gap: 8}}>
                 <DateField value={promiseDate} onChange={setPromiseDate} maximumDate={inAYear} />
+                <Text variant="caption">{t('beats.promiseAmount')}</Text>
+                <AmountInput value={promiseAmount} onChange={setPromiseAmount} />
                 <FilterChip label={t('beats.noPromise')} removable onPress={() => setPromiseDate('')} />
               </View>
             ) : (
@@ -140,6 +146,8 @@ export function VisitOutcomeSheet({
               outcome,
               reason: reasonText || undefined,
               promiseDate: promiseDate || undefined,
+              // An amount goes with a date; left empty, it's a promise with no amount.
+              promiseAmount: promiseDate && promiseAmount > 0 ? promiseAmount : undefined,
             })
           }
         />

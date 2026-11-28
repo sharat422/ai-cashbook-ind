@@ -89,11 +89,14 @@ ITC_LABEL = "for the CA — not a claim"
 
 
 def purchases_with_gst(db: Session, business: Business, start: str, end: str) -> list[tuple]:
-    """(purchase move, item name) for purchases dated start..end that carry GST."""
+    """(purchase move, item name) for purchases dated start..end that carry GST,
+    not reversed: a reversed purchase's ITC no longer exists, so it is not in the
+    CA's ITC review, its 2B check or GSTR-3B table 4 (its mirror row carries no GST)."""
     return db.execute(
         select(StockMove, Item.name).join(Item, Item.id == StockMove.item_id)
         .where(StockMove.business_id == business.id, StockMove.kind == "purchase",
-               StockMove.gst_amount.is_not(None), StockMove.date >= start, StockMove.date <= end)
+               StockMove.gst_amount.is_not(None), StockMove.reversed_at.is_(None),
+               StockMove.date >= start, StockMove.date <= end)
         .order_by(StockMove.date, StockMove.created_at)).all()
 
 

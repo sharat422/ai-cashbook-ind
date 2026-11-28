@@ -58,6 +58,8 @@ const EXPENSE_ICONS: Record<string, string> = {
   Food: '🍽️',
   Travel: '✈️',
   Utilities: '💡',
+  Purchases: '🛒',
+  Marketing: '📣',
   Miscellaneous: '📦',
 };
 const INCOME_OPTIONS: readonly string[] = INCOME_CATEGORIES;

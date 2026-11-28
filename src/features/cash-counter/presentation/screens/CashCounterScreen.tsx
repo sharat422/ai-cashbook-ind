@@ -1,6 +1,7 @@
 import React, {useMemo, useState} from 'react';
 import {Alert, Pressable, ScrollView, TextInput, View} from 'react-native';
 
+import {FilterChip} from '@components/filters';
 import {Button, Screen, Text} from '@components/ui';
 import {
   DENOMINATIONS,
@@ -12,6 +13,7 @@ import {
 } from '@features/cash-counter/domain/denominations';
 import {usePermissions} from '@features/auth/hooks';
 import {PERMISSIONS} from '@features/auth/rbac';
+import type {Beat} from '@features/beats/data/beats.remote';
 import {useBeats} from '@features/beats/presentation/hooks';
 import {reconciliationRemote} from '@features/reconciliation/data/reconciliation.remote';
 import {formatMoney} from '@features/reconciliation/domain/money';
@@ -27,10 +29,12 @@ export function CashCounterScreen({navigation}: AppScreenProps<'CashCounter'>): 
   const t = useT();
   const [counts, setCounts] = useState<Counts>({});
   const [saving, setSaving] = useState(false);
-  // Saved as Daily close's "Save count" does: the owner's for the whole business, staff's for their beat.
+  // Saved as Daily close's "Save count" does, for the beat picked as there: the owner can
+  // also count the whole business; staff count one of their beats.
   const seesAll = usePermissions().can(PERMISSIONS.DATA_VIEW);
-  const beats = useBeats().data;
-  const beatId = seesAll ? undefined : beats?.[0]?.id;
+  const beats: Beat[] = useBeats().data ?? [];
+  const [picked, setPicked] = useState<string | undefined>();
+  const beatId = picked ?? (seesAll ? undefined : beats[0]?.id);
 
   const total = useMemo(() => cashTotal(counts), [counts]);
   const pieces = useMemo(() => totalPieces(counts), [counts]);
@@ -135,6 +139,16 @@ export function CashCounterScreen({navigation}: AppScreenProps<'CashCounter'>): 
           </View>
         </View>
 
+        {beats.length > (seesAll ? 0 : 1) ? (
+          <View testID="cash-beat" className="mt-3 flex-row flex-wrap" style={{gap: 8}}>
+            {seesAll ? (
+              <FilterChip label={t('close.allBeats')} selected={beatId === undefined} onPress={() => setPicked(undefined)} />
+            ) : null}
+            {beats.map(b => (
+              <FilterChip key={b.id} label={b.name} selected={beatId === b.id} onPress={() => setPicked(b.id)} />
+            ))}
+          </View>
+        ) : null}
         <Button testID="cash-save" title={t('close.saveCount')} className="mt-3" loading={saving}
           disabled={total <= 0 || saving} onPress={save} />
         <Text variant="caption" className="mt-1 text-center">{t('cash.saveHint', {screen: t('close.title')})}</Text>

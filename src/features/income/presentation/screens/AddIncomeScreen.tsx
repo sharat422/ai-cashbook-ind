@@ -1,4 +1,5 @@
-import React from 'react';
+import {useQueryClient} from '@tanstack/react-query';
+import React, {useState} from 'react';
 import {Alert, View} from 'react-native';
 
 import {
@@ -10,31 +11,59 @@ import {
   alertFieldErrors,
 } from '@components/form';
 import {Button, Screen, Select, Text} from '@components/ui';
-import {INCOME_CATEGORIES} from '@features/income/domain/entities';
+import {incomeRemote} from '@features/income/data/income.remote';
+import {INCOME_CATEGORIES, type IncomeCategory} from '@features/income/domain/entities';
 import {
   useConnectivity,
   useCreateIncome,
   useIncomeForm,
 } from '@features/income/presentation/hooks';
+import {useIncomeStore} from '@features/income/presentation/store/income.store';
 import {useT} from '@/i18n';
 import {categoryLabel} from '@/i18n/labels';
 import type {AppScreenProps} from '@navigation/types';
 
 /**
  * Add Income form. Validates locally, then delegates to the create use case
- * which saves online or queues offline transparently.
+ * which saves online or queues offline transparently. With `edit` (the owner,
+ * from Entry details) it fixes a synced income instead: online only, and the
+ * photo stays as it is.
  */
 export function AddIncomeScreen({
   navigation,
+  route,
 }: AppScreenProps<'AddIncome'>): React.JSX.Element {
   const t = useT();
   const online = useConnectivity();
-  const form = useIncomeForm();
+  const edit = route.params?.edit;
+  const form = useIncomeForm(edit && {amount: edit.amount, category: edit.category as IncomeCategory,
+    date: edit.date, notes: edit.notes ?? ''});
   const createIncome = useCreateIncome();
+  const queryClient = useQueryClient();
+  const [updating, setUpdating] = useState(false);
+
+  const saveEdit = async (id: string) => {
+    setUpdating(true);
+    try {
+      const {amount, category, date, notes} = form.draft;
+      const saved = await incomeRemote.update(id, {amount, category, date, notes: notes ?? ''});
+      useIncomeStore.getState().replaceEntry(id, saved);
+      await queryClient.invalidateQueries(); // Reports, Dashboard, history: all from the fixed figure
+      Alert.alert(t('income.updatedTitle'), undefined, [{text: t('common.ok'), onPress: () => navigation.pop(2)}]);
+    } catch (e) {
+      Alert.alert(t('form.couldNotSave'), e instanceof Error ? e.message : t('common.tryAgainMsg'));
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const onSubmit = () => {
     form.markSubmitAttempted();
     if (alertFieldErrors(form.allErrors)) return;
+    if (edit) {
+      void saveEdit(edit.id);
+      return;
+    }
 
     createIncome.mutate(form.draft, {
       onSuccess: income => {
@@ -53,12 +82,12 @@ export function AddIncomeScreen({
   return (
     <Screen>
       <View className="py-6">
-        <Text variant="title">{t('income.title')}</Text>
+        <Text variant="title">{edit ? t('income.editTitle') : t('income.title')}</Text>
         <Text variant="subtitle" className="mt-1">
-          {t('income.subtitle')}
+          {edit ? t('income.editSubtitle') : t('income.subtitle')}
         </Text>
 
-        {!online ? (
+        {!online && !edit ? (
           <View className="mt-4 rounded-xl bg-amber-50 px-4 py-3">
             <Text className="text-sm font-medium text-amber-700">
               {t('entry.offlineBanner')}
@@ -106,18 +135,21 @@ export function AddIncomeScreen({
             />
           </FormField>
 
-          <FormField label={t('form.attachment')} hint={t('income.attachmentHint')}>
-            <AttachmentPicker
-              value={form.values.attachment}
-              onChange={value => form.setField('attachment', value)}
-            />
-          </FormField>
+          {edit ? null : (
+            <FormField label={t('form.attachment')} hint={t('income.attachmentHint')}>
+              <AttachmentPicker
+                value={form.values.attachment}
+                onChange={value => form.setField('attachment', value)}
+              />
+            </FormField>
+          )}
         </View>
 
         <Button
-          title={t('income.save')}
+          testID="income-save"
+          title={edit ? t('common.save') : t('income.save')}
           className="mt-8"
-          loading={createIncome.isPending}
+          loading={createIncome.isPending || updating}
           onPress={onSubmit}
         />
         <Button

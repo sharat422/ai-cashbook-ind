@@ -1,5 +1,5 @@
 import {personLabel} from '@utils/personLabel';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Alert, RefreshControl, ScrollView, View} from 'react-native';
 
 import {FilterChip} from '@components/filters';
@@ -96,7 +96,12 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
   };
   // Closing the beat's day: the server works the figures out again and locks the day's entries.
   const canReopen = can(PERMISSIONS.ENTRY_DELETE); // owner only
-  const [closeCounted, setCloseCounted] = useState('');
+  // The cash counted for the close starts as the latest saved count (Cash counter or Save count
+  // above); the owner can still change it. null = not typed over.
+  const [closeTyped, setCloseTyped] = useState<string | null>(null);
+  useEffect(() => setCloseTyped(null), [beatId, date]);
+  const fromCount = closeTyped == null && data?.cashCounted != null;
+  const closeCounted = closeTyped ?? data?.cashCounted ?? '';
   const paise = (v: string) => Math.round(Number(v) * 100);
   /** Counted − cash expected, as you type (the server stores its own on closing). */
   const closePreview = data && closeCounted
@@ -120,7 +125,7 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
       {text: t('common.cancel'), style: 'cancel'},
       {text: t('close.closeDay'), onPress: () => run(async () => {
         await reconciliationRemote.closeDay(beatId, date, closeCounted);
-        setCloseCounted('');
+        setCloseTyped(null);
       })},
     ]);
   };
@@ -295,7 +300,12 @@ export function DailyCloseScreen({navigation, route}: AppScreenProps<'DailyClose
                 ) : canCount ? (
                   <>
                     <Input testID="day-close-counted" placeholder={t('close.countPlaceholder')} keyboardType="decimal-pad"
-                      value={closeCounted} onChangeText={v => setCloseCounted(v.replace(/[^0-9.]/g, ''))} />
+                      value={closeCounted} onChangeText={v => setCloseTyped(v.replace(/[^0-9.]/g, ''))} />
+                    {fromCount ? (
+                      <Text testID="day-close-from-count" variant="caption">
+                        {t('close.fromCount', {when: data.cashCountedAt ? formatTimestamp(data.cashCountedAt) : ''})}
+                      </Text>
+                    ) : null}
                     {closePreview != null ? (
                       <View testID="day-close-difference">
                         <Row label={t('close.countDifference')} value={formatMoney(closePreview)} bold />

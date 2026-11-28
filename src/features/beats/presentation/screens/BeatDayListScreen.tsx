@@ -4,6 +4,7 @@ import {Alert, Pressable, RefreshControl, ScrollView, View} from 'react-native';
 import {EmptyState, ErrorState, Screen, Skeleton, Text} from '@components/ui';
 import type {Beat, BeatRetailer, VisitOutcome} from '@features/beats/data/beats.remote';
 import {makeVisitClientId, useVisitQueue} from '@features/beats/data/visitQueue';
+import {PromisesDueList} from '@features/beats/presentation/components/PromisesDue';
 import {
   VisitOutcomeSheet,
   reasonLabel,
@@ -18,7 +19,7 @@ import {
 import {useT, type TKey} from '@/i18n';
 import type {AppScreenProps} from '@navigation/types';
 import {formatINR} from '@utils/currency';
-import {formatDisplayDate} from '@utils/date';
+import {formatDisplayDate, todayIST} from '@utils/date';
 
 const OUTCOME_STYLE: Record<VisitOutcome, string> = {
   visited_ordered: 'bg-green-100 text-green-800',
@@ -55,7 +56,9 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
   const queued = useVisitQueue(s => s.pending);
   const [open, setOpen] = useState<{beatId: string; retailer: BeatRetailer} | null>(null);
   const collect = useCollectOnBeat();
-  const [paying, setPaying] = useState<{beatId: string; retailer: BeatRetailer} | null>(null);
+  // amount: a promise's still to be paid, to start the payment with.
+  const [paying, setPaying] = useState<{beatId: string; retailer: BeatRetailer; amount?: number} | null>(null);
+  const today = todayIST();
 
   const onCollect = (input: ReceivePaymentInput) => {
     if (!paying) return;
@@ -124,6 +127,17 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
                 {t('beats.noRetailers')}
               </Text>
             ) : null}
+            <PromisesDueList
+              rows={beat.retailers
+                .filter(r => r.promise && r.promise.date <= today)
+                .map(r => ({customerId: r.customerId, fullName: r.fullName, ...r.promise!,
+                  overdue: r.promise!.date < today}))
+                .sort((a, b) => a.date.localeCompare(b.date))}
+              onPress={row => {
+                const retailer = beat.retailers.find(r => r.customerId === row.customerId)!;
+                setPaying({beatId: beat.id, retailer, amount: row.remaining ?? undefined});
+              }}
+            />
             {beat.retailers.map((r, i) => {
               const pending = queued.find(
                 v => v.beatId === beat.id && v.customerId === r.customerId,
@@ -213,7 +227,7 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
       <VisitOutcomeSheet
         visible={open !== null}
         retailerName={open?.retailer.fullName ?? ''}
-        hasDues={(open?.retailer.outstandingAmount ?? 0) > 0}
+        dues={open?.retailer.outstandingAmount ?? 0}
         saving={record.isPending}
         onClose={() => setOpen(null)}
         onSave={onSave}
@@ -226,6 +240,7 @@ export function BeatDayListScreen({route, navigation}: AppScreenProps<'BeatDayLi
         onSubmit={onCollect}
         customerId={paying?.retailer.customerId}
         dayBeatId={paying?.beatId}
+        initialAmount={paying?.amount}
       />
     </Screen>
   );

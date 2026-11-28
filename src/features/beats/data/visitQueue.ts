@@ -64,8 +64,9 @@ export function syncPendingVisits(): Promise<number> {
       if (!(await connectivity.isOnline())) return 0;
       for (const visit of [...useVisitQueue.getState().pending]) {
         try {
-          const {clientId, beatId, customerId, outcome, reason, promiseDate, visitedAt} = visit;
-          await beatsRemote.recordVisit({clientId, beatId, customerId, outcome, reason, promiseDate, visitedAt});
+          const {clientId, beatId, customerId, outcome, reason, promiseDate, promiseAmount, visitedAt} = visit;
+          await beatsRemote.recordVisit({clientId, beatId, customerId, outcome, reason, promiseDate, promiseAmount,
+            visitedAt});
           useVisitQueue.getState().remove(visit.clientId);
           synced += 1;
         } catch (err) {

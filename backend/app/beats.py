@@ -7,7 +7,7 @@ assigned to them, whichever endpoint calls in. Owners and accountants
 """
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -173,6 +173,63 @@ def set_retailers(db: Session, beat: Beat, customer_ids: list[str]) -> None:
                for i, cid in enumerate(customer_ids))
 
 
+def _when(iso: str) -> datetime:
+    at = datetime.fromisoformat(iso)
+    return at.replace(tzinfo=timezone.utc) if at.tzinfo is None else at
+
+
+def open_promises(db: Session, customer_ids: list[str]) -> dict[str, dict]:
+    """Each retailer's open promise to pay: their latest visit with a promise date,
+    less what they've paid since: payments the server saved after it saved the visit
+    (both by the server's clock, so a phone's clock can't reorder them; cash taken at
+    the same visit, before the promise, doesn't count), in the books, and not a cash
+    sale's own payment. Paid in full, it's kept and gone; with no amount promised,
+    any payment since keeps it. The one place a promise clears, whichever screen
+    took the payment."""
+    latest: dict[str, Visit] = {}
+    for v in db.scalars(select(Visit).where(Visit.customer_id.in_(customer_ids), Visit.promise_date.is_not(None))
+                        .order_by(Visit.visited_at)):
+        latest[v.customer_id] = v  # oldest first, so the latest wins
+    if not latest:
+        return {}
+    paid: dict[str, float] = defaultdict(float)
+    for e in db.scalars(select(LedgerEntry).where(LedgerEntry.customer_id.in_(list(latest)),
+                                                  LedgerEntry.type == "payment", in_books(),
+                                                  LedgerEntry.paid_entry_id.is_(None))):
+        if _when(e.created_at) > _when(latest[e.customer_id].created_at):
+            paid[e.customer_id] += e.amount
+    out = {}
+    for cid, v in latest.items():
+        amount = float(v.promise_amount) if v.promise_amount is not None else None
+        if (paid[cid] > 0) if amount is None else (paid[cid] >= amount - 0.005):
+            continue
+        out[cid] = {"date": v.promise_date, "amount": amount,
+                    "remaining": None if amount is None else round(amount - paid[cid], 2), "beat_id": v.beat_id}
+    return out
+
+
+def promises_due(db: Session, beats: list[Beat]) -> list[dict]:
+    """Open promises due today or before (overdue), for these beats' retailers,
+    oldest first. Each on the promise's own beat when it's one of these, else the
+    retailer's first beat here (the beat a payment is collected on)."""
+    on_beats: dict[str, list[Beat]] = defaultdict(list)
+    for r, b in db.execute(select(BeatRetailer, Beat).join(Beat, Beat.id == BeatRetailer.beat_id)
+                           .where(BeatRetailer.beat_id.in_([b.id for b in beats]))):
+        on_beats[r.customer_id].append(b)
+    today = datetime.now(IST).date().isoformat()
+    due = {cid: p for cid, p in open_promises(db, list(on_beats)).items() if p["date"] <= today}
+    customers = {c.id: c for c in db.scalars(select(Customer).where(Customer.id.in_(list(due))))} if due else {}
+    rows = []
+    for cid, p in due.items():
+        beat = next((b for b in on_beats[cid] if b.id == p["beat_id"]), on_beats[cid][0])
+        c = customers[cid]
+        rows.append({"customer_id": cid, "full_name": c.full_name, "business_name": c.business_name,
+                     "outstanding_amount": c.outstanding_amount, "beat_id": beat.id, "beat_name": beat.name,
+                     "promise_date": p["date"], "amount": p["amount"], "remaining": p["remaining"],
+                     "overdue": p["date"] < today})
+    return sorted(rows, key=lambda r: (r["promise_date"], r["full_name"].lower()))
+
+
 def day_list(db: Session, beat: Beat) -> list[dict]:
     """The beat's retailers in visit order, with what a salesperson needs at
     the counter: balance, overdue (dues older than 30 days, oldest paid first),
@@ -199,6 +256,7 @@ def day_list(db: Session, beat: Beat) -> list[dict]:
         if v.beat_id == beat.id and v.visited_at[:10] == today:
             today_visit[v.customer_id] = v
 
+    promises = open_promises(db, ids)
     out = []
     links = allocation.links(db, beat.business_id)
     for r, c in rows:
@@ -212,6 +270,8 @@ def day_list(db: Session, beat: Beat) -> list[dict]:
             "overdue_amount": aging["d31_60"] + aging["d61_90"] + aging["d90_plus"],
             "credit_limit": c.credit_limit,
             "last_promise_date": promise.get(c.id),
+            # Still to be paid: today's or overdue ones go in the day list's "Promises due".
+            "promise": {k: v for k, v in promises[c.id].items() if k != "beat_id"} if c.id in promises else None,
             "today_visit": visit_dto(today_visit[c.id]) if c.id in today_visit else None,
         })
     return out
@@ -248,6 +308,7 @@ def visit_dto(v: Visit) -> dict:
         "outcome": v.outcome,
         "reason": v.reason,
         "promise_date": v.promise_date,
+        "promise_amount": float(v.promise_amount) if v.promise_amount is not None else None,
         "visited_at": v.visited_at,
     }
 

@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..discards import refuse_if_discarded
 from ..database import get_db
-from ..deps import require
-from ..rbac import DATA_VIEW, ENTRY_CREATE
-from ..models import Business, Expense
+from .. import corrections
+from ..deps import get_current_user, require
+from ..errors import AppError
+from ..rbac import DATA_VIEW, ENTRY_CREATE, ENTRY_DELETE, ENTRY_EDIT
+from ..models import Business, Expense, User
 from ..serializers import expense_dto
 from ..storage import save_upload
 from ..validation import validate_amount, validate_date, validate_notes, validate_text
@@ -73,3 +76,60 @@ def create_expense(
         return expense_dto(db.scalars(find).one())
     db.refresh(row)
     return expense_dto(row)
+
+
+# --- Corrections (owner only): edited or deleted in place, logged (app/corrections.py).
+# A stock purchase's expense is the purchase's own: reversing the purchase in Stock
+# deletes it (stock.reverse), and it is never edited or deleted on its own.
+
+class ExpenseEdit(BaseModel):
+    amount: float | None = None
+    category: str | None = None
+    vendor: str | None = None  # "" clears it
+    date: str | None = None
+    notes: str | None = None  # "" clears them
+
+
+def _correctable(db: Session, business: Business, expense_id: str) -> Expense:
+    row = corrections.owned(db, Expense, business, expense_id)
+    if row.purchase_id:
+        raise AppError(409, "purchase_expense", "This expense is a stock purchase. Reverse the purchase in "
+                       "Stock to cancel it, then enter it again if it was wrong.")
+    return row
+
+
+@router.patch("/expenses/{expense_id}")
+def edit_expense(
+    expense_id: str,
+    body: ExpenseEdit,
+    business: Business = Depends(require(ENTRY_EDIT)),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    row = _correctable(db, business, expense_id)
+    new = {}
+    if body.amount is not None:
+        new["amount"] = validate_amount(body.amount)
+    if body.category is not None:
+        new["category"] = validate_text(body.category, "Category", 60)
+    if body.vendor is not None:
+        new["vendor"] = validate_text(body.vendor, "Vendor", 200) if body.vendor.strip() else ""
+    if body.date is not None:
+        new["date"] = validate_date(body.date, allow_future=False)
+    if body.notes is not None:
+        new["notes"] = validate_notes(body.notes, 5000)
+    corrections.edit(db, business, user, row, new)
+    db.commit()
+    db.refresh(row)
+    return expense_dto(row)
+
+
+@router.delete("/expenses/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_expense(
+    expense_id: str,
+    business: Business = Depends(require(ENTRY_DELETE)),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    corrections.delete(db, business, user, _correctable(db, business, expense_id))
+    db.commit()

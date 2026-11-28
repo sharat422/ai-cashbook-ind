@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 
 import type {ReportSummary, ReportTxn} from './entities';
 import {
+  buildReportHtml,
   buildReportWorkbook,
   summaryAoa,
   transactionsAoa,
@@ -45,6 +46,28 @@ describe('summaryAoa', () => {
     // Category rows carry numeric amount + integer share %.
     expect(rows).toContainEqual(['Sales', 4000, 80]);
     expect(rows).toContainEqual(['Fuel', 1800, 100]);
+  });
+});
+
+describe('sales split (credit / cash / total) for the CA', () => {
+  const split: ReportSummary = {...summary, creditSales: 4602, cashSales: 500, incomeTotal: 5102, profit: 3302};
+
+  it('Excel: a Sales block with numeric credit, cash and total sales', () => {
+    const rows = summaryAoa(split);
+    const at = rows.findIndex(r => r[0] === 'Sales' && r[1] === 'Amount (₹)');
+    expect(rows.slice(at, at + 4)).toEqual([
+      ['Sales', 'Amount (₹)'], ['Credit sales (khata)', 4602], ['Cash sales', 500], ['Total sales', 5102],
+    ]);
+  });
+
+  it('PDF: the same three lines', () => {
+    const html = buildReportHtml(split, 'Gupta Traders').replace(/\s+/g, ' ');
+    expect(html).toMatch(/<h2>Sales<\/h2>.*Credit sales \(khata\).*₹4,602.*Cash sales.*₹500.*Total sales.*₹5,102.*Income by category/);
+  });
+
+  it('offline figures (no khata on the device): no split, rather than ₹0 credit sales', () => {
+    expect(summaryAoa(summary)).not.toContainEqual(['Sales', 'Amount (₹)']);
+    expect(buildReportHtml(summary, 'Gupta Traders')).not.toContain('Credit sales (khata)');
   });
 });
 

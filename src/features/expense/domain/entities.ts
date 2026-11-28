@@ -6,6 +6,12 @@ import type {Attachment, SyncStatus} from '@/shared/types/attachment';
 
 export type {Attachment, SyncStatus};
 
+/**
+ * The one list of expense categories: the form, Quick add, recurring expenses,
+ * receipt scan, AI entry and the AI categorizer all offer these. The server's
+ * ai.EXPENSE_CATEGORIES is the same list (backend/tests/test_expense_categories.py).
+ * "Purchases" is also what a stock purchase's expense is booked as.
+ */
 export const EXPENSE_CATEGORIES = [
   'Rent',
   'Salary',
@@ -13,6 +19,8 @@ export const EXPENSE_CATEGORIES = [
   'Food',
   'Travel',
   'Utilities',
+  'Purchases',
+  'Marketing',
   'Miscellaneous',
 ] as const;
 
@@ -39,4 +47,6 @@ export interface Expense extends ExpenseDraft {
   syncStatus: SyncStatus;
   /** URL of the uploaded attachment, if any. */
   attachmentUrl?: string;
+  /** Set on a stock purchase's expense (it goes only by reversing the purchase in Stock). */
+  purchaseId?: string;
 }

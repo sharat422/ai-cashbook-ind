@@ -192,6 +192,26 @@ export function ReportsScreen(): React.JSX.Element {
                 </View>
               </View>
 
+              {data.creditSales != null && data.cashSales != null ? (
+                <View testID="reports-sales" className="mt-4 rounded-2xl border border-border bg-white p-4" style={{gap: 8}}>
+                  <Text variant="label">{t('business.sales')}</Text>
+                  {([
+                    [categoryLabel(t, 'Credit sales'), data.creditSales],
+                    [t('reports.cashSales'), data.cashSales],
+                  ] as const).map(([label, amount]) => (
+                    <View key={label} className="flex-row justify-between">
+                      <Text className="text-sm text-slate-700">{label}</Text>
+                      <Text className="text-sm font-medium">{formatINR(amount)}</Text>
+                    </View>
+                  ))}
+                  <View className="flex-row justify-between border-t border-border pt-2">
+                    <Text className="text-sm font-semibold">{t('reports.totalSales')}</Text>
+                    <Text className="text-sm font-bold text-success">{formatINR(data.incomeTotal)}</Text>
+                  </View>
+                  <Text variant="caption">{t('reports.salesHint')}</Text>
+                </View>
+              ) : null}
+
               <CategoryTable
                 title={t('reports.incomeByCategory')}
                 rows={data.incomeByCategory}

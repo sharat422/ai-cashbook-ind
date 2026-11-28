@@ -24,10 +24,12 @@ jest.mock('@features/auth/hooks', () => ({
   usePermissions: () => ({can: (p: string) => mockRole === 'owner' || p === 'entry.create'}),
 }));
 let mockClosed: object | null = null;
+let mockCounted: string | null = null;
 const mockFigures = () => ({
   date: '2026-11-23', beatId: 'b1', collections: [], creditCollected: '1800.50', cashInHand: '1000.00',
   upiClaimed: '500.50', bankClaimed: '300.00', otherClaimed: '0.00', verified: '0.00', creditGiven: '2000.00',
-  difference: '1800.50', cashCounted: null, cashOverShort: null, cashCountedAt: null, deposits: [], members: [],
+  difference: '1800.50', cashCounted: mockCounted, cashOverShort: null,
+  cashCountedAt: mockCounted ? '2026-11-23T19:42:00+05:30' : null, deposits: [], members: [],
   close: mockClosed,
 });
 jest.mock('@features/reconciliation/presentation/hooks', () => ({
@@ -80,6 +82,34 @@ test('figures, counted cash with the difference, then Close sends only the count
     expect(mockCloseDay).toHaveBeenCalledWith('b1', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), '950');
     expect(byId(r, 'day-reopen')).toHaveLength(0);
   } finally {
+    act(() => r.unmount());
+    alert.mockRestore();
+  }
+});
+
+test('the latest cash count fills in the close; the owner can still change it', async () => {
+  mockRole = 'owner';
+  mockClosed = null;
+  mockCounted = '980.00'; // saved from the Cash counter (or Save count)
+  mockCloseDay.mockClear();
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  const r = await render();
+  try {
+    expect(byId(r, 'day-close-counted')[0].props.value).toBe('980.00');
+    expect(byId(r, 'day-close-from-count')).not.toHaveLength(0);
+    expect(textOf(r)).toContain('−₹20.00'); // the difference shows straight away
+    await act(async () => byId(r, 'day-close-save')[0].props.onPress());
+    await confirm(alert);
+    expect(mockCloseDay).toHaveBeenLastCalledWith('b1', expect.any(String), '980.00');
+
+    await act(async () => byId(r, 'day-close-counted')[0].props.onChangeText('1000'));
+    expect(byId(r, 'day-close-counted')[0].props.value).toBe('1000');
+    expect(byId(r, 'day-close-from-count')).toHaveLength(0); // no longer the count's figure
+    await act(async () => byId(r, 'day-close-save')[0].props.onPress());
+    await confirm(alert);
+    expect(mockCloseDay).toHaveBeenLastCalledWith('b1', expect.any(String), '1000');
+  } finally {
+    mockCounted = null;
     act(() => r.unmount());
     alert.mockRestore();
   }

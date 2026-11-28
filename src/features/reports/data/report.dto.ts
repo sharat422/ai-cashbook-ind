@@ -13,6 +13,8 @@ export interface ReportSummaryDto {
   from: string;
   to: string;
   income_total: number;
+  credit_sales?: number;
+  cash_sales?: number;
   expense_total: number;
   profit: number;
   income_count: number;
@@ -32,6 +34,8 @@ export function toReportSummary(dto: ReportSummaryDto): ReportSummary {
     from: dto.from,
     to: dto.to,
     incomeTotal: Number(dto.income_total ?? 0),
+    creditSales: dto.credit_sales == null ? undefined : Number(dto.credit_sales),
+    cashSales: dto.cash_sales == null ? undefined : Number(dto.cash_sales),
     expenseTotal: Number(dto.expense_total ?? 0),
     profit: Number(dto.profit ?? 0),
     incomeCount: dto.income_count ?? 0,

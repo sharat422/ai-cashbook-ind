@@ -77,8 +77,9 @@ export function TransactionHistoryScreen({navigation}: Partial<AppScreenProps<'T
   // Tap a row: its details, including notes and the attached bill photo.
   const openEntry = useCallback(
     (tx: Transaction) => navigation?.navigate('TransactionDetail', {entry: {
-      kind: tx.type, amount: tx.amount, category: tx.category, date: tx.date,
-      vendor: tx.vendor, notes: tx.notes, attachmentUrl: tx.attachmentUrl, syncStatus: 'synced'}}),
+      id: tx.id, kind: tx.type, amount: tx.amount, category: tx.category, date: tx.date,
+      vendor: tx.vendor, notes: tx.notes, attachmentUrl: tx.attachmentUrl, syncStatus: 'synced',
+      purchase: !!tx.purchaseId}}),
     [navigation],
   );
   const renderItem = useCallback(

@@ -21,6 +21,8 @@ MAX_AMOUNT = 10_000_000
 
 # Indian mobile: 10 digits starting 6-9 (matches validateMobile on the client).
 _MOBILE_RE = re.compile(r"^[6-9]\d{9}$")
+# A UPI ID, name@bank (the app's isValidUpiId uses the same pattern; tests/test_business_upi.py checks).
+UPI_ID_RE = re.compile(r"^[a-zA-Z0-9._-]{2,}@[a-zA-Z]{2,}$")
 
 
 def _reject(message: str) -> "HTTPException":
@@ -99,4 +101,14 @@ def validate_text(value: str, field: str, max_length: int) -> str:
     result = value.strip()
     if not result or len(result) > max_length:
         raise _reject(f"{field} must contain 1 to {max_length} characters.")
+    return result
+
+
+def validate_upi_id(value: str) -> str | None:
+    """The business's UPI ID for payment QRs; "" clears it."""
+    result = value.strip()
+    if not result:
+        return None
+    if not UPI_ID_RE.match(result):
+        raise _reject("Enter the UPI ID as name@bank, e.g. shop@okhdfcbank.")
     return result

@@ -16,7 +16,7 @@ from ..errors import error_body
 from ..models import VISIT_OUTCOMES, AccessLog, Beat, BeatAssignment, BeatRetailer, Business, BusinessMember, User, Visit, now_iso
 from ..rbac import BEATS_MANAGE, ENTRY_CREATE, role_can
 from ..security import get_current_user
-from ..validation import validate_date, validate_notes, validate_text
+from ..validation import validate_amount, validate_date, validate_notes, validate_text
 
 router = APIRouter(tags=["beats"])
 
@@ -44,6 +44,7 @@ class VisitBody(BaseModel):
     outcome: str
     reason: str | None = None
     promise_date: str | None = Field(default=None, alias="promiseDate")
+    promise_amount: float | None = Field(default=None, alias="promiseAmount")
     visited_at: str | None = Field(default=None, alias="visitedAt")
 
 
@@ -95,6 +96,18 @@ def today_beats(
 ) -> list[dict]:
     business, role = membership
     return [_with_list(db, b) for b in svc.get_today_beats(db, business, user, role)]
+
+
+@router.get("/promises/due")
+def promises_due(
+    membership: tuple[Business, str] = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Open promises to pay due today or overdue, on the beats this person sees
+    (staff: their own): the home screen's list."""
+    business, role = membership
+    return svc.promises_due(db, svc.list_beats(db, business, user, role))
 
 
 @router.get("/beats/{beat_id}")
@@ -416,10 +429,14 @@ def record_visit(
     promise = body.promise_date and validate_date(body.promise_date)
     if promise and promise < visited_at[:10]:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Promise date can't be before the visit.")
+    if body.promise_amount is not None and not promise:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Set the date the retailer promised to pay by.")
+    promise_amount = validate_amount(body.promise_amount, "Promised amount") if body.promise_amount is not None else None
 
     visit = Visit(business_id=business.id, beat_id=beat.id, customer_id=body.customer_id,
                   user_id=user.id, outcome=body.outcome, reason=reason,
-                  promise_date=promise or None, visited_at=visited_at, client_id=client_id)
+                  promise_date=promise or None, promise_amount=promise_amount,
+                  visited_at=visited_at, client_id=client_id)
     db.add(visit)
     try:
         db.commit()

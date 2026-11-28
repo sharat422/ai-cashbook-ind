@@ -9,6 +9,7 @@ export interface ExpenseDto {
   vendor: string;
   notes: string | null;
   attachment_url: string | null;
+  purchase_id?: string | null;
   created_at: string;
 }
 
@@ -22,6 +23,7 @@ export function toExpense(dto: ExpenseDto): Expense {
     vendor: dto.vendor,
     notes: dto.notes ?? undefined,
     attachmentUrl: dto.attachment_url ?? undefined,
+    purchaseId: dto.purchase_id ?? undefined,
     attachment: null,
     createdAt: dto.created_at,
     syncStatus: 'synced',

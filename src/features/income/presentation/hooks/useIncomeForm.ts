@@ -32,8 +32,8 @@ const initialValues = (): FormValues => ({
  * the use case enforces, but errors only surface for fields the user has
  * touched (or after a submit attempt) to avoid shouting on first render.
  */
-export function useIncomeForm() {
-  const [values, setValues] = useState<FormValues>(initialValues);
+export function useIncomeForm(start?: Partial<FormValues>) {
+  const [values, setValues] = useState<FormValues>(() => ({...initialValues(), ...start}));
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
 

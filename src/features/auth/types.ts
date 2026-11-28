@@ -19,6 +19,10 @@ export interface Business {
   gstin?: string | null;
   /** The seller's address, printed on GST invoices. */
   address?: string | null;
+  /** Where customers pay (name@bank) and the name they see: the owner sets them once,
+   *  every member's phone builds payment QRs from them. */
+  upiId?: string | null;
+  upiPayeeName?: string | null;
   /** The caller's role in this business (from /businesses/me). Absent for the
    *  local create response; defaults to owner (the creator). */
   role?: Role;
