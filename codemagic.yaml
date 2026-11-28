@@ -117,7 +117,7 @@ workflows:
   # ANDROID (staging backend by default)
   # ==========================================================================
   android:
-    name: Android Release Build (staging)
+    name: Android · Staging (Play internal)
     max_build_duration: 60
     instance_type: linux_x2
     triggering:
@@ -129,14 +129,11 @@ workflows:
     environment:
       node: 18.20.4
       java: 17
+      groups:
+        - android_release_keystore
+        - google_play
       vars:
         API_BASE_URL: "https://smart-cashbook-api.onrender.com"
-    # No caching: a stale $HOME/.gradle / node_modules cache intermittently caused
-    # React Native autolinking to drop react-native-config (its Android platform is
-    # only detected via the repo's react-native.config.js), which then failed the
-    # build at app/build.gradle:7 (":react-native-config could not be found"). A
-    # clean autolink every run is deterministic. Re-add caching only if builds are
-    # too slow AND this is confirmed fixed.
     scripts:
       - name: Install npm dependencies
         script: npm ci
@@ -147,15 +144,36 @@ workflows:
             awk -v url="$API_BASE_URL" '/^API_BASE_URL=/{print "API_BASE_URL=" url; found=1; next} {print} END{if(!found) print "API_BASE_URL=" url}' .env > .env.tmp && mv .env.tmp .env
             echo "Building against API_BASE_URL=$API_BASE_URL"
           fi
+      - name: Materialize the release keystore + signing properties
+        script: |
+          set -e
+          : "${CM_KEYSTORE:?Missing CM_KEYSTORE}"
+          : "${CM_KEYSTORE_PASSWORD:?Missing CM_KEYSTORE_PASSWORD}"
+          : "${CM_KEY_ALIAS:?Missing CM_KEY_ALIAS}"
+          : "${CM_KEY_PASSWORD:?Missing CM_KEY_PASSWORD}"
+          echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/android/app/upload-keystore.jks"
+          cat > "$CM_BUILD_DIR/android/keystore.properties" <<EOF
+          RELEASE_STORE_FILE=upload-keystore.jks
+          RELEASE_STORE_PASSWORD=$CM_KEYSTORE_PASSWORD
+          RELEASE_KEY_ALIAS=$CM_KEY_ALIAS
+          RELEASE_KEY_PASSWORD=$CM_KEY_PASSWORD
+          EOF
       - name: Make gradlew executable
         script: chmod +x android/gradlew
-      - name: Build Android release APK
+      - name: Build signed release AAB
         script: |
           cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew bundleRelease --no-daemon --stacktrace \
+            -PversionCodeOverride="$PROJECT_BUILD_NUMBER" \
+            -PversionNameOverride="1.0.$PROJECT_BUILD_NUMBER-staging"
     artifacts:
-      - android/app/build/outputs/**/*.apk
+      - android/app/build/outputs/bundle/**/*.aab
       - android/app/build/outputs/**/mapping.txt
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: false
 
   # ==========================================================================
   # ANDROID · PRODUCTION → signed .aab for the Play Store
@@ -177,6 +195,7 @@ workflows:
         # Provides CM_KEYSTORE (base64 .jks), CM_KEYSTORE_PASSWORD,
         # CM_KEY_ALIAS, CM_KEY_PASSWORD — see the header notes.
         - android_release_keystore
+        - google_play
       vars:
         API_BASE_URL: "https://ai-cashbook-ind.onrender.com"
     # No caching — see the note on the `android` workflow (stale cache broke
@@ -233,11 +252,11 @@ workflows:
       - android/app/build/outputs/**/mapping.txt
     # To auto-publish, create a Google Play service account, store its JSON as the
     # encrypted var GCLOUD_SERVICE_ACCOUNT_CREDENTIALS, and uncomment:
-    # publishing:
-    #   google_play:
-    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-    #     track: internal
-    #     submit_as_draft: true
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
 
   # ==========================================================================
   # iOS · STAGING → TestFlight (smart-cashbook-api.onrender.com)
